@@ -50,3 +50,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Maunally adding Python stuff
+__pycache__/
+*.py[cod]
+*$py.class
+
