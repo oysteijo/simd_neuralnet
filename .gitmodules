@@ -1,0 +1,3 @@
+[submodule "c_npy"]
+	path = c_npy
+	url = git@github.com:oysteijo/c_npy.git
