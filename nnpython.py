@@ -7,7 +7,8 @@ sigmoid = lambda x: 1.0 / (np.exp( -x ) + 1.0)
 class NeuralNet(object):
     def __init__(self, sizes):
         self.n_layers = len(sizes) - 1
-        self.layers = [Layer(np.random.randn( inp, out ), np.zeros( out ), sigmoid ) for inp, out in zip(sizes[:-1], sizes[1:])]
+        self.layers = [Layer(np.random.randn( inp, out ).astype(np.float32), np.zeros( out, dtype=np.float32 ), sigmoid )
+                for inp, out in zip(sizes[:-1], sizes[1:])]
     def feedforward(self, x):
         for layer in self.layers:
             x = layer.activation_func( np.dot( x ,layer.weight) + layer.bias )
