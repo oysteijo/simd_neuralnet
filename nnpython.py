@@ -1,7 +1,7 @@
 import numpy as np
-from collections import namedtuple
+from recordclass import recordclass
 
-Layer = namedtuple("Layer", ["weight", "bias", "activation_func"])
+Layer = recordclass("Layer", ["weight", "bias", "activation_func"])
 sigmoid = lambda x: 1.0 / (np.exp( -x ) + 1.0)
 
 class NeuralNet(object):
@@ -10,14 +10,30 @@ class NeuralNet(object):
         self.layers = [Layer(np.random.randn( inp, out ).astype(np.float32), np.zeros( out, dtype=np.float32 ), sigmoid )
                 for inp, out in zip(sizes[:-1], sizes[1:])]
     def feedforward(self, x):
-        print(x)
         for layer in self.layers:
             x = layer.activation_func( np.dot( x ,layer.weight) + layer.bias )
-            print(x)
         return x
 
     def backpropagation( self, x, y):
-        pass
+        nabla_w = [np.zeros( l.weight.shape, dtype=np.float32 ) for l in self.layers]
+        nabla_b = [np.zeros( l.bias.shape, dtype=np.float32 ) for l in self.layers]
+        activations = [x]
+        # Forward
+        for layer in self.layers:
+            x = layer.activation_func( np.dot( x ,layer.weight) + layer.bias )
+            activations.append(x)
+        # Backward pass
+        delta = (x-y)*y*(1-y)  # Derivative of the cost * derivative of sigmoid 
+        nabla_b[-1] = delta
+        nabla_w[-1] = np.outer(activations[-2],delta)
+        assert self.layers[-1].weight.shape == nabla_w[-1].shape
+        for l in range(2, len(self.layers)+1):            
+            delta = np.dot(self.layers[-l+1].weight, delta) * (activations[-l]*(1.0-activations[-l]))
+            assert nabla_b[-l].shape == delta.shape
+            nabla_b[-l] = delta
+            nabla_w[-l] = np.outer(activations[-l-1],delta)
+            assert self.layers[-l].weight.shape == nabla_w[-l].shape
+        return zip( nabla_w, nabla_b ) 
 
     def get_weights( self ):
         retlist = []
@@ -35,5 +51,17 @@ if __name__ == '__main__':
     inp = np.random.rand(32).astype(np.float32)
     np.save("random_input.npy", inp)
     print(nn.feedforward(inp))
+
+    train_sample = np.array([0.5,0.5,0.5,0.5], dtype=np.float32)
+
+    for _ in range(100):
+        learning_rate = 0.1
+        for ((n_w, n_b), l) in zip(nn.backpropagation(inp, train_sample ), nn.layers):
+            l.weight -= learning_rate * n_w
+            l.bias -= learning_rate * n_b
+
+        print(nn.feedforward(inp))
+
+
 
 
