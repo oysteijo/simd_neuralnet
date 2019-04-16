@@ -19,22 +19,22 @@ int main(int argc, char *argv[] ){
     printf("/* Auto-generated from code in '%s' */\n\n", __FILE__ );
     printf("#ifndef __EXPONENTIAL_H__\n#define __EXPONENTIAL_H__\n\n");
     printf("#define EXP_MAX_INDEX %d\n", n-1 );
-    printf("#define EXP_MAX_VALUE %.9g\n\n", (n-1)/10.0f );
+    printf("#define EXP_MAX_VALUE %.9g\n\n", (n-1)/100.0 );
             
     printf("static float e[%d] = {", n );
     for( int i = 0; i < n; i++ ){
         if( (i & 0x03) == 0 ) printf("\n  ");
-        printf("%.17gf, ", exp( x ) / 10 );
-        x += 0.1;
+        printf("%.17gf, ", exp( x ) / 100.0 );
+        x += 0.01;
     }
     printf("\n};\n");
     printf("#endif /* __EXPONENTIAL_H__ */\n");
 
     /* check */
     char max_value_str[20];
-    sprintf( max_value_str, "%.9g", (n-1)/10.0f );
+    sprintf( max_value_str, "%.9g", (n-1)/100.0 );
     float max_val = strtof( max_value_str, NULL );
-    const int ck = (int) max_val * 10.0f;
+    const int ck = (int) max_val * 100.0f;
     if( ck > (n-1) ){
         fprintf(stderr, "Max values looks up value beyond table.\n" );
         return -1;

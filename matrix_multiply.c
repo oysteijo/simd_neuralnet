@@ -37,6 +37,30 @@ void matrix_multiply_general( int n, int m, const float *weight, const float *bi
 			}
 		}
 	}
+    /* Do the rest. If the user has done his/her homework, this should not be necesarry */
+    unsigned int reminding = m & 0x7;
+    if( !reminding ) return;
+
+    y_ptr = y + (count*8);
+    bias_ptr = bias + (count*8);
+
+    for (int j = reminding; j; j--)
+        *y_ptr++ = *bias_ptr++;
+
+    for (int i = 0; i < n; i++) {
+        float const inp = input[i];
+        const float *weight_ptr = weight + ( i * m );
+        if (inp) {
+            float  *y_ptr = y + (count*8);
+            if (inp == 1.0f)
+                for (int j = reminding; j; j--)
+                    *y_ptr++ += *weight_ptr++;
+            else {
+                for (int j = reminding; j; j--)
+                    *y_ptr++ += inp * *weight_ptr++;
+            }
+        }
+    }
 }
 
 void matrix_multiply_output( int m, int n, const float *weight, const float *bias, const float *y, float *out )
