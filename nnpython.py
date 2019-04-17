@@ -23,12 +23,19 @@ class NeuralNet(object):
             x = layer.activation_func( np.dot( x ,layer.weight) + layer.bias )
             activations.append(x)
         # Backward pass
-        delta = (x-y)*y*(1-y)  # Derivative of the cost * derivative of sigmoid 
-        nabla_b[-1] = delta
-        nabla_w[-1] = np.outer(activations[-2],delta)
+        #delta = (x-y)*y*(1-y)  # Derivative of the cost * derivative of sigmoid 
+        #        nabla_b[-1] = delta
+        #       nabla_w[-1] = np.outer(activations[-2],delta)
         assert self.layers[-1].weight.shape == nabla_w[-1].shape
-        for l in range(2, len(self.layers)+1):            
-            delta = np.dot(self.layers[-l+1].weight, delta) * (activations[-l]*(1.0-activations[-l]))
+        error = x-y
+        for l in range(1, len(self.layers)+1):            
+            if l == 1:
+                delta = error # *y*(1-y)  # Derivative of the cost * derivative of sigmoid 
+            else:
+                delta = np.dot(self.layers[-l+1].weight, delta) #* (activations[-l]*(1.0-activations[-l]))
+
+            delta *= activations[-l]*(1.0-activations[-l])
+            
             assert nabla_b[-l].shape == delta.shape
             nabla_b[-l] = delta
             nabla_w[-l] = np.outer(activations[-l-1],delta)
