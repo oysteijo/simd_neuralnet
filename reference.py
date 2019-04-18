@@ -18,22 +18,19 @@ class NeuralNet(object):
         nabla_w = [np.zeros( l.weight.shape, dtype=np.float32 ) for l in self.layers]
         nabla_b = [np.zeros( l.bias.shape, dtype=np.float32 ) for l in self.layers]
         activations = [x]
+
         # Forward
         for layer in self.layers:
             x = layer.activation_func( np.dot( x ,layer.weight) + layer.bias )
             activations.append(x)
-        # Backward pass
-        #delta = (x-y)*y*(1-y)  # Derivative of the cost * derivative of sigmoid 
-        #        nabla_b[-1] = delta
-        #       nabla_w[-1] = np.outer(activations[-2],delta)
-        assert self.layers[-1].weight.shape == nabla_w[-1].shape
-        error = x-y
-        for l in range(1, len(self.layers)+1):            
-            if l == 1:
-                delta = error # *y*(1-y)  # Derivative of the cost * derivative of sigmoid 
-            else:
-                delta = np.dot(self.layers[-l+1].weight, delta) #* (activations[-l]*(1.0-activations[-l]))
 
+        # Backward pass
+        assert self.layers[-1].weight.shape == nabla_w[-1].shape
+        delta = 2.0 * ( x-y ) / self.layers[-1].weight.shape[1] # derivative of root *mean* square error.
+        weights = [l.weight for l in self.layers] + [np.eye(delta.shape[0])] 
+
+        for l in range(1, len(self.layers)+1):            
+            delta = np.dot(weights[-l], delta)
             delta *= activations[-l]*(1.0-activations[-l])
             
             assert nabla_b[-l].shape == delta.shape
@@ -50,25 +47,30 @@ class NeuralNet(object):
         return tuple(retlist)
 
 if __name__ == '__main__':
+    np.set_printoptions(precision=4, linewidth=130)
     np.random.seed(42)
 
-    nn = NeuralNet([32,16,8,4])
+    sizes=[32,16,8,4]
+    nn = NeuralNet(sizes)
     print(nn)
     np.savez("initial_weights.npz", *nn.get_weights())
-    inp = np.random.rand(32).astype(np.float32)
+    inp = np.random.rand(sizes[0]).astype(np.float32)
     np.save("random_input.npy", inp)
     print(nn.feedforward(inp))
 
-    train_sample = np.array([0.5,0.5,0.5,0.5], dtype=np.float32)
+    train_sample = np.array([0.5]*sizes[-1], dtype=np.float32)
 
-    for _ in range(100):
-        learning_rate = 0.1
-        for ((n_w, n_b), l) in zip(nn.backpropagation(inp, train_sample ), nn.layers):
-            l.weight -= learning_rate * n_w
-            l.bias -= learning_rate * n_b
+    grads = []
+    for n_w, n_b in nn.backpropagation( inp, train_sample ):
+        grads.append(n_w)
+        grads.append(n_b)
+        
+    print(grads)
+#    for _ in range(100):
+#        learning_rate = 0.1
+#        for ((n_w, n_b), l) in zip(nn.backpropagation(inp, train_sample ), nn.layers):
+#            l.weight -= learning_rate * n_w
+#            l.bias -= learning_rate * n_b
 
-        print(nn.feedforward(inp))
-
-
-
+#        print(nn.feedforward(inp))
 
