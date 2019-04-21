@@ -27,7 +27,7 @@ int main( int argc, char *argv[] )
 
     int grad_size = 0;
     for ( int i = 0; i < nn->n_layers; i++ )
-        grad_size += nn->layer[i].n_input * (nn->layer[i].n_output + 1);
+        grad_size += (nn->layer[i].n_input + 1) * nn->layer[i].n_output;
 
     float SIMD_ALIGN(grad[grad_size]);
     memset( grad, 0, grad_size * sizeof(float));

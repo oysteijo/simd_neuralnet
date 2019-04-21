@@ -36,7 +36,6 @@ void backpropagation( const neuralnet_t *nn, const float *input, const float *ta
     /* forward */
     for( int i = 0; i < nn->n_layers; i++){
         const layer_t *layer_ptr = nn->layer + i;
-        // printf("Layer: %d\n inputs: %2d\noutputs: %2d\n", i, layer_ptr->n_input, layer_ptr->n_output); 
         matrix_multiply_general( 
                 layer_ptr->n_input,
                 layer_ptr->n_output,
@@ -44,12 +43,8 @@ void backpropagation( const neuralnet_t *nn, const float *input, const float *ta
                 layer_ptr->bias,
                 activations[i],
                 activations[i+1]);
-        // print_vector( layer_ptr->n_output, y[i] );
         layer_ptr->activation_func( layer_ptr->n_output, activations[i+1] );
-        // print_vector( layer_ptr->n_output, activations[i+1] );
     }
-    // print_vector( nn->layer[nn->n_layers-1].n_output, activations[nn->n_layers] );
-
 
     /* backward */
 
@@ -74,12 +69,9 @@ void backpropagation( const neuralnet_t *nn, const float *input, const float *ta
         grad_b[nn->n_layers-1][i]  = 2.0f * ( output[i] - target[i] ) / (float) n_out;
     }
 
-    // for l in range(1, len(self.layers)+1):
     for( int layer = nn->n_layers-1; layer >= 0; layer-- ){
         const int n_inp = nn->layer[layer].n_input;
         const int n_out = nn->layer[layer].n_output;
-        // printf("n_inp: %d\n", n_inp);
-        // printf("n_out: %d\n", n_out);
         if( layer != nn->n_layers-1 ) {
             cblas_sgemv( CblasRowMajor, CblasNoTrans,
                     nn->layer[layer+1].n_input,
@@ -90,11 +82,9 @@ void backpropagation( const neuralnet_t *nn, const float *input, const float *ta
                     grad_b[layer+1], 1,
                     0.0f, /* beta */
                     grad_b[layer], 1 );
-            // print_vector( n_out, grad_b[layer]);
         }
         /* FIXME: This will be a pointer to a funk */
         sigmoid_diff( n_out, activations[layer+1], grad_b[layer] );
-        // print_vector( n_out, grad_b[layer] );
         
         cblas_sger(CblasRowMajor, /* you’re using row-major storage */
            n_inp,                 /* the matrix X has dx1 rows ...  */
@@ -106,6 +96,20 @@ void backpropagation( const neuralnet_t *nn, const float *input, const float *ta
            1,                     /* stride between elements of x2. */
            grad_w[layer],
            n_out);                /* leading dimension of matrix X. */
-        // print_vector( n_out * n_inp , grad_w[layer]);
     }
+
+#if 0
+    /* Update (This will be on the outside) */
+    ptr = grad;
+    for ( int i = 0 ; i < nn->n_layers; i++ ){
+        float *b = nn->layer[i].bias;
+        float *w = nn->layer[i].weight;
+
+        for ( int j = 0, j < nn->layer[i].n_output; j++)
+           *b++ += lr * *ptr++; 
+
+        for ( int j = 0, j < nn->layer[i].n_output * nn->layer[i].n_input; j++)
+           *w++ += lr * *ptr++;
+    }
+#endif 
 }
