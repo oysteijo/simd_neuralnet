@@ -533,6 +533,7 @@ static void print_vector( int n, const float *v )
         printf("% .7f ", v[i] );
     printf("]\n");
 }
+
 /**
   @brief Forward calculate the neural network 
   @param nn The neural net that will do the forward calculaton. (aka. evaluate)
@@ -585,7 +586,6 @@ void neuralnet_evaluate( const neuralnet_t *nn, const float *input, float *out )
             y[nn->n_layers-2], out );
     layer_ptr->activation_func( layer_ptr->n_output, out );
 }
-
 
 #if defined( TRAINING_FEATURES )
 void neuralnet_save( const neuralnet_t *nn, const char *filename )
