@@ -32,8 +32,6 @@ class NeuralNet(object):
         for l in range(1, len(self.layers)+1):            
             if l > 1:
                 grad_b[-l] = np.dot(self.layers[-l+1].weight, grad_b[-l+1])
-                print(self.layers[-l+1].weight.shape)
-                print("Here: ", grad_b[-l])
             grad_b[-l] *= activations[-l]*(1.0-activations[-l])  # FIXME: This is depending on the activation_func
             
             grad_w[-l] = np.outer(activations[-l-1],grad_b[-l])

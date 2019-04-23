@@ -13,11 +13,12 @@ static void rectifier_plain ( unsigned int hidden, float *ar );
 static void tanh_libc       ( unsigned int hidden, float *ar );
 static void tanh_vec        ( unsigned int hidden, float *ar );
 static void softmax( unsigned int hidden, float *ar );
+static void sigmoid( unsigned int hidden, float *ar );
 
 activation_func get_activation_func( const char * name ){
 	return
 		!strcmp( name, "logistic_gnubg") ? logistic_gnubg :
-		!strcmp( name, "sigmoid") ? logistic_plain :
+		!strcmp( name, "sigmoid") ? sigmoid :
 		!strcmp( name, "logistic_plain") ? logistic_plain :
 		!strcmp( name, "rectifier_vec") ? rectifier_vec :
 		!strcmp( name, "rectifier_plain") ? rectifier_plain :
@@ -36,6 +37,7 @@ const char * get_activation_name( activation_func ptr ){
 		ptr == tanh_libc ? "tanh_libc" :
 		ptr == tanh_vec ? "tanh_vec" :
 		ptr == softmax ? "softmax" :
+		ptr == sigmoid ? "sigmoid" :
 		"(unknown)";
 }
 /* FIXME: There is actually no implementations for systems w/o AVX...  =:-o */
@@ -47,7 +49,7 @@ const char * get_activation_name( activation_func ptr ){
 _PS_CONST8( ones, 1.0f );
 _PS_CONST8( twos, 2.0f );
 /* _PS_CONST8( tens, 10.0f ); */
-_PS_CONST8( hundreds, 100.0f );
+_PS_CONST8( hundredtwentyeights, 128.0f );
 _PS_CONST8( maxvals, EXP_MAX_VALUE );
 _PS_CONST8( minusones, -1.0f );
 
@@ -59,7 +61,7 @@ static const int32_t __attribute__ ((aligned(16))) __abs_mask8[8] = {0x7FFFFFFF,
 static inline __m256 exp_positive_avx( __m256 xin )
 {
 	xin = _mm256_min_ps( xin, _ps_8_maxvals );
-	xin = _mm256_mul_ps( xin, _ps_8_hundreds );
+	xin = _mm256_mul_ps( xin, _ps_8_hundredtwentyeights );
 
 #if defined(__AVX2__)
 	__m256i i = _mm256_cvtps_epi32( xin );
@@ -83,7 +85,7 @@ static inline __m256 exp_positive_avx( __m256 xin )
 	ex.elem[7] = e[i.elem[7]];
 	xin = _mm256_sub_ps( xin, _mm256_cvtepi32_ps( i.i ) );
 #endif
-	xin = _mm256_add_ps( xin, _ps_8_hundreds );
+	xin = _mm256_add_ps( xin, _ps_8_hundredtwentyeights );
 #if defined(__AVX2__)
 	return _mm256_mul_ps( xin, ex );
 #else
@@ -222,4 +224,9 @@ static void rectifier_plain( unsigned int hidden, float *ar )
 {
 	for( unsigned int i = 0; i < hidden; i++ )
 		ar[i] = fmaxf(0.0f, ar[i]);
+}
+static void sigmoid( unsigned int hidden, float *ar )
+{
+	for( unsigned int i = 0; i < hidden; i++ )
+		ar[i] = 1.0f / (1.0f + expf(-ar[i]));
 }

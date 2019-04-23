@@ -1,5 +1,4 @@
 #include "loss.h"
-#include "exponential.h"
 
 #include <stdint.h> 
 #include <immintrin.h> 
@@ -57,24 +56,24 @@ const char * get_loss_name( loss_func ptr ){
 /* FIXME: These are now really plain and no SIMD yet. */
 static void mean_squared_error(const unsigned int n, const float *y_pred, const float *y_real, float *loss )
 {
-    for( int i = 0; i < n; i++ )
+    for( unsigned int i = 0; i < n; i++ )
         loss[i] = 2.0f * (y_pred[i] - y_real[i] ) / (float) n;
 }
 
 static void mean_absolute_error(const unsigned int n, const float *y_pred, const float *y_real, float *loss )
 {
-    for( int i = 0; i < n; i++ )
+    for( unsigned int i = 0; i < n; i++ )
         loss[i] = y_pred[i] >= y_real[i] ? 1.0f : -1.0f;
 }
 
 static void mean_absolute_percentage_error(const unsigned int n, const float *y_pred, const float *y_real, float *loss )
 {
-    for( int i = 0; i < n; i++ )
+    for( unsigned int i = 0; i < n; i++ )
         loss[i] = y_pred[i] >= y_real[i] ? 1.0f / (float) n : -1.0f / (float) n;
 }
 
 static void crossentropy(const unsigned int n, const float *y_pred, const float *y_real, float *loss )
 {
-    for( int i = 0; i < n; i++ )
+    for( unsigned int i = 0; i < n; i++ )
         loss[i] = (y_pred[i] >= y_real[i]);
 }

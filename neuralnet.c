@@ -4,6 +4,12 @@
 #include "simd.h"
 #include "activation.h"
 #include "matrix_multiply.h"
+#include "c_npy.h"
+
+#if defined(TRAINING_FEATURES)
+#include "loss.h"
+#include "cblas.h"
+#endif
 
 #include <stdio.h>
 #include <string.h>             /* for memcpy */
@@ -71,7 +77,6 @@ weight_alloc_error:
   @param filename Filename to neural network file.
   @return Pointer to newly created neural network. Returns NULL on failure. Use neuralnet_free() to free resources.
 */
-#include "c_npy.h"
 neuralnet_t *neuralnet_new( const char *filename )
 {
     neuralnet_t *nn;
@@ -218,18 +223,131 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename )
         free(array[i]);
 }
 
-#endif /* TRAINING_FEATURES */
-
-/* FIXME: Check how to suppress warnings with other compilers */
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-void dummy_trainer( neuralnet_t *nn, const float * input, const float *desired, const void *unused )
+/* FIXME: These will go to activation.c */
+void sigmoid_diff( unsigned int n, const float *act, float *v )
 {
-    fprintf( stderr, "No parameter adjustments done. Call neuralnet_set_trainer() to add a train function.\n" );
-    return;
+    for( unsigned int i=0; i < n; i++ )
+        v[i] *= act[i]*(1.0f-act[i]);
 }
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#endif
+
+/* FIXME: Silence these "unused" warnings */
+void linear_diff( unsigned int n, const float *act, float *v) { }
+
+void neuralnet_set_loss ( neuralnet_t *nn, const char *loss_name )
+{
+    nn->loss = get_loss_func( loss_name );
+    if(!nn->loss){
+        printf("Warning: Loss function '%s' not found.\n", loss_name);
+        return;
+    }
+
+    /* FIXME */
+    for ( int i = 0; i < nn->n_layers; i++ ){
+        layer_t *layer_ptr = nn->layer + i;
+        layer_ptr->activation_derivative = sigmoid_diff;
+        printf("%s\n", get_activation_name( layer_ptr->activation_func ));
+    }    
+
+    /* Then some cleanup */
+    if( nn->loss == get_loss_func( "crossentropy" ) ){
+        if( nn->layer[nn->n_layers-1].activation_func == get_activation_func( "sigmoid" ) ||
+          nn->layer[nn->n_layers-1].activation_func == get_activation_func( "softmax" ) )
+            nn->layer[nn->n_layers-1].activation_derivative = linear_diff;
+        else
+            printf("Warning: Using 'crossentropy' loss function when output activation is neither 'sigmoid' nor 'softmax'.\n");
+    }
+}
+
+void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const float *target, float *grad )
+{
+    int n_biases = 0;
+    for( int i = 0; i < nn->n_layers; i++)
+        n_biases += nn->layer[i].n_output;
+
+    float SIMD_ALIGN(workmem[ n_biases + nn->layer[0].n_input ]);
+    float *activations[nn->n_layers+1];
+    activations[0] = (float*) input;
+    activations[1] = workmem;
+    for( int i = 1; i < nn->n_layers; i++)
+        activations[i+1] = activations[i] + nn->layer[i-1].n_output;
+    
+    /* forward */
+    for( int i = 0; i < nn->n_layers; i++){
+        const layer_t *layer_ptr = nn->layer + i;
+        matrix_multiply_general( 
+                layer_ptr->n_input,
+                layer_ptr->n_output,
+                layer_ptr->weight,
+                layer_ptr->bias,
+                activations[i],
+                activations[i+1]);
+        layer_ptr->activation_func( layer_ptr->n_output, activations[i+1] );
+    }
+
+    /* backward */
+
+    /* Set up some pointers */
+    float *grad_b[nn->n_layers];
+    float *grad_w[nn->n_layers];
+    float *ptr = grad;
+    for( int i = 0; i < nn->n_layers; i++ ) {
+        const int n_inp = nn->layer[i].n_input;
+        const int n_out = nn->layer[i].n_output;
+        grad_b[i] = ptr;
+        ptr += n_out;
+        grad_w[i] = ptr;
+        ptr += n_inp*n_out;
+    }
+
+    /* This calls the derivtive of the loss function. See loss.[ch]. */
+    float *output = activations[nn->n_layers];
+    assert( nn->loss );
+    nn->loss( nn->layer[nn->n_layers-1].n_output, output, target, grad_b[nn->n_layers-1] );
+    
+    for( int layer = nn->n_layers-1; layer >= 0; layer-- ){
+        const int n_inp = nn->layer[layer].n_input;
+        const int n_out = nn->layer[layer].n_output;
+        if( layer != nn->n_layers-1 ) {
+            cblas_sgemv( CblasRowMajor, CblasNoTrans,
+                    nn->layer[layer+1].n_input,
+                    nn->layer[layer+1].n_output,
+                    1.0f, 
+                    nn->layer[layer+1].weight,
+                    nn->layer[layer+1].n_output,
+                    grad_b[layer+1], 1,
+                    0.0f, /* beta */
+                    grad_b[layer], 1 );
+        }
+        /* FIXME: This will be a pointer to a funk */
+        nn->layer[layer].activation_derivative( n_out, activations[layer+1], grad_b[layer] );
+        
+        /* This is actually the outer product */
+        cblas_sger(CblasRowMajor, /* you’re using row-major storage */
+           n_inp,                 /* the matrix X has dx1 rows ...  */
+           n_out,                 /*  ... and dx2 columns.          */
+           1.0,                   /* scale factor to apply to x1x2' */
+           activations[layer], 
+           1,                     /* stride between elements of x1. */
+           grad_b[layer],
+           1,                     /* stride between elements of x2. */
+           grad_w[layer],
+           n_out);                /* leading dimension of matrix X. */
+    }
+
+#if 0
+    /* Update (This will be on the outside) */
+    ptr = grad;
+    for ( int i = 0 ; i < nn->n_layers; i++ ){
+        float *b = nn->layer[i].bias;
+        float *w = nn->layer[i].weight;
+
+        for ( int j = 0, j < nn->layer[i].n_output; j++)
+           *b++ += lr * *ptr++; 
+
+        for ( int j = 0, j < nn->layer[i].n_output * nn->layer[i].n_input; j++)
+           *w++ += lr * *ptr++;
+    }
+#endif 
+}
+
+#endif /* TRAINING_FEATURES */
