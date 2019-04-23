@@ -2,7 +2,7 @@
 #include "c_npy.h"
 #include <stdio.h>
 
-#include "backpropagation.c"
+// #include "backpropagation.c"
 
 int main( int argc, char *argv[] )
 {
@@ -19,12 +19,12 @@ int main( int argc, char *argv[] )
         return -3;
 
     float pred[4] = { 0 };
-    neuralnet_evaluate( nn, (float*) cm->data, pred );
+    neuralnet_predict( nn, (float*) cm->data, pred );
     for (int i = 0; i < 4; i++ )
         printf("%.6f  ", pred[i]);
     printf("\n");
 
-
+#if 0
     int grad_size = 0;
     for ( int i = 0; i < nn->n_layers; i++ )
         grad_size += (nn->layer[i].n_input + 1) * nn->layer[i].n_output;
@@ -33,7 +33,8 @@ int main( int argc, char *argv[] )
     memset( grad, 0, grad_size * sizeof(float));
     float target[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
     backpropagation( nn, (float*) cm->data, target, grad );
-
+#endif
+    neuralnet_save( nn, "new_net.npz");
 
     neuralnet_free (nn );
 

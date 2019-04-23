@@ -18,19 +18,17 @@ struct _neuralnet_t
     int     n_layers;
     layer_t layer[MLP_MAX_LAYERS];
 #if defined(TRAINING_FEATURES)
-    void    (*train) (neuralnet_t *nn, const float *input, const float *desired, const void *data );
+    void    (*loss)  (const unsigned int n, const float *y_pred, const float *y_true, float *loss );
 #endif
 };
 
 neuralnet_t * neuralnet_new              ( const char *filename);
 void          neuralnet_free             (       neuralnet_t *nn); 
-void          neuralnet_evaluate         ( const neuralnet_t *nn, const float *input, float *output);
+void          neuralnet_predict          ( const neuralnet_t *nn, const float *input, float *output);
 #if defined(TRAINING_FEATURES)
-typedef void (*trainfunc)                (       neuralnet_t *nn, const float *input, const float *desired, const void *data);
-void          neuralnet_set_trainer      (       neuralnet_t *nn, trainfunc tf);
-void          neuralnet_train            (       neuralnet_t *nn, const float *input, const float *desired, const void *data);
+void          neuralnet_set_loss         (       neuralnet_t *nn, const char *loss_name );
+void          neuralnet_backpropagation  ( const neuralnet_t *nn, const float *input, const float *desired, float *gradient);
 void          neuralnet_save             ( const neuralnet_t *nn, const char *filename);
-void          neuralnet_scale_parameters ( const neuralnet_t *nn, int idx, float scale );
 #endif
 
 static inline int neuralnet_get_n_layers ( const neuralnet_t *mlp ) { return mlp->n_layers; }
