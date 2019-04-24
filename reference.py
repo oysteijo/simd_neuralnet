@@ -27,7 +27,7 @@ class NeuralNet(object):
 
         # Backward pass
         assert self.layers[-1].weight.shape == grad_w[-1].shape
-        grad_b[-1] = 2.0 * ( x-y ) / self.layers[-1].weight.shape[1] # derivative of root *mean* square error.
+        grad_b[-1] = 2.0 * ( x-y ) / self.layers[-1].weight.shape[1] # derivative of *mean* square error.
 
         for l in range(1, len(self.layers)+1):            
             if l > 1:
@@ -46,7 +46,7 @@ class NeuralNet(object):
         return tuple(retlist)
 
 if __name__ == '__main__':
-    np.set_printoptions(precision=4, linewidth=130)
+    np.set_printoptions(precision=4, linewidth=220)
     np.random.seed(42)
 
     sizes=[32,16,8,4]
@@ -61,10 +61,10 @@ if __name__ == '__main__':
 
     grads = []
     for grad_w, grad_b in nn.backpropagation( inp, train_sample ):
-        grads.append(grad_w)
         grads.append(grad_b)
+        grads.append(grad_w)
         
-    print(grads)
+    print("\n".join(map(str,grads)))
 #    for _ in range(100):
 #        learning_rate = 0.1
 #        for ((grad_w, grad_b), l) in zip(nn.backpropagation(inp, train_sample ), nn.layers):

@@ -26,6 +26,11 @@ To be able to achive the above, we need to set some limitations.
 An other limitation might be that the number of units in a hidden layer may have to be a multiple of the number of floats
 you can fit in a SIMD register. With SSE this number is 4. With AVX this number is 8. With AVX-512 the number will be 16. There must (of course) be possible to have an abritary number of inputs and outputs. 
 
+## Status today (24th April 2019)
+The reference implementation in python seems to calculate the exact same values for the gradient as a corresponding model in Keras.
+Also, the C implementation seems to calculate the exact same gradient values as the reference. Also the activation functions
+has been implemented. The gradient calculation has not been tested for many network configurations.
+
 ## Status today (18th April 2019)
-The reference implementation in python seems to clculate the exacte same values for the gradient as a corresponding model in Keras.
+The reference implementation in python seems to calculate the exact same values for the gradient as a corresponding model in Keras.
 

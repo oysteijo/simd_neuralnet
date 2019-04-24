@@ -223,16 +223,6 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename )
         free(array[i]);
 }
 
-/* FIXME: These will go to activation.c */
-void sigmoid_diff( unsigned int n, const float *act, float *v )
-{
-    for( unsigned int i=0; i < n; i++ )
-        v[i] *= act[i]*(1.0f-act[i]);
-}
-
-/* FIXME: Silence these "unused" warnings */
-void linear_diff( unsigned int n, const float *act, float *v) { }
-
 void neuralnet_set_loss ( neuralnet_t *nn, const char *loss_name )
 {
     nn->loss = get_loss_func( loss_name );
@@ -244,7 +234,7 @@ void neuralnet_set_loss ( neuralnet_t *nn, const char *loss_name )
     /* FIXME */
     for ( int i = 0; i < nn->n_layers; i++ ){
         layer_t *layer_ptr = nn->layer + i;
-        layer_ptr->activation_derivative = sigmoid_diff;
+        layer_ptr->activation_derivative = get_activation_derivative( layer_ptr->activation_func );
         printf("%s\n", get_activation_name( layer_ptr->activation_func ));
     }    
 
@@ -252,7 +242,7 @@ void neuralnet_set_loss ( neuralnet_t *nn, const char *loss_name )
     if( nn->loss == get_loss_func( "crossentropy" ) ){
         if( nn->layer[nn->n_layers-1].activation_func == get_activation_func( "sigmoid" ) ||
           nn->layer[nn->n_layers-1].activation_func == get_activation_func( "softmax" ) )
-            nn->layer[nn->n_layers-1].activation_derivative = linear_diff;
+            nn->layer[nn->n_layers-1].activation_derivative = NULL;  /* HUGE FIXME */
         else
             printf("Warning: Using 'crossentropy' loss function when output activation is neither 'sigmoid' nor 'softmax'.\n");
     }
