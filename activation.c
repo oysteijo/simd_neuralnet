@@ -163,7 +163,7 @@ static void exponential( unsigned int n, float *ar )
 static void softplus( unsigned int n, float *ar )
 {
 	for( unsigned int i = 0; i < n; i++ )
-		ar[i] = logf( expf(ar[i] + 1.0f) ) ;
+		ar[i] = logf( expf(ar[i]) + 1.0f ) ;
 }
 
 static void softsign( unsigned int n, float *ar )
@@ -185,8 +185,8 @@ static void hard_sigmoid( unsigned int n, float *ar )
 static void softplus_derivative    ( unsigned int n, const float *activation, float *ar )
 {
     for( unsigned int i=0; i < n; i++ ){
-        float x =  expf( activation[i] - 1.0f );
-        ar[i] *= x / (1.0f + x );
+        float x =  expf( activation[i] );
+        ar[i] *= (x - 1.0f) / x; 
     }
 }
 

@@ -1,4 +1,5 @@
 #include "neuralnet.h"
+#include "activation.h"
 #include "c_npy.h"
 #include "simd.h"
 
@@ -35,6 +36,8 @@ int main( int argc, char *argv[] )
         return -2;
     }
 
+    nn->layer[nn->n_layers-1].activation_func = get_activation_func("softplus");
+
     cmatrix_t *cm = c_npy_matrix_read_file( "random_input.npy");
     if(!cm)
         return -3;
@@ -54,6 +57,7 @@ int main( int argc, char *argv[] )
     memset( grad, 0, grad_size * sizeof(float));
     float target[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
     neuralnet_set_loss( nn, "mean_squared_error" );
+//    neuralnet_set_loss( nn, "crossentropy" );
     neuralnet_backpropagation( nn, (float*) cm->data, target, grad );
 #endif
 //    neuralnet_save( nn, "new_net.npz");
