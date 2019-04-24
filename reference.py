@@ -3,12 +3,14 @@ from recordclass import recordclass
 
 Layer = recordclass("Layer", ["weight", "bias", "activation_func"])
 sigmoid = lambda x: 1.0 / (np.exp( -x ) + 1.0)
+softmax = lambda x: np.exp(x) / np.exp(x).sum()
 
 class NeuralNet(object):
     def __init__(self, sizes):
         self.n_layers = len(sizes) - 1
         self.layers = [Layer(np.random.randn( inp, out ).astype(np.float32), np.zeros( out, dtype=np.float32 ), sigmoid )
                 for inp, out in zip(sizes[:-1], sizes[1:])]
+        self.layers[-1].activation_func = softmax
 
     def feedforward(self, x):
         for layer in self.layers:
@@ -27,12 +29,13 @@ class NeuralNet(object):
 
         # Backward pass
         assert self.layers[-1].weight.shape == grad_w[-1].shape
-        grad_b[-1] = 2.0 * ( x-y ) / self.layers[-1].weight.shape[1] # derivative of *mean* square error.
+        #grad_b[-1] = 2.0 * ( x-y ) / self.layers[-1].weight.shape[1] # derivative of *mean* square error.
+        grad_b[-1] = ( x-y )
 
         for l in range(1, len(self.layers)+1):            
             if l > 1:
                 grad_b[-l] = np.dot(self.layers[-l+1].weight, grad_b[-l+1])
-            grad_b[-l] *= activations[-l]*(1.0-activations[-l])  # FIXME: This is depending on the activation_func
+                grad_b[-l] *= activations[-l]*(1.0-activations[-l])  # FIXME: This is depending on the activation_func
             
             grad_w[-l] = np.outer(activations[-l-1],grad_b[-l])
             assert self.layers[-l].weight.shape == grad_w[-l].shape
@@ -57,7 +60,8 @@ if __name__ == '__main__':
     np.save("random_input.npy", inp)
     print(nn.feedforward(inp))
 
-    train_sample = np.array([0.5]*sizes[-1], dtype=np.float32)
+    #train_sample = np.array([0.5]*sizes[-1], dtype=np.float32)
+    train_sample = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
 
     grads = []
     for grad_w, grad_b in nn.backpropagation( inp, train_sample ):

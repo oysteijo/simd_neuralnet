@@ -135,8 +135,8 @@ static void print_vector( int n, const float *v )
 }
 static void print_matrix( int m, int n, const float *v )
 {
-    float *ptr = v;
-    printf("[");
+    const float *ptr = v;
+    printf("[\n");
     for ( int i = 0; i < m; i++ ){
         printf(" ");
         print_vector( n, ptr );
@@ -217,12 +217,14 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename )
     array[2*nn->n_layers] = NULL;
     
     int retval = c_npy_matrix_array_write( filename, array );
-    /* FIXME: Check the retval */
+    if( retval != nn->n_layers*2 )
+        printf("Warning: Arrays written: %d  !=  2 x n_layers     (n_layers=%d)\n", retval, nn->n_layers );
 
     for (int i = 0; i < 2*nn->n_layers ; i++ )
         free(array[i]);
 }
 
+/* Do this better! */
 static void do_nothing( unsigned int n, const float *a, float *b)
 {
 } 
@@ -239,14 +241,14 @@ void neuralnet_set_loss ( neuralnet_t *nn, const char *loss_name )
     for ( int i = 0; i < nn->n_layers; i++ ){
         layer_t *layer_ptr = nn->layer + i;
         layer_ptr->activation_derivative = get_activation_derivative( layer_ptr->activation_func );
-        printf("%s\n", get_activation_name( layer_ptr->activation_func ));
     }    
 
     /* Then some cleanup */
     if( nn->loss == get_loss_func( "crossentropy" ) ){
         if( nn->layer[nn->n_layers-1].activation_func == get_activation_func( "sigmoid" ) ||
-          nn->layer[nn->n_layers-1].activation_func == get_activation_func( "softmax" ) )
-            nn->layer[nn->n_layers-1].activation_derivative = do_nothing;  /* HUGE FIXME */
+          nn->layer[nn->n_layers-1].activation_func == get_activation_func( "softmax" ) ){
+            nn->layer[nn->n_layers-1].activation_derivative = do_nothing;
+        } 
         else
             printf("Warning: Using 'crossentropy' loss function when output activation is neither 'sigmoid' nor 'softmax'.\n");
     }

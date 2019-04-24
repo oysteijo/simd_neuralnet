@@ -43,11 +43,11 @@ const char * get_loss_name( loss_func ptr ){
 
 /* 
    Note to developers who want to implement their own loss function:
-   There is no automatic (symbolic) derivation of a comutation graph.
+   There is no automatic (symbolic) derivation of a computation graph.
    The functions defined in this code is therefore the derivative
    w.r.t the output. However there are some logic in neuralnet_set_loss
    that modifies the activation output for matching output activations.
-   The functions can therefor look a bit strange in some cases.
+   The functions can therefore look a bit strange in some cases.
 
    If you don't understand the concept of "matching", I really recommend
    you to do the derivation by hand on paper.
@@ -75,5 +75,5 @@ static void mean_absolute_percentage_error(const unsigned int n, const float *y_
 static void crossentropy(const unsigned int n, const float *y_pred, const float *y_real, float *loss )
 {
     for( unsigned int i = 0; i < n; i++ )
-        loss[i] = (y_pred[i] >= y_real[i]);
+        loss[i] = (y_pred[i] - y_real[i]);
 }

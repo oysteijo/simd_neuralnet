@@ -142,10 +142,17 @@ static void sigmoid( unsigned int n, float *ar )
 		ar[i] = 1.0f / (1.0f + expf(-ar[i]));
 }
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 static void linear( unsigned int n, float *ar )
 {
     /* Do nothing */
 }
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 static void tanh_act( unsigned int n, float *ar )
 {
@@ -211,18 +218,27 @@ static void exponential_derivative ( unsigned int n, const float *activation, fl
         ar[i] *= activation[i];
 }
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 static void linear_derivative      ( unsigned int n, const float *activation, float *ar )
 {
     /* This function is intentionally empty. */
 }
+
+static void softmax_derivative     ( unsigned int n, const float *activation, float *ar )
+{
+    /* This function is intentionally empty. */
+}
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+
 static void relu_derivative        ( unsigned int n, const float *activation, float *ar )
 {
     for( unsigned int i=0; i < n; i++ )
         ar[i] *= activation[i] <= 0.0f ? 0.0f : 1.0f ;
-}
-static void softmax_derivative     ( unsigned int n, const float *activation, float *ar )
-{
-    /* This function is intentionally empty. */
 }
 
 static void sigmoid_derivative     ( unsigned int n, const float *activation, float *ar )
