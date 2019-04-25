@@ -244,14 +244,19 @@ void neuralnet_set_loss ( neuralnet_t *nn, const char *loss_name )
     }    
 
     /* Then some cleanup */
-    if( nn->loss == get_loss_func( "crossentropy" ) ){
-        if( nn->layer[nn->n_layers-1].activation_func == get_activation_func( "sigmoid" ) ||
-          nn->layer[nn->n_layers-1].activation_func == get_activation_func( "softmax" ) ){
+    if( nn->loss == get_loss_func( "binary_crossentropy" ) )
+        if( nn->layer[nn->n_layers-1].activation_func == get_activation_func( "sigmoid" )){ 
             nn->layer[nn->n_layers-1].activation_derivative = do_nothing;
-        } 
-        else
-            printf("Warning: Using 'crossentropy' loss function when output activation is neither 'sigmoid' nor 'softmax'.\n");
-    }
+        } else {
+            printf("Warning: Using 'binary_crossentropy' loss function when output activation is not 'sigmoid'.\n");
+        }
+
+    if( nn->loss == get_loss_func( "categorical_crossentropy" ) )
+        if( nn->layer[nn->n_layers-1].activation_func == get_activation_func( "softmax" )){
+            nn->layer[nn->n_layers-1].activation_derivative = do_nothing;
+        } else {
+            printf("Warning: Using 'categorical_crossentropy' loss function when output activation is not 'softmax'.\n");
+        }
 }
 
 void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const float *target, float *grad )

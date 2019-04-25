@@ -56,7 +56,7 @@ int main( int argc, char *argv[] )
     float SIMD_ALIGN(grad[grad_size]);
     memset( grad, 0, grad_size * sizeof(float));
     float target[4] = { 1.0f, 1.0f, 0.0f, 0.0f };
-    neuralnet_set_loss( nn, "crossentropy" );
+    neuralnet_set_loss( nn, "binary_crossentropy" );
 //    neuralnet_set_loss( nn, "crossentropy" );
     neuralnet_backpropagation( nn, (float*) cm->data, target, grad );
 #endif

@@ -10,7 +10,8 @@ typedef void (*loss_func)(const unsigned int n, const float *y_pred, const float
 static void mean_squared_error            (const unsigned int n, const float *y_pred, const float *y_real, float *loss );
 static void mean_absolute_error           (const unsigned int n, const float *y_pred, const float *y_real, float *loss );
 static void mean_absolute_percentage_error(const unsigned int n, const float *y_pred, const float *y_real, float *loss );
-static void crossentropy                  (const unsigned int n, const float *y_pred, const float *y_real, float *loss );
+static void binary_crossentropy           (const unsigned int n, const float *y_pred, const float *y_real, float *loss );
+static void categorical_crossentropy      (const unsigned int n, const float *y_pred, const float *y_real, float *loss );
 
 loss_func get_loss_func( const char * name ){
 	return
@@ -25,9 +26,8 @@ loss_func get_loss_func( const char * name ){
 		!strcmp( name, "mape")                           ? mean_absolute_percentage_error :
 
 
-		!strcmp( name, "categorical_crossentropy")       ? crossentropy :
-		!strcmp( name, "binary_crossentropy")            ? crossentropy :
-		!strcmp( name, "crossentropy")                   ? crossentropy :
+		!strcmp( name, "categorical_crossentropy")       ? categorical_crossentropy :
+		!strcmp( name, "binary_crossentropy")            ? binary_crossentropy :
 
 		NULL;
 }
@@ -37,7 +37,8 @@ const char * get_loss_name( loss_func ptr ){
 		ptr == mean_squared_error             ? "mean_squared_error" :
 		ptr == mean_absolute_error            ? "mean_absolute_error" :
 		ptr == mean_absolute_percentage_error ? "mean_absolute_percentage_error" :
-		ptr == crossentropy                   ? "crossentropy" :
+		ptr == binary_crossentropy            ? "binary_crossentropy" :
+		ptr == categorical_crossentropy       ? "categorical_crossentropy" :
 		"(unknown)";
 }
 
@@ -51,6 +52,11 @@ const char * get_loss_name( loss_func ptr ){
 
    If you don't understand the concept of "matching", I really recommend
    you to do the derivation by hand on paper.
+
+   Also note that these functions does not calculate the scalar loss. These
+   functions return "void" instead of float. If you really need the scalar
+   loss value, you have to code it your self in a separate function. These
+   functions are ment for internal usage in the backpropagation.
 */
 
 /* FIXME: These are now really plain and no SIMD yet. */
@@ -72,8 +78,15 @@ static void mean_absolute_percentage_error(const unsigned int n, const float *y_
         loss[i] = y_pred[i] >= y_real[i] ? 1.0f / (float) n : -1.0f / (float) n;
 }
 
-static void crossentropy(const unsigned int n, const float *y_pred, const float *y_real, float *loss )
+static void categorical_crossentropy(const unsigned int n, const float *y_pred, const float *y_real, float *loss )
 {
     for( unsigned int i = 0; i < n; i++ )
         loss[i] = (y_pred[i] - y_real[i]);
 }
+
+static void binary_crossentropy(const unsigned int n, const float *y_pred, const float *y_real, float *loss )
+{
+    for( unsigned int i = 0; i < n; i++ )
+        loss[i] = (y_pred[i] - y_real[i]) / (float) n;
+}
+
