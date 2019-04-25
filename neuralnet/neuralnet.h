@@ -25,14 +25,22 @@ struct _neuralnet_t
 #endif
 };
 
-neuralnet_t * neuralnet_new              ( const char *filename);
-void          neuralnet_free             (       neuralnet_t *nn); 
-void          neuralnet_predict          ( const neuralnet_t *nn, const float *input, float *output);
+neuralnet_t * neuralnet_new               ( const char *filename);
+void          neuralnet_free              (       neuralnet_t *nn); 
+void          neuralnet_predict           ( const neuralnet_t *nn, const float *input, float *output);
 #if defined(TRAINING_FEATURES)
-void          neuralnet_set_loss         (       neuralnet_t *nn, const char *loss_name );
-void          neuralnet_backpropagation  ( const neuralnet_t *nn, const float *input, const float *desired, float *gradient);
-void          neuralnet_save             ( const neuralnet_t *nn, const char *filename);
+void          neuralnet_set_loss          (       neuralnet_t *nn, const char *loss_name );
+void          neuralnet_backpropagation   ( const neuralnet_t *nn, const float *input, const float *desired, float *gradient);
+void          neuralnet_save              ( const neuralnet_t *nn, const char *filename);
 #endif
 
-static inline int neuralnet_get_n_layers ( const neuralnet_t *nn ) { return nn->n_layers; }
+static inline int neuralnet_get_n_layers  ( const neuralnet_t *nn ) { return nn->n_layers; }
+
+static inline
+unsigned int  neuralnet_total_n_parameters( const neuralnet_t *nn ) {
+    unsigned int count = 0;
+    for ( int i = 0; i < nn->n_layers; i++ )
+        count += (nn->layer[i].n_input + 1) * nn->layer[i].n_output;
+    return count;
+}
 #endif /* __NN_NEURALNET_H__ */

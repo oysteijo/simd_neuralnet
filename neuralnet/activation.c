@@ -15,10 +15,10 @@ softmax
 elu      (Uses a parameter)
 selu     (Uses a parameter or two?)
 softplus
-softsign (What is the derivative?)
+softsign
 relu
 tanh
-hard_sigmoid (What is the derivative?)
+hard_sigmoid
 exponential
 linear
 
