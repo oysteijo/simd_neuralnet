@@ -1,0 +1,50 @@
+
+CC     = gcc
+CFLAGS = -std=c99 -Wall -Wextra -O3 -mavx2 -mfma $(dbg) $(profile)
+LDFLAGS = $(profile) 
+
+src = $(wildcard *.c)
+obj = $(src:.c=.o)
+dep = $(obj:.o=.d)  # one dependency file for each source
+
+# dependency library
+C_NPY_LIBPATH = ../c_npy
+CFLAGS += -I$(C_NPY_LIBPATH)
+LDFLAGS += -L$(C_NPY_LIBPATH) -lc_npy
+
+# This should obly be turned off when you do not need any training.
+DEFINES = -DTRAINING_FEATURES
+CFLAGS += $(DEFINES)
+
+alib = libneuralnet.a
+
+$(alib): $(obj)
+	$(AR) rcs $@ $^
+
+-include $(dep)   # include all dep files in the makefile
+
+# rule to generate a dep file by using the C preprocessor
+# (see man cpp for details on the -MM and -MT options)
+%.d: %.c
+	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
+
+.PHONY: clean
+clean:
+	$(RM) $(obj) $(alib)
+
+.PHONY: cleandep
+cleandep:
+	$(RM) $(dep)
+
+.PHONY: install
+install: $(alib)
+	mkdir -p $(DESTDIR)$(PREFIX)/lib
+	mkdir -p $(DESTDIR)$(PREFIX)/include
+	cp $(alib) $(DESTDIR)$(PREFIX)/lib/$(alib)
+	cp c_npy.h $(DESTDIR)$(PREFIX)/include/
+
+.PHONY: uninstall
+uninstall:
+	$(RM) $(DESTDIR)$(PREFIX)/lib/$(alib)
+	$(RM) $(DESTDIR)$(PREFIX)/include/c_npy.h
+

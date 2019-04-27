@@ -1,9 +1,0 @@
-AC_INIT([neuralnet], [0.1], [oysteijo@gmail.com])
-AM_INIT_AUTOMAKE
-AC_PROG_CC_C99
-AC_SUBST([INCLUDE_PATH], ["-I../c_npy"])
-AC_SUBST([DEFINES], ["-DTRAINING_FEATURES"])
-AC_SUBST([AVX2_FLAGS], ["-mavx2 -mfma"])
-AC_PROG_RANLIB
-AC_CONFIG_FILES([Makefile])
-AC_OUTPUT
