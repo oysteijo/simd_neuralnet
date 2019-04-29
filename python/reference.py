@@ -1,9 +1,43 @@
+import sys
 import numpy as np
 from recordclass import recordclass
 
-Layer = recordclass("Layer", ["weight", "bias", "activation_func"])
+Layer = recordclass("Layer", ["weight", "bias", "activation_func", "activation_derivative"])
+
+# This corresponds to activation.c in the C implementation
+def get_activation_func(str):
+    return getattr(sys.modules[__name__], str)
+
 sigmoid = lambda x: 1.0 / (np.exp( -x ) + 1.0)
 softmax = lambda x: np.exp(x) / np.exp(x).sum()
+relu = lambda x: np.maximum( x, 0, x)
+linear = lambda x: x
+tanh = np.tanh
+exponential = np.exp
+softplus = lambda x: np.log1p( np.exp(x) ) 
+softsign = lambda x: x / (np.absolute(x) + 1.0 )
+hard_sigmoid = lambda x: np.clip((0.2 * x) + 0.5, 0, 1, out=x) # Check this!
+
+
+sigmoid_derivative = lambda x:  x * (1 - x )
+softmax_derivative = lambda x: x 
+relu_derivative = lambda x: something where  np.maximum( x, 0, x)
+linear_derivative = lambda x: x
+tanh_derivative = lambda x: 1.0 - x*x
+exponential_derivative = np.exp
+softplus_derivative = lambda x: (np.exp(x) - 1) / np.exp(x)
+def softsign_derivative(x):
+    y = x / (1-x)
+    return 1.0 / ((1+np.absolute(y)) * (1+np.absolute(y)))
+
+hard_sigmoid_derivative = lambda x: np.clip((0.2 * x) + 0.5, 0, 1, out=x) # Check this!
+
+
+
+def binary_crossentropy(x):
+    pass
+def categorical_crossentropy(x):
+    pass
 
 
 
@@ -14,7 +48,7 @@ class NeuralNet(object):
                 for inp, out in zip(sizes[:-1], sizes[1:])]
 #        self.layers[-1].activation_func = softmax
 
-    def feedforward(self, x):
+    def predict(self, x):
         for layer in self.layers:
             x = layer.activation_func( np.dot( x ,layer.weight) + layer.bias )
         return x
