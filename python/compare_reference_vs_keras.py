@@ -6,11 +6,21 @@ import itertools
 with open("config.txt") as f:
     config = {k.strip(): v.strip() for k,v in [x.split("=") for x in f.readlines()]}
 
-#for l,a in itertools.product(["mean_squared_error", "mean_absolute_error", "mean_absolute_percentage_error","binary_crossentropy", "categorical_crossentropy"], ["sigmoid", "softplus", "softsign", "hard_sigmoid"]):
-for l,a in itertools.product(["mean_absolute_error"], ["sigmoid"]):
+activations = ["sigmoid", "relu", "linear", "tanh", "softplus", "softsign", "hard_sigmoid", "softmax"]
+losses = ["mean_squared_error", "mean_absolute_error", "mean_absolute_percentage_error","binary_crossentropy", "categorical_crossentropy"]
+
+for l,a in itertools.product(losses, activations ):
+    if l == "binary_crossentropy" and a != "sigmoid":
+        continue
+    # When it comes to softmax and categorical_crossentropy, you cannot have the one without the other.
+    if l == "categorical_crossentropy" and a != "softmax":
+        continue
+    if a == "softmax" and l != "categorical_crossentropy":
+        continue
+    
     config["loss"] = l
     config["activations"] = "sigmoid, sigmoid, %s" % a
-    print("Loss sunction: ", l)
+    print("Loss function: ", l)
     print("Output activation: ", a)
 
     # Create two networks
@@ -36,7 +46,7 @@ for l,a in itertools.product(["mean_absolute_error"], ["sigmoid"]):
     
     for refg,krsg in zip(r_grads, keras_grad):
         print("Mean Absolute Error of gradient: ", np.mean( np.absolute(refg - krsg)))
+#    np.set_printoptions( precision=4, linewidth= 240)
 #    print("\n".join(map(str, r_grads)))
 #    print("\n".join(map(str, keras_grad)))
 
-    
