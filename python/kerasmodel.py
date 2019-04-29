@@ -17,24 +17,12 @@ def create_keras_model( weights, activations, loss, **kwargs ):
 
     model = Sequential()
     model.add( Dense( weights[0].shape[1], activation=activations[0], input_dim=weights[0].shape[0] ) )
-    for w, act in zip( weights[2::2], activations[2::2] ):
+    for w, act in zip( weights[2::2], activations[1:] ):
         model.add( Dense( w.shape[1], activation=act) )
     model.compile( optimizer=SGD(lr=0.01), loss=loss)
     model.set_weights(list(weights))
     return model
 
-    
-        
-    
-    
-    print(model.predict(inp))
-    
-    train_sample = np.array([1.0,1.0,0.0,0.0], dtype=np.float32)
-    train_sample = train_sample.reshape(1,4)
-    #model.train_on_batch(inp, train_sample )
-    
-    print(model.predict(inp))
-    
 # This function is taken from a Stack Overflow posting.
 # https://stackoverflow.com/questions/51140950/how-to-obtain-the-gradients-in-keras
 def get_weight_grad(model, inputs, outputs):
