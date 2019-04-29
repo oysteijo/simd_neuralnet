@@ -29,7 +29,7 @@ tanh_derivative        = lambda x: 1.0 - x*x
 exponential_derivative = lambda x: x
 softplus_derivative    = lambda x: (np.exp(x) - 1) / np.exp(x)
 def softsign_derivative(x):
-    y = x / (1-x)
+    y = x / (1-np.absolute(x))
     return 1.0 / ((1+np.absolute(y)) * (1+np.absolute(y)))
 
 hard_sigmoid_derivative = lambda x: np.where( np.logical_and( x <= 1.0 , x >= 0.0 ), 0.2, 0 )
@@ -39,7 +39,7 @@ def get_loss_func(str):
     return getattr(sys.modules[__name__], str)
 
 mean_squared_error             = lambda y_pred, y_real: 2.0 * ( y_pred-y_real ) / y_pred.shape[0]
-mean_absolute_error            = lambda y_pred, y_real: np.where( y_pred >= y_real, 1.0, -1.0 )
+mean_absolute_error            = lambda y_pred, y_real: np.where( y_pred >= y_real, 1.0, -1.0 ) / y_pred.shape[0]
 mean_absolute_percentage_error = lambda y_pred, y_real: np.where( y_pred >= y_real, 1.0, -1.0 ) / y_pred.shape[0]
 categorical_crossentropy       = lambda y_pred, y_real: y_pred - y_real 
 binary_crossentropy            = lambda y_pred, y_real: (y_pred - y_real) / y_pred.shape[0]
@@ -56,7 +56,19 @@ class NeuralNet(object):
         self.layers = [Layer(w,b,get_activation_func(act), get_activation_func( act + "_derivative"))
               for w,b,act in zip( weights[::2], weights[1::2], activations )]
         self.loss = get_loss_func(loss)
-        # Here you need the "matching" logic
+        # Here comes the "matching" logic
+        do_nothing = linear_derivative
+        if self.loss == binary_crossentropy:
+            if self.layers[-1].activation_func == sigmoid:  
+                self.layers[-1].activation_derivative = do_nothing
+            else:
+                print("Warning: Using 'binary_crossentropy' loss function when output activation is not 'sigmoid'.\n")
+
+        if self.loss == categorical_crossentropy:
+            if self.layers[-1].activation_func == softmax:
+                self.layers[-1].activation_derivative = do_nothing
+            else:
+                print("Warning: Using 'categorical_crossentropy' loss function when output activation is not 'softmax'.\n")
 
     def predict(self, x):
         for layer in self.layers:
