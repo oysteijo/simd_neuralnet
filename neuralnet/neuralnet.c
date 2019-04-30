@@ -77,7 +77,7 @@ weight_alloc_error:
   @param filename Filename to neural network file.
   @return Pointer to newly created neural network. Returns NULL on failure. Use neuralnet_free() to free resources.
 */
-neuralnet_t *neuralnet_new( const char *filename )
+neuralnet_t *neuralnet_new( const char *filename, char *activation_funcs[] )
 {
     neuralnet_t *nn;
 
@@ -86,7 +86,7 @@ neuralnet_t *neuralnet_new( const char *filename )
         return NULL;
     }
 
-    /* FIXME: This code is not production quality. */
+    /* FIXME: This code is still not production quality. */
     cmatrix_t **array;
     if( NULL != (array = c_npy_matrix_array_read( filename ))) {
         size_t len = c_npy_matrix_array_length( array );
@@ -94,7 +94,6 @@ neuralnet_t *neuralnet_new( const char *filename )
         for( int i = 0; i < nn->n_layers; i++ ){
             nn->layer[i].n_input = array[i*2]->shape[0];
             nn->layer[i].n_output = array[i*2]->shape[1];
-            nn->layer[i].activation_func = get_activation_func( "sigmoid" );
         }
         if( !_weights_memory_allocate( nn )){
             fprintf(stderr, "Cannot allocate memory for neural net weights.\n");
@@ -107,9 +106,24 @@ neuralnet_t *neuralnet_new( const char *filename )
             memcpy( nn->layer[i].weight, weights->data, weights->shape[0] * weights->shape[1] * sizeof(float));
             memcpy( nn->layer[i].bias, bias->data, bias->shape[0] * sizeof(float));
         }
+        
+        /* Oh! What a memory leak!? */
+        c_npy_matrix_array_free( array ); 
+
+        /* Set the activation functions */
+        if ( activation_funcs == NULL ) /* NULL passed into function */
+            for( int i = 0; i < nn->n_layers; i++ )
+                nn->layer[i].activation_func = get_activation_func("linear");
+
+        for( int i = 0; i < nn->n_layers; i++ ){
+            const char *func_name = activation_funcs[i];
+            nn->layer[i].activation_func = get_activation_func( func_name ? func_name : "linear" );
+        }
+
         return nn;
     }
 
+    fprintf(stderr, "Neural network created, but no sizes nor activation functions were set.");
     return nn;
 }
 
