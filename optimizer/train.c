@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <time.h>
 #include <assert.h>
 
 /* This is used for debug */
@@ -111,14 +112,16 @@ int main( int argc, char *argv[] )
     cmatrix_t *test_X = train_test[2];
     cmatrix_t *test_Y = train_test[3];
 
-    float learning_rate = 0.002;
+    float learning_rate = 0.00001;
 
 
     /* It does not handle any whitespace in front of (or trailing) */
     char **split = strsplit( argv[2], ',' );
+#if 0
     for ( int i = 0; i < 3; i++ ){
         printf("%d:%s\n", i, split[i] );
     }
+#endif
 
     neuralnet_t *nn = neuralnet_new( argv[1], split );
     assert( nn );
@@ -196,7 +199,11 @@ int main( int argc, char *argv[] )
             total_error += metric( n_output, y_pred, test_Y_ptr + (i*n_output));
         }
         total_error /= n_test_samples;
-        printf("Epoch: %d  Metric: % .7e\n", epoch, total_error );
+        time_t now = time(NULL);
+        struct tm *ltime = localtime( &now );
+        char outstr[200];
+        strftime( outstr, sizeof(outstr), "%H:%M:%S", ltime );
+        printf("%s Epoch: %d  Metric: % .7e\n", outstr, epoch, total_error );
     }
     free( pivot );
 
