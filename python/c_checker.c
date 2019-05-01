@@ -12,6 +12,9 @@
 #include <string.h>
 #include <time.h>
 #include <assert.h>
+#include <immintrin.h>
+
+#include "../neuralnet/simd.h"
 
 /* This is used for debug */
 static void print_vector( int n, const float *v )
@@ -161,7 +164,7 @@ int main( int argc, char *argv[] )
     c_npy_matrix_write_file( "c_prediction.npy", &save );
 
     /* Backprop */
-    float grad[n_parameters];
+    float SIMD_ALIGN(grad[n_parameters]);
     neuralnet_backpropagation( nn, (float*) inp->data, (float*) target->data, grad );
 
     float *ptr = grad;
