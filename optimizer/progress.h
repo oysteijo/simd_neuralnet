@@ -54,7 +54,7 @@ static inline void progress_bar( const char *label, int x, int n )
 {
 	if ( (x != n) && (x % (n/100 + 1) != 0) ) return;
 
-	int w = getcols( fileno(stdout) ) - EXTRA_WIDTH - strlen( label );
+	int w = getcols( STDOUT_FILENO ) - EXTRA_WIDTH - strlen( label );
 	if( w < 1 ) return;
 
 	// Calculuate the ratio of complete-to-incomplete.

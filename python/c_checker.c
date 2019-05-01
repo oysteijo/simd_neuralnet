@@ -5,7 +5,6 @@
 #include "metrics.h"
 
 #include "strtools.h"
-#include "progress.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -102,11 +101,12 @@ STRSPLIT_FREE_INIT
 
 int main( int argc, char *argv[] )
 {
-    if (argc != 4 ){
+    if (argc != 6 ){
         fprintf( stderr, "Usage: %s <weightsfile.npz> <quoted list of activations> <trainsamples.npz>\n", argv[0] );
         return 0;
     }
 
+    /*
     cmatrix_t **train_test = c_npy_matrix_array_read( argv[3]);
     if( !train_test ) return -1;
 
@@ -116,6 +116,7 @@ int main( int argc, char *argv[] )
     cmatrix_t *test_Y = train_test[3];
 
     float learning_rate = 0.01;
+    */
 
 
     /* It does not handle any whitespace in front of (or trailing) */
@@ -135,89 +136,65 @@ int main( int argc, char *argv[] )
         nn->layer[i].activation_func = get_activation_func( "relu" );
     nn->layer[nn->n_layers-1].activation_func = get_activation_func( "sigmoid" );
 #endif
-    neuralnet_set_loss( nn, "mean_squared_error" );
+    neuralnet_set_loss( nn, argv[3] );
 
-    metric_func metric = backgammon_equity_absolute_error;
-    // metric_func metric = get_metric_func( get_loss_name( nn->loss ));
+    // metric_func metric = backgammon_equity_absolute_error;
+    metric_func metric = get_metric_func( get_loss_name( nn->loss ));
 
     const unsigned int n_parameters = neuralnet_total_n_parameters( nn );
 
-    /* One epoch */
-    assert( train_X->shape[0] == train_Y->shape[0] );
-    const size_t n_samples = train_X->shape[0];
-    
-    if( n_samples > RAND_MAX )
-        printf("Oh! RAND_MAX is less than the number of samples! Does shuffle work?");
+    cmatrix_t *inp    = c_npy_matrix_read_file( argv[ 4 ] );
+    cmatrix_t *target = c_npy_matrix_read_file( argv[ 5 ] );
 
-    const int n_input  = train_X->shape[1];
-    const int n_output = train_Y->shape[1];
+    float prediction[target->shape[0]];
+    cmatrix_t save = {
+        .data  = (char *) prediction,
+        .shape = { 1, target->shape[0], 0 },
+        .ndim  = 2,
+        .endianness = target->endianness,
+        .typechar = target->typechar,
+        .elem_size = target->elem_size,
+        .fortran_order = target->fortran_order
+    };
 
-    assert( n_input == nn->layer[0].n_input );
-    assert( n_output == nn->layer[nn->n_layers-1].n_output );
+    neuralnet_predict( nn, (float *) inp->data, prediction );
+    c_npy_matrix_write_file( "c_prediction.npy", &save );
 
-    unsigned int *pivot = malloc( n_samples * sizeof(unsigned int) );
-    if ( !pivot ){
-        fprintf( stderr, "Cannot allocate pivot array.\n");
-        return 0;
+    /* Backprop */
+    float grad[n_parameters];
+    neuralnet_backpropagation( nn, (float*) inp->data, (float*) target->data, grad );
+
+    float *ptr = grad;
+    for ( int i = 0 ; i < n_parameters; i++ )
+        if ( isnan( *ptr++ ))
+            printf("NaN found!\n");
+
+    ptr = grad;
+    for ( int l = 0; l < nn->n_layers; l++ ){
+        const int n_inp = nn->layer[l].n_input;
+        const int n_out = nn->layer[l].n_output;
+        save.data = (char*) ptr;
+        save.shape[0] = n_out;
+        save.ndim = 1;
+        char filename[32];
+        sprintf(filename, "bias_grad_%d.npy", l );
+        c_npy_matrix_write_file( filename, &save );
+        ptr += n_out;
+
+        save.data = (char*) ptr;
+        save.shape[0] = n_inp;
+        save.shape[1] = n_out;
+        save.ndim = 2;
+        sprintf(filename, "weight_grad_%d.npy", l );
+        c_npy_matrix_write_file( filename, &save );
+        ptr += n_inp * n_out;
     }
-    for ( unsigned int i = 0; i < n_samples; i++ )
-        pivot[i] = i;
 
-    int n_epochs = 10;
-    srand( 42 );
-    for ( int epoch = 0; epoch < n_epochs; epoch++ ){
 
-        float *train_X_ptr = (float*) train_X->data;
-        float *train_Y_ptr = (float*) train_Y->data;
+    /* Cleanup */
+    c_npy_matrix_free( inp );
+    c_npy_matrix_free( target );
 
-        for ( unsigned int i = 0; i < n_samples; i++ ){
-
-            float grad[n_parameters]; /* simd? */
-            memset( grad, 0, n_parameters * sizeof(float));
-            neuralnet_backpropagation( nn, train_X_ptr + (pivot[i] * n_input), train_Y_ptr + (pivot[i] * n_output), grad );
-
-            /* update */
-            float *ptr = grad;
-            for ( int l = 0; l < nn->n_layers; l++ ){
-                const int n_inp = nn->layer[l].n_input;
-                const int n_out = nn->layer[l].n_output;
-                scale_and_add_vector( n_out, nn->layer[l].bias, -learning_rate, ptr );
-                ptr += n_out;
-                scale_and_add_vector( n_out * n_inp, nn->layer[l].weight, -learning_rate, ptr );
-                ptr += n_inp * n_out;
-            }
-            char label[20];
-            sprintf(label, "Epoch %2d: ", epoch);
-            progress_bar(label, i, n_samples-1 );
-        }
-        fisher_yates_shuffle( pivot, n_samples );
-
-        /* Now test */
-        float *test_X_ptr = (float*) test_X->data;
-        float *test_Y_ptr = (float*) test_Y->data;
-
-        const size_t n_test_samples = test_X->shape[0];
-        /* OpenMP thread */
-        float total_error = 0.0f;
-        for ( unsigned int i = 0; i < n_test_samples; i++ ){
-            float y_pred[n_output];
-            neuralnet_predict( nn, test_X_ptr + (i*n_input), y_pred );
-            total_error += metric( n_output, y_pred, test_Y_ptr + (i*n_output));
-        }
-        total_error /= n_test_samples;
-        time_t now = time(NULL);
-        struct tm *ltime = localtime( &now );
-        char outstr[200];
-        strftime( outstr, sizeof(outstr), "%H:%M:%S", ltime );
-        printf("%s Epoch: %d  %s: % .7e\n", outstr, epoch, get_metric_name( metric ), total_error );
-
-    }
-    free( pivot );
-
-    /* log and report */
-    neuralnet_save( nn, "best.npz" );
     neuralnet_free( nn );
-    c_npy_matrix_array_free( train_test );
     return 0;
-}    
-    
+}
