@@ -299,6 +299,10 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
 
     /* backward */
 
+    /* First we set the grad vector to 0.0. The caller always seems forgets! */
+    unsigned int n_param = neuralnet_total_n_parameters( nn );
+    memset( grad, 0, n_param * sizeof(float));
+
     /* Set up some pointers */
     float *grad_b[nn->n_layers];
     float *grad_w[nn->n_layers];

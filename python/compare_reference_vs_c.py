@@ -53,8 +53,7 @@ for l,a in itertools.product(losses, activations ):
 
     for refg,cg in zip(r_grads, c_grad):
         print("Mean Absolute Error of gradient: ", np.mean( np.absolute(refg - cg)))
-    np.set_printoptions( precision=4, linewidth= 240)
-    print("\n".join(map(str, r_grads)))
-    print("\n".join(map(str, c_grad)))
-    exit()
+#    np.set_printoptions( precision=4, linewidth= 240)
+#    print("\n".join(map(str, r_grads)))
+#    print("\n".join(map(str, c_grad)))
 
