@@ -7,6 +7,8 @@
 #include "strtools.h"
 #include "progress.h"
 
+#include <cblas.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -49,8 +51,9 @@ static void print_gradient( const neuralnet_t *nn, const float *grad )
 }
 
 /** 
- * Implements a <- a + scale * b
+ * Implements a <- a + scale * b   (Which is saxpy, isn't it?)
  * */
+/* Hehe - a call to cblas_saxpy instead of this primitive loop, is actually slower!! */
 void scale_and_add_vector( unsigned int n, float *a, const float scale, const float *b )
 {
     float *a_ptr = a;
@@ -137,8 +140,8 @@ int main( int argc, char *argv[] )
 #endif
     neuralnet_set_loss( nn, "mean_squared_error" );
 
-    metric_func metric = backgammon_equity_absolute_error;
-    // metric_func metric = get_metric_func( get_loss_name( nn->loss ));
+    // metric_func metric = backgammon_equity_absolute_error;
+    metric_func metric = get_metric_func( get_loss_name( nn->loss ));
 
     const unsigned int n_parameters = neuralnet_total_n_parameters( nn );
 
@@ -177,13 +180,15 @@ int main( int argc, char *argv[] )
             neuralnet_backpropagation( nn, train_X_ptr + (pivot[i] * n_input), train_Y_ptr + (pivot[i] * n_output), grad );
 
             /* update */
-            float *ptr = grad;
+            const float *ptr = grad;
             for ( int l = 0; l < nn->n_layers; l++ ){
                 const int n_inp = nn->layer[l].n_input;
                 const int n_out = nn->layer[l].n_output;
-                scale_and_add_vector( n_out, nn->layer[l].bias, -learning_rate, ptr );
+                //scale_and_add_vector( n_out, nn->layer[l].bias, -learning_rate, ptr );
+                cblas_saxpy( n_out, -learning_rate, ptr, 1, nn->layer[l].bias, 1 );
                 ptr += n_out;
-                scale_and_add_vector( n_out * n_inp, nn->layer[l].weight, -learning_rate, ptr );
+                //scale_and_add_vector( n_out * n_inp, nn->layer[l].weight, -learning_rate, ptr );
+                cblas_saxpy( n_out * n_inp, -learning_rate, ptr, 1, nn->layer[l].weight, 1 );
                 ptr += n_inp * n_out;
             }
             char label[20];
