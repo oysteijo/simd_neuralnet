@@ -56,3 +56,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# We use a lot of datafiles in .npy and .npz 
+*.npz
+*.npy
+

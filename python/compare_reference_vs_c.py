@@ -20,6 +20,13 @@ for l,a in itertools.product(losses, activations ):
     
     config["loss"] = l
     config["activations"] = "sigmoid,sigmoid,%s" % a
+
+#   Argh! this is ugly!
+    if l == "mean_absolute_percentage_error":
+        config["test_target"] = "test_target_mape.npy" 
+    else:
+        config["test_target"] = "test_target.npy" 
+
     print("Loss function: ", l)
     print("Output activation: ", a)
 

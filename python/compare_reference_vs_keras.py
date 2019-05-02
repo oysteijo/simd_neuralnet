@@ -10,6 +10,7 @@ activations = ["sigmoid", "relu", "linear", "tanh", "softplus", "softsign", "har
 losses = ["mean_squared_error", "mean_absolute_error", "mean_absolute_percentage_error","binary_crossentropy", "categorical_crossentropy"]
 
 for l,a in itertools.product(losses, activations ):
+#for l,a in itertools.product(["categorical_crossentropy"], ["softmax"] ):
     if l == "binary_crossentropy" and a != "sigmoid":
         continue
     # When it comes to softmax and categorical_crossentropy, you cannot have the one without the other.
@@ -20,6 +21,14 @@ for l,a in itertools.product(losses, activations ):
     
     config["loss"] = l
     config["activations"] = "sigmoid, sigmoid, %s" % a
+
+#   Argh! this is ugly!
+    if l == "mean_absolute_percentage_error":
+        config["test_target"] = "test_target_mape.npy" 
+    else:
+        config["test_target"] = "test_target.npy" 
+
+
     print("Loss function: ", l)
     print("Output activation: ", a)
 

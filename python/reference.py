@@ -40,8 +40,8 @@ def get_loss_func(str):
 
 mean_squared_error             = lambda y_pred, y_real: 2.0 * ( y_pred-y_real ) / y_pred.shape[0]
 mean_absolute_error            = lambda y_pred, y_real: np.where( y_pred >= y_real, 1.0, -1.0 ) / y_pred.shape[0]
-mean_absolute_percentage_error = lambda y_pred, y_real: 100.0 * np.where( y_pred >= y_real, 1.0, -1.0 ) / (np.maximum( y_real, 1e-7, y_real ) * y_real.shape[0] )
-categorical_crossentropy       = lambda y_pred, y_real: y_pred - y_real 
+mean_absolute_percentage_error = lambda y_pred, y_real: np.where( y_pred >= y_real, 100.0, -100.0 ) / (np.maximum( y_real, 1e-7, y_real ) * y_real.shape[0] )
+categorical_crossentropy       = lambda y_pred, y_real: (y_pred - y_real) 
 binary_crossentropy            = lambda y_pred, y_real: (y_pred - y_real) / y_pred.shape[0]
 
 # And this is the neural network itself.

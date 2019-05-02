@@ -69,13 +69,13 @@ static void mean_squared_error( unsigned int n, const float *y_pred, const float
 static void mean_absolute_error( unsigned int n, const float *y_pred, const float *y_real, float *loss )
 {
     for( unsigned int i = 0; i < n; i++ )
-        loss[i] = y_pred[i] >= y_real[i] ? 1.0f : -1.0f;
+        loss[i] = (y_pred[i] >= y_real[i] ? 1.0f : -1.0f) / (float) n;
 }
 
 static void mean_absolute_percentage_error( unsigned int n, const float *y_pred, const float *y_real, float *loss )
 {
     for( unsigned int i = 0; i < n; i++ )
-        loss[i] = y_pred[i] >= y_real[i] ? 1.0f / (float) n : -1.0f / (float) n;
+        loss[i] = (y_pred[i] >= y_real[i] ? 100.0f : -100.0f) / (fmax(y_real[i], 1e-7f) * (float) n);
 }
 
 static void categorical_crossentropy( unsigned int n, const float *y_pred, const float *y_real, float *loss )
