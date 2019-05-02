@@ -23,8 +23,33 @@ To be able to achive the above, we need to set some limitations.
  * **Fully connect feed forward neural networks only!** No support for LSTM, convolutional layers, RNN or whatever.
  * **Limited number of additional features!** No weight initializations methods, etc.
  
+### Loss functions implemented
+The following loss functions are implemented.
+  * mean_squared_error
+  * mean_absolute_error
+  * mean_absolute_percentage_error
+  * binary_crossentropy
+  * categorical_crossentropy
+  
+### Activations functions supported
+The following loss functions are implemented.
+  * sigmoid
+  * tanh
+  * softmax
+  * softsign
+  * softplus
+  * hard_sigmoid
+  * relu
+  * linear
+  * exponential
+  
 An other limitation might be that the number of units in a hidden layer may have to be a multiple of the number of floats
 you can fit in a SIMD register. With SSE this number is 4. With AVX this number is 8. With AVX-512 the number will be 16. There must (of course) be possible to have an abritary number of inputs and outputs. 
+
+## Status today (2nd May 2019)
+Yes! I strongly believe that Keras, the Python reference and my C implementation now get the same gradients.
+I still see that my simple SGD application does not give the error rates I expected, so I will try to compare,
+with Keras and other tools to check if it's something wrong with my code or with my expectations.
 
 ## Status today (24th April 2019)
 The reference implementation in python seems to calculate the exact same values for the gradient as a corresponding model in Keras.
