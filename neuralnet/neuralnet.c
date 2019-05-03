@@ -105,6 +105,10 @@ neuralnet_t *neuralnet_new( const char *filename, char *activation_funcs[] )
             cmatrix_t *bias      = array[i*2+1];
             memcpy( nn->layer[i].weight, weights->data, weights->shape[0] * weights->shape[1] * sizeof(float));
             memcpy( nn->layer[i].bias, bias->data, bias->shape[0] * sizeof(float));
+            /* FIXME in far future: If the matrices are fortran order, reorganize them. Hmmm ... maybe
+             * such feature belong in c_npy? */ 
+            assert( weights->fortran_order == false );
+            assert( bias->fortran_order == false );
         }
         
         /* Oh! What a memory leak!? */

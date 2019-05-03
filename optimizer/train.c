@@ -180,8 +180,14 @@ int main( int argc, char *argv[] )
     cmatrix_t *test_X = train_test[2];
     cmatrix_t *test_Y = train_test[3];
 
-    float learning_rate = 0.01;
+    /* if any of these asserts fails, try to open the weight in python and save with
+     * np.ascontiguousarray( matrix ) */
+    assert( train_X->fortran_order == false );
+    assert( train_Y->fortran_order == false );
+    assert( test_X->fortran_order == false );
+    assert( test_Y->fortran_order == false );
 
+    float learning_rate = 0.01;
 
     /* It does not handle any whitespace in front of (or trailing) */
     char **split = strsplit( argv[2], ',' );

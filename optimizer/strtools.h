@@ -140,7 +140,7 @@ char *strjoinv( const char **strv, char separator )
 /**
   @brief Remove heading and trailing whitespaces if a string.
   @param str The string to strip
-  @return pointer to the srtipped string.
+  @return pointer to the stripped string.
   */
 static inline char *strstrip(char *str)
 {
