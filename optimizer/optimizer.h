@@ -8,11 +8,11 @@
  * This is the typical way of creating an optimizer instance. The code below shows how to instansiate
  * the implementation neuralnet_optimizer_t and composite_optimizer_t.
 
-        optimizer_t *sgd = OPTIMIZER(stochastic_gradient_descent_new( SGD_OPTIMIZER_ARGS("race.weights", "race", "race" )));
+        optimizer_t *sgd = OPTIMIZER(stochastic_gradient_descent_new( SGD_OPTIMIZER_ARGS( .learning_rate = 0.01 )));
 
  * The interface assures the 'run_epoch' method to be implemented, and this method can be called like:
 
-        optimizer_run_epoch( sgd, nn, gnubg, board, values );
+        optimizer_run_epoch( sgd, train_X, train_Y, test_X, test_Y, 1 );
 
  * There is also a free method for all optimizers and a standard for creating.
  * For convienience, there are two macros defined, OPTIMIZER_DECLARE and
@@ -24,29 +24,25 @@
 #ifndef __OPTIMIZER_H__
 #define __OPTIMIZER_H__
 #include "neuralnet.h"
+#include "c_npy.h"
 
 #include <stdlib.h>  /* malloc/free in macros */
 #include <stdio.h>   /* fprintf in macro */
 
 #define OPTIMIZER(v) (optimizer_t*)(v)
 
-enum {
-	OUTPUT_WIN, 
-	OUTPUT_WINGAMMON, 
-	OUTPUT_WINBACKGAMMON, 
-	OUTPUT_LOSEGAMMON, 
-	OUTPUT_LOSEBACKGAMMON, 
-	N_OUTPUT
-};
-
 typedef struct _optimizer_t optimizer_t;
 struct _optimizer_t {
-	void (*run_epoch) (const optimizer_t *self, const board_t *board, float output[ N_OUTPUT ] );
+	void (*run_epoch) (const optimizer_t *self, const cmatrix_t *train_X, const cmatrix_t *train_Y, 
+                                                const cmatrix_t *test_X, const cmatrix_t *test_Y, unsigned int batch_size );
 	void (*free) (optimizer_t *self);
+    neuralnet_t *nn;
 };
 
-static inline void optimizer_evaluate( const optimizer_t *self, const board_t *board, float output[ N_OUTPUT ] ){
-	self->run_epoch( self, board, output );
+static inline void optimizer_run_epoch( const optimizer_t *self, const cmatrix_t *train_X, const cmatrix_t *train_Y, 
+                                                const cmatrix_t *test_X, const cmatrix_t *test_Y, unsigned int batch_size )
+{
+	self->run_epoch( self, train_X, train_Y, test_X, test_t, batch_size );
 }
 
 static inline void optimizer_free( optimizer_t *self){
@@ -66,18 +62,19 @@ static inline void optimizer_free( optimizer_t *self){
 #endif
 
 #define OPTIMIZER_DEFINE(name,...) \
-static void name ## _evaluate( const optimizer_t *eval, const board_t *b, float *output ); \
+static void name ## _run_epoch( const optimizer_t *opt, const cmatrix_t *train_X, const cmatrix_t *train_Y, \
+                      const cmatrix_t *test_X, const cmatrix_t *test_Y, unsigned int batch_size ); \
 DLLEXPORT name ## _t * name ## _new( void * UNUSED(config)) \
 {	\
-	name ## _t *neweval = malloc( sizeof( name ## _t ) ); \
-	if ( !neweval ) {\
+	name ## _t *newopt = malloc( sizeof( name ## _t ) ); \
+	if ( !newopt ) {\
 		fprintf( stderr ,"Can't allocate memory for '" #name "_t' optimizer type.\n"); \
 		return NULL; \
 	} \
-	neweval->eval.run_epoch = name ## _evaluate; \
-	neweval->eval.free = (void(*)(optimizer_t*)) free; \
+	newopt->opt.run_epoch = name ## _run_epoch; \
+	newopt->opt.free = (void(*)(optimizer_t*)) free; \
 	__VA_ARGS__ ; \
-	return neweval; \
+	return newopt; \
 }
 
 #define OPTIMIZER_DECLARE(name) \

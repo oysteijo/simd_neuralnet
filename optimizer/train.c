@@ -16,6 +16,9 @@
 #include <time.h>
 #include <assert.h>
 
+#include <immintrin.h>
+#include "simd.h"
+
 /* This is used for debug */
 static void print_vector( int n, const float *v )
 {
@@ -54,13 +57,51 @@ static void print_gradient( const neuralnet_t *nn, const float *grad )
  * Implements a <- a + scale * b   (Which is saxpy, isn't it?)
  * */
 /* Hehe - a call to cblas_saxpy instead of this primitive loop, is actually slower!! */
-void scale_and_add_vector( unsigned int n, float *a, const float scale, const float *b )
+#if defined(__AVX__)
+void scale_and_add_vector( unsigned int n, float *y, const float scale, const float *b )
 {
-    float *a_ptr = a;
-    const float *b_ptr = b;
-    for ( unsigned int i = 0; i < n; i++ )
-        *a_ptr++ += scale * *b_ptr++;
+	unsigned int count = n >> 3;
+    unsigned int remaining = n & 0x7;
+	const float *b_ptr = b;
+	float *y_ptr = y; 
+
+    /* y is always aligned, that is not a problem. However, b, which comes from the gradient is not aligned
+       when a n_output from a layer is not mod 8. There is of course a possibility to do things sequensial 
+       until we are aligned, and then to vectorized operations, however.... fix this later, it won't gain much. */
+    if ( simd_aligned( y ) && simd_aligned( b ) ){
+        __m256 scalevec = _mm256_set1_ps(scale);
+        for (int j = count; j; j--, y_ptr += 8, b_ptr += 8){
+#if defined(__AVX2__)
+            _mm256_store_ps(y_ptr, _mm256_fmadd_ps( _mm256_load_ps(b_ptr), scalevec, _mm256_load_ps(y_ptr)));
+#else
+            _mm256_store_ps(y_ptr, _mm256_add_ps(_mm256_load_ps(y_ptr), _mm256_mul_ps(_mm256_load_ps(b_ptr), scalevec)));
+#endif
+        }
+    
+    } else {
+        count = 0;
+        remaining = n;
+    }
+
+    /* Do the rest. If the user has done his/her homework, this should not be necesarry */
+    if( !remaining ) return;
+
+    y_ptr = y + (count*8);
+    b_ptr = b + (count*8);
+
+    for ( unsigned int i = 0; i < remaining; i++ )
+        *y_ptr++ += scale * *b_ptr++;
 }
+#else  /* not __AVX__ */
+void scale_and_add_vector( unsigned int n, float *y, const float scale, const float *b )
+{
+    float *y_ptr = y;
+    const float *b_ptr = b;
+
+    for ( unsigned int i = 0; i < n; i++ )
+        *y_ptr++ += scale * *b_ptr++;
+}
+#endif
 
 typedef float (*metric_func)      (unsigned int n, const float *y_pred, const float *y_real );
 
@@ -103,10 +144,31 @@ STRSPLIT_INIT
 // STRSPLIT_LENGTH_INIT
 STRSPLIT_FREE_INIT
 
+float evaluate( neuralnet_t *nn, cmatrix_t *test_X, cmatrix_t *test_Y, metric_func metric )
+{
+    float *test_X_ptr = (float*) test_X->data;
+    float *test_Y_ptr = (float*) test_Y->data;
+
+    const size_t n_test_samples = test_X->shape[0];
+    assert ( n_test_samples == test_Y->shape[0] );
+
+    const int n_input = test_X->shape[1];
+    const int n_output = test_Y->shape[1];
+
+    /* OpenMP thread */
+    float total_error = 0.0f;
+    for ( unsigned int i = 0; i < n_test_samples; i++ ){
+        float y_pred[n_output];
+        neuralnet_predict( nn, test_X_ptr + (i*n_input), y_pred );
+        total_error += metric( n_output, y_pred, test_Y_ptr + (i*n_output));
+    }
+    return total_error /= (float) n_test_samples;
+}
+
 int main( int argc, char *argv[] )
 {
     if (argc != 4 ){
-        fprintf( stderr, "Usage: %s <weightsfile.npz> <quoted list of activations> <trainsamples.npz>\n", argv[0] );
+        fprintf( stderr, "Usage: %s <weightsfile.npz> <list of activations> <trainsamples.npz>\n", argv[0] );
         return 0;
     }
 
@@ -166,7 +228,7 @@ int main( int argc, char *argv[] )
     for ( unsigned int i = 0; i < n_samples; i++ )
         pivot[i] = i;
 
-    int n_epochs = 10;
+    int n_epochs = 20;
     srand( 42 );
     for ( int epoch = 0; epoch < n_epochs; epoch++ ){
 
@@ -175,8 +237,7 @@ int main( int argc, char *argv[] )
 
         for ( unsigned int i = 0; i < n_samples; i++ ){
 
-            float grad[n_parameters]; /* simd? */
-            memset( grad, 0, n_parameters * sizeof(float));
+            float SIMD_ALIGN(grad[n_parameters]); /* simd? */
             neuralnet_backpropagation( nn, train_X_ptr + (pivot[i] * n_input), train_Y_ptr + (pivot[i] * n_output), grad );
 
             /* update */
@@ -184,11 +245,11 @@ int main( int argc, char *argv[] )
             for ( int l = 0; l < nn->n_layers; l++ ){
                 const int n_inp = nn->layer[l].n_input;
                 const int n_out = nn->layer[l].n_output;
-                //scale_and_add_vector( n_out, nn->layer[l].bias, -learning_rate, ptr );
-                cblas_saxpy( n_out, -learning_rate, ptr, 1, nn->layer[l].bias, 1 );
+                scale_and_add_vector( n_out, nn->layer[l].bias, -learning_rate, ptr );
+                // cblas_saxpy( n_out, -learning_rate, ptr, 1, nn->layer[l].bias, 1 );
                 ptr += n_out;
-                //scale_and_add_vector( n_out * n_inp, nn->layer[l].weight, -learning_rate, ptr );
-                cblas_saxpy( n_out * n_inp, -learning_rate, ptr, 1, nn->layer[l].weight, 1 );
+                scale_and_add_vector( n_out * n_inp, nn->layer[l].weight, -learning_rate, ptr );
+                // cblas_saxpy( n_out * n_inp, -learning_rate, ptr, 1, nn->layer[l].weight, 1 );
                 ptr += n_inp * n_out;
             }
             char label[20];
@@ -220,7 +281,7 @@ int main( int argc, char *argv[] )
     free( pivot );
 
     /* log and report */
-    neuralnet_save( nn, "best.npz" );
+    neuralnet_save( nn, "after-20-epochs.npz" );
     neuralnet_free( nn );
     c_npy_matrix_array_free( train_test );
     return 0;
