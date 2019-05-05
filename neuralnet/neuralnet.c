@@ -26,13 +26,7 @@ static void neuralnet_dump( neuralnet_t *nn )
                 nn->layer[i].n_output);
         printf("Activation function: %s\n", get_activation_name( nn->layer[i].activation_func ));
     }
-    int n_weights = 0;
-    int n_biases = 0;
-    for ( int i = 0; i < nn->n_layers; i++ ) {
-        n_weights += nn->layer[i].n_input * nn->layer[i].n_output;
-        n_biases += nn->layer[i].n_output;
-    }
-    printf("Total number of parameters: %d\n", n_weights + n_biases );
+    printf("Total number of parameters: %u\n", neuralnet_total_n_parameters( nn ));
 }
 #endif
 
@@ -166,6 +160,9 @@ static void print_matrix( int m, int n, const float *v )
 
 /**
   @brief Forward calculate the neural network 
+ 
+  This function only takes ONE single input sample and hence returns only one prediction.
+
   @param nn The neural net that will do the forward calculaton. (aka. evaluate)
   @param input Pointer for an array of input features
   @param out Pointer to an array of evaluated outputs
@@ -273,6 +270,14 @@ void neuralnet_set_loss ( neuralnet_t *nn, const char *loss_name )
             printf("Warning: Using 'categorical_crossentropy' loss function when output activation is not 'softmax'.\n");
         }
     }
+
+    if( nn->layer[nn->n_layers-1].activation_func == get_activation_func( "softmax" )){
+        if( nn->loss == get_loss_func( "categorical_crossentropy" ) ){
+            /* All ok. This should have been handled by the statements above */
+        } else {
+            printf("Warning: Using 'softmax' output activation when loss function is not 'categorical_crossentropy'.\n");
+        }
+    }
 }
 
 void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const float *target, float *grad )
@@ -354,21 +359,5 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
            grad_w[layer],
            n_out);                /* leading dimension of matrix X. */
     }
-
-#if 0
-    /* Update (This will be on the outside) */
-    ptr = grad;
-    for ( int i = 0 ; i < nn->n_layers; i++ ){
-        float *b = nn->layer[i].bias;
-        float *w = nn->layer[i].weight;
-
-        for ( int j = 0, j < nn->layer[i].n_output; j++)
-           *b++ += lr * *ptr++; 
-
-        for ( int j = 0, j < nn->layer[i].n_output * nn->layer[i].n_input; j++)
-           *w++ += lr * *ptr++;
-    }
-#endif 
 }
-
 #endif /* TRAINING_FEATURES */

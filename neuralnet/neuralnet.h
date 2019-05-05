@@ -37,7 +37,7 @@ void          neuralnet_save              ( const neuralnet_t *nn, const char *f
 static inline int neuralnet_get_n_layers  ( const neuralnet_t *nn ) { return nn->n_layers; }
 
 static inline
-unsigned int  neuralnet_total_n_parameters( const neuralnet_t *nn ) {
+unsigned int neuralnet_total_n_parameters( const neuralnet_t *nn ) {
     unsigned int count = 0;
     for ( int i = 0; i < nn->n_layers; i++ )
         count += (nn->layer[i].n_input + 1) * nn->layer[i].n_output;

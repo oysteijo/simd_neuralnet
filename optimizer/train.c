@@ -68,7 +68,7 @@ void scale_and_add_vector( unsigned int n, float *y, const float scale, const fl
     /* y is always aligned, that is not a problem. However, b, which comes from the gradient is not aligned
        when a n_output from a layer is not mod 8. There is of course a possibility to do things sequensial 
        until we are aligned, and then to vectorized operations, however.... fix this later, it won't gain much. */
-    if ( simd_aligned( y ) && simd_aligned( b ) ){
+    if ( is_aligned( y ) && is_aligned( b ) ){
         __m256 scalevec = _mm256_set1_ps(scale);
         for (int j = count; j; j--, y_ptr += 8, b_ptr += 8){
 #if defined(__AVX2__)

@@ -33,16 +33,20 @@
 
 typedef struct _optimizer_t optimizer_t;
 struct _optimizer_t {
-	void (*run_epoch) (const optimizer_t *self, const cmatrix_t *train_X, const cmatrix_t *train_Y, 
+	float (*run_epoch) (const optimizer_t *self, const cmatrix_t *train_X, const cmatrix_t *train_Y, 
                                                 const cmatrix_t *test_X, const cmatrix_t *test_Y, unsigned int batch_size );
 	void (*free) (optimizer_t *self);
+    
     neuralnet_t *nn;
+    unsigned long long int iterations;
+    bool shuffle;
+    void (*progress)( char *label, int x, int n ); 
 };
 
-static inline void optimizer_run_epoch( const optimizer_t *self, const cmatrix_t *train_X, const cmatrix_t *train_Y, 
+static inline float optimizer_run_epoch( const optimizer_t *self, const cmatrix_t *train_X, const cmatrix_t *train_Y, 
                                                 const cmatrix_t *test_X, const cmatrix_t *test_Y, unsigned int batch_size )
 {
-	self->run_epoch( self, train_X, train_Y, test_X, test_t, batch_size );
+	return self->run_epoch( self, train_X, train_Y, test_X, test_Y, batch_size );
 }
 
 static inline void optimizer_free( optimizer_t *self){
@@ -62,9 +66,9 @@ static inline void optimizer_free( optimizer_t *self){
 #endif
 
 #define OPTIMIZER_DEFINE(name,...) \
-static void name ## _run_epoch( const optimizer_t *opt, const cmatrix_t *train_X, const cmatrix_t *train_Y, \
+static float name ## _run_epoch( const optimizer_t *opt, const cmatrix_t *train_X, const cmatrix_t *train_Y, \
                       const cmatrix_t *test_X, const cmatrix_t *test_Y, unsigned int batch_size ); \
-DLLEXPORT name ## _t * name ## _new( void * UNUSED(config)) \
+DLLEXPORT name ## _t * name ## _new( neuralnet_t *nn, void * UNUSED(config)) \
 {	\
 	name ## _t *newopt = malloc( sizeof( name ## _t ) ); \
 	if ( !newopt ) {\
@@ -73,12 +77,13 @@ DLLEXPORT name ## _t * name ## _new( void * UNUSED(config)) \
 	} \
 	newopt->opt.run_epoch = name ## _run_epoch; \
 	newopt->opt.free = (void(*)(optimizer_t*)) free; \
+    newopt->opt.nn = nn; \
 	__VA_ARGS__ ; \
 	return newopt; \
 }
 
 #define OPTIMIZER_DECLARE(name) \
 typedef struct _ ## name ## _t name ## _t; \
-name ## _t * name ## _new( void * config); 
+name ## _t * name ## _new( neuralnet_t *nn, void * config); 
 
 #endif  /* __OPTIMIZER_H__ */

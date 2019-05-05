@@ -29,6 +29,9 @@
 
 #define simd_aligned(ar) (!(((int)ar) % ALIGN_SIZE))
 
+#define is_aligned(POINTER) \
+    (((uintptr_t)(const void *)(POINTER)) % (ALIGN_SIZE) == 0)
+
 #else
 #define SIMD_ALIGN(D) D
 #define simd_aligned(ar) ar
