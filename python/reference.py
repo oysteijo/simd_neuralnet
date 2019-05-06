@@ -1,8 +1,5 @@
 import sys
 import numpy as np
-from recordclass import recordclass
-
-Layer = recordclass("Layer", ["weight", "bias", "activation_func", "activation_derivative"])
 
 # This corresponds to activation.c in the C implementation
 def get_activation_func(str):
@@ -43,6 +40,26 @@ mean_absolute_error            = lambda y_pred, y_real: np.where( y_pred >= y_re
 mean_absolute_percentage_error = lambda y_pred, y_real: np.where( y_pred >= y_real, 100.0, -100.0 ) / (np.maximum( y_real, 1e-7, y_real ) * y_real.shape[0] )
 categorical_crossentropy       = lambda y_pred, y_real: (y_pred - y_real) 
 binary_crossentropy            = lambda y_pred, y_real: (y_pred - y_real) / y_pred.shape[0]
+
+# This is the Layer class.
+# It only holds the weight matrix, the bias vectors and the activation func + derivatives. No methods.
+# This actually used to be a recordclass, but to avoid that dependency, it is now proper classed.
+
+class Layer(object):
+    def __init__(self, weight, bias, activation_func, activation_derivative=None ):
+        self.weight = weight
+        self.bias   = bias
+        if isinstance( activation_func, str ):
+            self.activation_func = get_activation_func(activation_func)
+        else:
+            self.activation_func = activation_func
+
+        if activation_derivative == None:
+            self.activation_derivative = get_activation_derivative( self.activation_func )
+        elif isinstance( activation_derivative, str ):
+            self.activation_derivative = get_activation_func( activation_derivative )
+        else:
+            self.activation_derivative = activation_derivative
 
 # And this is the neural network itself.
 class NeuralNet(object):
@@ -104,33 +121,4 @@ class NeuralNet(object):
             retlist.append( layer.weight )
             retlist.append( layer.bias )
         return tuple(retlist)
-
-if __name__ == '__main__':
-    np.set_printoptions(precision=4, linewidth=220)
-    np.random.seed(42)
-
-    sizes=[32,16,8,4]
-    nn = NeuralNet(sizes)
-    print(nn)
-    np.savez("initial_weights.npz", *nn.get_weights())
-    inp = np.random.rand(sizes[0]).astype(np.float32)
-    np.save("random_input.npy", inp)
-    print(nn.feedforward(inp))
-
-    #train_sample = np.array([0.5]*sizes[-1], dtype=np.float32)
-    train_sample = np.array([1.0, 1.0, 0.0, 0.0], dtype=np.float32)
-
-    grads = []
-    for grad_w, grad_b in nn.backpropagation( inp, train_sample ):
-        grads.append(grad_b)
-        grads.append(grad_w)
-        
-    print("\n".join(map(str,grads)))
-#    for _ in range(100):
-#        learning_rate = 0.1
-#        for ((grad_w, grad_b), l) in zip(nn.backpropagation(inp, train_sample ), nn.layers):
-#            l.weight -= learning_rate * grad_w
-#            l.bias -= learning_rate * grad_b
-
-#        print(nn.feedforward(inp))
 
