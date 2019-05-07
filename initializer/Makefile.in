@@ -1,0 +1,45 @@
+
+CC     = gcc
+CFLAGS = -std=c99 -Wall -Wextra -O3 -mavx2 -mfma $(dbg) $(profile)
+LDFLAGS = $(profile) 
+
+src = $(wildcard *.c)
+obj = $(src:.c=.o)
+dep = $(obj:.o=.d)  # one dependency file for each source
+
+# dependency library
+C_NPY_LIBPATH = ../c_npy
+CFLAGS += -I$(C_NPY_LIBPATH)
+LDFLAGS += -L$(C_NPY_LIBPATH) -lc_npy -lm
+
+DEFINES =
+CFLAGS += $(DEFINES)
+
+tool = create_initial_weights
+
+$(tool): $(obj)
+	$(CC) -o $@ $^ $(LDFLAGS) 
+
+-include $(dep)   # include all dep files in the makefile
+
+# rule to generate a dep file by using the C preprocessor
+# (see man cpp for details on the -MM and -MT options)
+%.d: %.c
+	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
+
+.PHONY: clean
+clean:
+	$(RM) $(obj) $(alib)
+
+.PHONY: cleandep
+cleandep:
+	$(RM) $(dep)
+
+.PHONY: install
+install: $(alib)
+	@echo "Not yet! This tool should not be installed."
+
+.PHONY: uninstall
+uninstall:
+	@echo "Nothing to uninstall."
+
