@@ -64,15 +64,22 @@ class Layer(object):
 # And this is the neural network itself.
 class NeuralNet(object):
     def __init__( self, weights, activations, loss, **kwargs ):
-        arr = np.load(weights)
-        weights = tuple((arr[m] for m in arr))
-        activations = [a.strip() for a in activations.split(",")]
+        if isinstance(weights,str):
+            arr = np.load(weights)
+            weights = tuple((arr[m] for m in arr))
+
+        if isinstance(activations,str):
+            activations = [a.strip() for a in activations.split(",")]
+
+        if isinstance(loss,str):
+            loss = get_loss_func(loss)
 
         assert 2*len(activations) == len(weights)
         self.n_layers = len(activations)
         self.layers = [Layer(w,b,get_activation_func(act), get_activation_func( act + "_derivative"))
               for w,b,act in zip( weights[::2], weights[1::2], activations )]
-        self.loss = get_loss_func(loss)
+        self.loss = loss
+
         # Here comes the "matching" logic
         do_nothing = linear_derivative
         if self.loss == binary_crossentropy:
