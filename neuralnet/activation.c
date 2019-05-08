@@ -3,6 +3,8 @@
 #include <string.h>
 #include <math.h>
 
+#include <immintrin.h>
+
 /*
 Just thinking out here.... This code needs a cleanup. It started as a implementation
 from 'octopus', but at this stage we rather want things to be general than superfast.
@@ -129,17 +131,143 @@ static void softmax( unsigned int n, float *ar )
 	}
 }
 
-static void relu( unsigned int n, float *ar )
+static void relu( unsigned int n, float *y )
 {
-	for( unsigned int i = 0; i < n; i++ )
-		ar[i] = fmaxf(0.0f, ar[i]);
+    int i = 0;
+    int nn = (int) n;
+#ifdef __AVX2__
+    const __m256 zero = _mm256_set1_ps(0.0f);
+
+    __m256 YMM0, YMM1;
+
+    for (i = 0; i <= ((nn)-16); i += 16) {
+        YMM0 = _mm256_load_ps(y + i);
+        YMM1 = _mm256_load_ps(y + i + 8);
+        YMM0 = _mm256_max_ps(zero, YMM0);
+        YMM1 = _mm256_max_ps(zero, YMM1);
+		_mm256_store_ps( y + i, YMM0 );
+		_mm256_store_ps( y + i + 8, YMM1 );
+    }
+#endif
+	for( ; i < nn; i++ )
+		y[i] = fmaxf(0.0f, y[i]);
 }
 
-static void sigmoid( unsigned int n, float *ar )
+#ifdef __AVX2__
+#if defined(__GNUC__)
+# define ALIGN32_BEG __attribute__((aligned(32)))
+#elif defined(_WIN32)
+# define ALIGN32_BEG __declspec(align(32))
+#endif
+
+
+#define _PS256_CONST(Name, Val)                                            \
+  static const ALIGN32_BEG float _ps256_##Name[8] = { Val, Val, Val, Val, Val, Val, Val, Val }
+#define _PI32_CONST256(Name, Val)                                            \
+  static const ALIGN32_BEG int _pi32_256_##Name[8] = { Val, Val, Val, Val, Val, Val, Val, Val }
+
+_PS256_CONST(1  , 1.0f);
+_PS256_CONST(0p5, 0.5f);
+
+_PS256_CONST(exp_hi,        88.3762626647949f);
+_PS256_CONST(exp_lo,        -88.3762626647949f);
+
+_PS256_CONST(cephes_LOG2EF, 1.44269504088896341);
+_PS256_CONST(cephes_exp_C1, 0.693359375);
+_PS256_CONST(cephes_exp_C2, -2.12194440e-4);
+
+_PS256_CONST(cephes_exp_p0, 1.9875691500E-4);
+_PS256_CONST(cephes_exp_p1, 1.3981999507E-3);
+_PS256_CONST(cephes_exp_p2, 8.3334519073E-3);
+_PS256_CONST(cephes_exp_p3, 4.1665795894E-2);
+_PS256_CONST(cephes_exp_p4, 1.6666665459E-1);
+_PS256_CONST(cephes_exp_p5, 5.0000001201E-1);
+
+_PI32_CONST256(0x7f, 0x7f);
+
+static inline __m256 exp256_ps(__m256 x) {
+    __m256 tmp = _mm256_setzero_ps(), fx;
+    __m256i imm0;
+    __m256 one = *(__m256*)_ps256_1;
+
+    x = _mm256_min_ps(x, *(__m256*)_ps256_exp_hi);
+    x = _mm256_max_ps(x, *(__m256*)_ps256_exp_lo);
+
+    /* express exp(x) as exp(g + n*log(2)) */
+    fx = _mm256_mul_ps(x, *(__m256*)_ps256_cephes_LOG2EF);
+    fx = _mm256_add_ps(fx, *(__m256*)_ps256_0p5);
+
+    /* how to perform a floorf with SSE: just below */
+    //imm0 = _mm256_cvttps_epi32(fx);
+    //tmp  = _mm256_cvtepi32_ps(imm0);
+
+    tmp = _mm256_floor_ps(fx);
+
+    /* if greater, substract 1 */
+    //__m256 mask = _mm256_cmpgt_ps(tmp, fx);
+    __m256 mask = _mm256_cmp_ps(tmp, fx, _CMP_GT_OS);
+    mask = _mm256_and_ps(mask, one);
+    fx = _mm256_sub_ps(tmp, mask);
+
+    tmp = _mm256_mul_ps(fx, *(__m256*)_ps256_cephes_exp_C1);
+    __m256 z = _mm256_mul_ps(fx, *(__m256*)_ps256_cephes_exp_C2);
+    x = _mm256_sub_ps(x, tmp);
+    x = _mm256_sub_ps(x, z);
+
+    z = _mm256_mul_ps(x,x);
+
+    __m256 y = *(__m256*)_ps256_cephes_exp_p0;
+    y = _mm256_mul_ps(y, x);
+    y = _mm256_add_ps(y, *(__m256*)_ps256_cephes_exp_p1);
+    y = _mm256_mul_ps(y, x);
+    y = _mm256_add_ps(y, *(__m256*)_ps256_cephes_exp_p2);
+    y = _mm256_mul_ps(y, x);
+    y = _mm256_add_ps(y, *(__m256*)_ps256_cephes_exp_p3);
+    y = _mm256_mul_ps(y, x);
+    y = _mm256_add_ps(y, *(__m256*)_ps256_cephes_exp_p4);
+    y = _mm256_mul_ps(y, x);
+    y = _mm256_add_ps(y, *(__m256*)_ps256_cephes_exp_p5);
+    y = _mm256_mul_ps(y, z);
+    y = _mm256_add_ps(y, x);
+    y = _mm256_add_ps(y, one);
+
+    /* build 2^n */
+    imm0 = _mm256_cvttps_epi32(fx);
+    // another two AVX2 instructions
+    imm0 = _mm256_add_epi32(imm0, *(__m256i*)_pi32_256_0x7f);
+    imm0 = _mm256_slli_epi32(imm0, 23);
+    __m256 pow2n = _mm256_castsi256_ps(imm0);
+    y = _mm256_mul_ps(y, pow2n);
+    return y;
+}
+#endif 
+
+static void sigmoid( unsigned int n, float *y )
 {
-    /* Use 0.5 + 0.5*tanhf(0.5*x) ?? */
-	for( unsigned int i = 0; i < n; i++ )
-		ar[i] = 1.0f / (1.0f + expf(-ar[i]));
+    int i = 0;
+    int nn = (int) n;
+#ifdef __AVX2__
+    const __m256 one  = _mm256_set1_ps(1.0f);
+    const __m256 zero = _mm256_set1_ps(0.0f);
+
+    __m256 YMM0, YMM1, YMM2, YMM3;
+
+    for (i = 0; i <= ((nn)-16); i += 16) {
+        YMM0 = _mm256_load_ps(y + i);
+        YMM1 = _mm256_load_ps(y + i + 8);
+        YMM0 = _mm256_sub_ps(zero, YMM0);
+        YMM1 = _mm256_sub_ps(zero, YMM1);
+        YMM2 = _mm256_add_ps(one, exp256_ps(YMM0));
+        YMM3 = _mm256_add_ps(one, exp256_ps(YMM1));
+        YMM2 = _mm256_div_ps(one, YMM2);
+        YMM3 = _mm256_div_ps(one, YMM3);
+        _mm256_store_ps(y + i, YMM2);
+        _mm256_store_ps(y + i + 8, YMM3);
+    }
+#endif  /* __AVX2__ */
+    for (; i < (nn); i++) {
+        y[i] = 1.0f / (1.0f + expf(-y[i]));
+    }
 }
 
 #if defined(__GNUC__)
@@ -154,11 +282,36 @@ static void linear( unsigned int n, float *ar )
 #pragma GCC diagnostic pop
 #endif
 
-static void tanh_act( unsigned int n, float *ar )
+static void tanh_act( unsigned int n, float *y )
 {
-	for( unsigned int i = 0; i < n; i++ )
-		ar[i] = tanhf(ar[i]);
-		/* ar[i] = -1.0f + 2.0f / (1.0f + expf(-2.0f*ar[i])); */
+    int i = 0;
+    int nn = (int) n;
+#ifdef __AVX2__
+    const __m256 one      = _mm256_set1_ps( 1.0f);
+    const __m256 neg_one  = _mm256_set1_ps(-1.0f);
+    const __m256 two      = _mm256_set1_ps( 2.0f);
+    const __m256 neg_two  = _mm256_set1_ps(-2.0f);
+
+    __m256 YMM0, YMM1, YMM2, YMM3;
+
+    for (i = 0; i <= ((nn)-16); i += 16) {
+        YMM0 = _mm256_load_ps(y + i);
+        YMM1 = _mm256_load_ps(y + i + 8);
+        YMM0 = _mm256_mul_ps(neg_two, YMM0);
+        YMM1 = _mm256_mul_ps(neg_two, YMM1);
+        YMM2 = _mm256_add_ps(one, exp256_ps(YMM0));
+        YMM3 = _mm256_add_ps(one, exp256_ps(YMM1));
+        YMM2 = _mm256_div_ps(two, YMM2);
+        YMM3 = _mm256_div_ps(two, YMM3);
+        YMM2 = _mm256_add_ps(neg_one, YMM2);
+        YMM3 = _mm256_add_ps(neg_one, YMM3);
+        _mm256_store_ps(y + i, YMM2);
+        _mm256_store_ps(y + i + 8, YMM3);
+    }
+#endif  /* __AVX2__ */
+	for( ; i < nn; i++ )
+		y[i] = tanhf(y[i]);
+		/* y[i] = -1.0f + 2.0f / (1.0f + expf(-2.0f*y[i])); */
 }
 
 static void exponential( unsigned int n, float *ar )
