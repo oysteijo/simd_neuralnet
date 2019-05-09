@@ -75,7 +75,6 @@ class NeuralNet(object):
             loss = get_loss_func(loss)
 
         assert 2*len(activations) == len(weights)
-        self.n_layers = len(activations)
         self.layers = [Layer(w,b,get_activation_func(act), get_activation_func( act + "_derivative"))
               for w,b,act in zip( weights[::2], weights[1::2], activations )]
         self.loss = loss
@@ -93,6 +92,9 @@ class NeuralNet(object):
                 self.layers[-1].activation_derivative = do_nothing
             else:
                 print("Warning: Using 'categorical_crossentropy' loss function when output activation is not 'softmax'.\n")
+
+    def __len__( self ):
+        return len(self.layers)
 
     def predict(self, x):
         for layer in self.layers:
