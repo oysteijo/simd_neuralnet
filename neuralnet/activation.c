@@ -39,27 +39,27 @@ sigmoid, softmax, softplus, softsign, relu, tanh, hard_sigmoid, exponential, lin
 As a starting point we do this plain with no tricks like SIMD or lookup tables.
 */
 
-static void softplus    ( unsigned int n, float *ar );
-static void softsign    ( unsigned int n, float *ar );
-static void hard_sigmoid( unsigned int n, float *ar );
-static void exponential ( unsigned int n, float *ar );
-static void linear      ( unsigned int n, float *ar );
-static void relu        ( unsigned int n, float *ar );
-static void softmax     ( unsigned int n, float *ar );
-static void sigmoid     ( unsigned int n, float *ar );
+static void softplus    ( const int n, float *ar );
+static void softsign    ( const int n, float *ar );
+static void hard_sigmoid( const int n, float *ar );
+static void exponential ( const int n, float *ar );
+static void linear      ( const int n, float *ar );
+static void relu        ( const int n, float *ar );
+static void softmax     ( const int n, float *ar );
+static void sigmoid     ( const int n, float *ar );
 /* Argh! "tanh" is already defined in math.h  (C99). We give this a different name */
-static void tanh_act    ( unsigned int n, float *ar );
+static void tanh_act    ( const int n, float *ar );
 
 #if defined(TRAINING_FEATURES)
-static void softplus_derivative    ( unsigned int n, const float *activation, float *ar );
-static void softsign_derivative    ( unsigned int n, const float *activation, float *ar );
-static void hard_sigmoid_derivative( unsigned int n, const float *activation, float *ar );
-static void exponential_derivative ( unsigned int n, const float *activation, float *ar );
-static void linear_derivative      ( unsigned int n, const float *activation, float *ar );
-static void relu_derivative        ( unsigned int n, const float *activation, float *ar );
-static void softmax_derivative     ( unsigned int n, const float *activation, float *ar );
-static void sigmoid_derivative     ( unsigned int n, const float *activation, float *ar );
-static void tanh_act_derivative    ( unsigned int n, const float *activation, float *ar );
+static void softplus_derivative    ( const int n, const float *activation, float *ar );
+static void softsign_derivative    ( const int n, const float *activation, float *ar );
+static void hard_sigmoid_derivative( const int n, const float *activation, float *ar );
+static void exponential_derivative ( const int n, const float *activation, float *ar );
+static void linear_derivative      ( const int n, const float *activation, float *ar );
+static void relu_derivative        ( const int n, const float *activation, float *ar );
+static void softmax_derivative     ( const int n, const float *activation, float *ar );
+static void sigmoid_derivative     ( const int n, const float *activation, float *ar );
+static void tanh_act_derivative    ( const int n, const float *activation, float *ar );
 #endif
 
 #define CHECK_ACTIVATION_NAME(func) \
@@ -118,29 +118,28 @@ activation_derivative get_activation_derivative( activation_func ptr ){
 #undef CHECK_ACTIVATION_DERIV_PTR
 #endif
 
-static void softmax( unsigned int n, float *ar )
+static void softmax( const int n, float *ar )
 {
     /* FIXME: This might overflow! */
 	float sum = 0.0f;
-	for ( unsigned int j = 0 ; j < n; j++ ){
+	for ( int j = 0 ; j < n; j++ ){
 		ar[j] = expf( ar[j] );
 		sum += ar[j];
 	}
-	for ( unsigned int j = 0 ; j < n; j++ ){
+	for ( int j = 0 ; j < n; j++ ){
 		ar[j] /= sum;
 	}
 }
 
-static void relu( unsigned int n, float *y )
+static void relu( const int n, float *y )
 {
     int i = 0;
-    int nn = (int) n;
 #ifdef __AVX2__
     const __m256 zero = _mm256_set1_ps(0.0f);
 
     __m256 YMM0, YMM1;
 
-    for (i = 0; i <= ((nn)-16); i += 16) {
+    for (i = 0; i <= ((n)-16); i += 16) {
         YMM0 = _mm256_load_ps(y + i);
         YMM1 = _mm256_load_ps(y + i + 8);
         YMM0 = _mm256_max_ps(zero, YMM0);
@@ -149,7 +148,7 @@ static void relu( unsigned int n, float *y )
 		_mm256_store_ps( y + i + 8, YMM1 );
     }
 #endif
-	for( ; i < nn; i++ )
+	for( ; i < n; i++ )
 		y[i] = fmaxf(0.0f, y[i]);
 }
 
@@ -242,17 +241,16 @@ static inline __m256 exp256_ps(__m256 x) {
 }
 #endif 
 
-static void sigmoid( unsigned int n, float *y )
+static void sigmoid( const int n, float *y )
 {
     int i = 0;
-    int nn = (int) n;
 #ifdef __AVX2__
     const __m256 one  = _mm256_set1_ps(1.0f);
     const __m256 zero = _mm256_set1_ps(0.0f);
 
     __m256 YMM0, YMM1, YMM2, YMM3;
 
-    for (i = 0; i <= ((nn)-16); i += 16) {
+    for (i = 0; i <= ((n)-16); i += 16) {
         YMM0 = _mm256_load_ps(y + i);
         YMM1 = _mm256_load_ps(y + i + 8);
         YMM0 = _mm256_sub_ps(zero, YMM0);
@@ -265,7 +263,7 @@ static void sigmoid( unsigned int n, float *y )
         _mm256_store_ps(y + i + 8, YMM3);
     }
 #endif  /* __AVX2__ */
-    for (; i < (nn); i++) {
+    for (; i < (n); i++) {
         y[i] = 1.0f / (1.0f + expf(-y[i]));
     }
 }
@@ -274,7 +272,7 @@ static void sigmoid( unsigned int n, float *y )
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
-static void linear( unsigned int n, float *ar )
+static void linear( const int n, float *ar )
 {
     /* Do nothing */
 }
@@ -282,10 +280,9 @@ static void linear( unsigned int n, float *ar )
 #pragma GCC diagnostic pop
 #endif
 
-static void tanh_act( unsigned int n, float *y )
+static void tanh_act( const int n, float *y )
 {
     int i = 0;
-    int nn = (int) n;
 #ifdef __AVX2__
     const __m256 one      = _mm256_set1_ps( 1.0f);
     const __m256 neg_one  = _mm256_set1_ps(-1.0f);
@@ -294,7 +291,7 @@ static void tanh_act( unsigned int n, float *y )
 
     __m256 YMM0, YMM1, YMM2, YMM3;
 
-    for (i = 0; i <= ((nn)-16); i += 16) {
+    for (i = 0; i <= ((n)-16); i += 16) {
         YMM0 = _mm256_load_ps(y + i);
         YMM1 = _mm256_load_ps(y + i + 8);
         YMM0 = _mm256_mul_ps(neg_two, YMM0);
@@ -309,32 +306,31 @@ static void tanh_act( unsigned int n, float *y )
         _mm256_store_ps(y + i + 8, YMM3);
     }
 #endif  /* __AVX2__ */
-	for( ; i < nn; i++ )
+	for( ; i < n; i++ )
 		y[i] = tanhf(y[i]);
-		/* y[i] = -1.0f + 2.0f / (1.0f + expf(-2.0f*y[i])); */
 }
 
-static void exponential( unsigned int n, float *ar )
+static void exponential( const int n, float *ar )
 {
-	for( unsigned int i = 0; i < n; i++ )
+	for( int i = 0; i < n; i++ )
 		ar[i] = expf(ar[i]);
 }
 
-static void softplus( unsigned int n, float *ar )
+static void softplus( const int n, float *ar )
 {
-	for( unsigned int i = 0; i < n; i++ )
+	for( int i = 0; i < n; i++ )
 		ar[i] = logf( expf(ar[i]) + 1.0f ) ;
 }
 
-static void softsign( unsigned int n, float *ar )
+static void softsign( const int n, float *ar )
 {
-	for( unsigned int i = 0; i < n; i++ )
+	for( int i = 0; i < n; i++ )
 		ar[i] = ar[i] / (fabsf(ar[i]) + 1.0f ) ;
 }
 
-static void hard_sigmoid( unsigned int n, float *ar )
+static void hard_sigmoid( const int n, float *ar )
 {
-	for( unsigned int i = 0; i < n; i++ )
+	for( int i = 0; i < n; i++ )
 		ar[i] = ar[i] < -2.5f ? 0.0f :
                 ar[i] >  2.5f ? 1.0f :
                 0.2f * ar[i] + 0.5f ;
@@ -342,32 +338,33 @@ static void hard_sigmoid( unsigned int n, float *ar )
 
 #if defined(TRAINING_FEATURES)
 
-static void softplus_derivative    ( unsigned int n, const float *activation, float *ar )
+static void softplus_derivative    ( const int n, const float *activation, float *ar )
 {
-    for( unsigned int i=0; i < n; i++ ){
+    for( int i=0; i < n; i++ ){
         float x =  expf( activation[i] );
         ar[i] *= (x - 1.0f) / x; 
     }
 }
 
-static void softsign_derivative    ( unsigned int n, const float *activation, float *ar )
+static void softsign_derivative    ( const int n, const float *activation, float *ar )
 {
     /* Can this be simplified? */
-    for( unsigned int i=0; i < n; i++ ){
+    for( int i=0; i < n; i++ ){
         float x = activation[i] / (1.0f - fabsf(activation[i]));
         ar[i] *= 1.0f / ((1.0f + fabsf(x)) * (1.0f + fabsf(x)));
     }
 }
 
-static void hard_sigmoid_derivative( unsigned int n, const float *activation, float *ar )
+static void hard_sigmoid_derivative( const int n, const float *activation, float *ar )
 {
-    for( unsigned int i=0; i < n; i++ )
+    int i = 0;
+    for( ; i < n; i++ )
         ar[i] *= activation[i] <= 0.0f ? 0.0f :
            activation[i] >= 1.0f ? 0.0f : 0.2f ;
 }
-static void exponential_derivative ( unsigned int n, const float *activation, float *ar )
+static void exponential_derivative ( const int n, const float *activation, float *ar )
 {
-    for( unsigned int i=0; i < n; i++ )
+    for( int i=0; i < n; i++ )
         ar[i] *= activation[i];
 }
 
@@ -375,12 +372,12 @@ static void exponential_derivative ( unsigned int n, const float *activation, fl
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
-static void linear_derivative      ( unsigned int n, const float *activation, float *ar )
+static void linear_derivative      ( const int n, const float *activation, float *ar )
 {
     /* This function is intentionally empty. */
 }
 
-static void softmax_derivative     ( unsigned int n, const float *activation, float *ar )
+static void softmax_derivative     ( const int n, const float *activation, float *ar )
 {
     /* This function is intentionally empty. */
 }
@@ -388,21 +385,92 @@ static void softmax_derivative     ( unsigned int n, const float *activation, fl
 #pragma GCC diagnostic pop
 #endif
 
-static void relu_derivative        ( unsigned int n, const float *activation, float *ar )
+static void relu_derivative        ( const int n, const float *activation, float *ar )
 {
-    for( unsigned int i=0; i < n; i++ )
+    int i = 0;
+#ifdef __AVX2__
+    const __m256 zero = _mm256_setzero_ps();
+    const __m256 ones = _mm256_set1_ps(1.0f);
+
+    __m256 YMM0, YMM1, YMM2, YMM3;
+
+    for (i = 0; i <= ((n)-16); i += 16) {
+        YMM0 = _mm256_loadu_ps(activation + i);
+        YMM1 = _mm256_loadu_ps(activation + i + 8);
+        
+        YMM0 = _mm256_cmp_ps(YMM0, zero, _CMP_LE_OS);
+        YMM1 = _mm256_cmp_ps(YMM1, zero, _CMP_LE_OS);
+
+        YMM0 = _mm256_blendv_ps( zero, ones, YMM0);
+        YMM1 = _mm256_blendv_ps( zero, ones, YMM1);
+
+        YMM2 = _mm256_loadu_ps(ar + i);
+        YMM3 = _mm256_loadu_ps(ar + i + 8);
+
+		_mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
+		_mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
+    }
+#endif /* __AVX2__ */
+    for(; i < n; i++ )
         ar[i] *= activation[i] <= 0.0f ? 0.0f : 1.0f ;
 }
 
-static void sigmoid_derivative     ( unsigned int n, const float *activation, float *ar )
+static void sigmoid_derivative     ( const int n, const float *activation, float *ar )
 {
-    for( unsigned int i=0; i < n; i++ )
+    /* is the memory aligned? */
+    int i = 0;
+#ifdef __AVX2__
+    const __m256 ones = _mm256_set1_ps(1.0f);
+
+    __m256 YMM0, YMM1, YMM2, YMM3;
+
+    for (i = 0; i <= ((n)-16); i += 16) {
+        YMM0 = _mm256_loadu_ps(activation + i);
+        YMM1 = _mm256_loadu_ps(activation + i + 8);
+
+        YMM2 = _mm256_sub_ps( ones, YMM0 );
+        YMM3 = _mm256_sub_ps( ones, YMM1 );
+
+        YMM0 = _mm256_mul_ps(YMM0, YMM2);
+        YMM1 = _mm256_mul_ps(YMM1, YMM3);
+
+        YMM2 = _mm256_loadu_ps(ar + i);
+        YMM3 = _mm256_loadu_ps(ar + i + 8);
+
+		_mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
+		_mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
+    }
+#endif /* __AVX2__ */
+    for(; i < n; i++ )
         ar[i] *= activation[i]*(1.0f-activation[i]);
 }
 
-static void tanh_act_derivative    ( unsigned int n, const float *activation, float *ar )
+static void tanh_act_derivative    ( const int n, const float *activation, float *ar )
 {
-    for( unsigned int i=0; i < n; i++ )
+    int i = 0;
+#ifdef __AVX2__
+    const __m256 ones = _mm256_set1_ps(1.0f);
+
+    __m256 YMM0, YMM1, YMM2, YMM3;
+
+    for (i = 0; i <= ((n)-16); i += 16) {
+        YMM0 = _mm256_loadu_ps(activation + i);
+        YMM1 = _mm256_loadu_ps(activation + i + 8);
+
+        YMM0 = _mm256_mul_ps(YMM0, YMM0);
+        YMM1 = _mm256_mul_ps(YMM1, YMM1);
+
+        YMM0 = _mm256_sub_ps(ones, YMM0);
+        YMM1 = _mm256_sub_ps(ones, YMM1);
+
+        YMM2 = _mm256_loadu_ps(ar + i);
+        YMM3 = _mm256_loadu_ps(ar + i + 8);
+
+		_mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
+		_mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
+    }
+#endif /* __AVX2__ */
+    for( ; i < n; i++ )
         ar[i] *= 1.0f-activation[i]*activation[i];
 
 }

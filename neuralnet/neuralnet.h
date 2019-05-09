@@ -10,9 +10,9 @@ struct _layer_t
 {
     int    n_input, n_output;
     float *weight, *bias;
-    void    (*activation_func) (unsigned int n, float *ar);
+    void    (*activation_func) (const int n, float *ar);
 #if defined(TRAINING_FEATURES)
-    void    (*activation_derivative) (unsigned int n, const float *activation, float *ar);
+    void    (*activation_derivative) (const int n, const float *activation, float *ar);
 #endif
 };
 
