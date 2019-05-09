@@ -63,10 +63,10 @@ static void tanh_act_derivative    ( const int n, const float *activation, float
 #endif
 
 #define CHECK_ACTIVATION_NAME(func) \
-		!strcmp( name, #func) ? func :
+        !strcmp( name, #func) ? func :
 
 activation_func get_activation_func( const char * name ){
-	return
+    return
         CHECK_ACTIVATION_NAME(softplus)
         CHECK_ACTIVATION_NAME(softsign)
         CHECK_ACTIVATION_NAME(hard_sigmoid)
@@ -75,15 +75,15 @@ activation_func get_activation_func( const char * name ){
         CHECK_ACTIVATION_NAME(relu)
         CHECK_ACTIVATION_NAME(softmax)
         CHECK_ACTIVATION_NAME(sigmoid)
-		!strcmp( name, "tanh") ? tanh_act :
-		NULL;
+        !strcmp( name, "tanh") ? tanh_act :
+        NULL;
 }
 
 #define CHECK_ACTIVATION_PTR(func) \
         ptr == func ? #func :
 
 const char * get_activation_name( activation_func ptr ){
-	return
+    return
         CHECK_ACTIVATION_PTR(softplus)
         CHECK_ACTIVATION_PTR(softsign)
         CHECK_ACTIVATION_PTR(hard_sigmoid)
@@ -93,7 +93,7 @@ const char * get_activation_name( activation_func ptr ){
         CHECK_ACTIVATION_PTR(softmax)
         CHECK_ACTIVATION_PTR(sigmoid)
         ptr == tanh_act ? "tanh" :
-		"(unknown)";
+        "(unknown)";
 }
 #undef CHECK_ACTIVATION_NAME
 #undef CHECK_ACTIVATION_PTR
@@ -103,7 +103,7 @@ const char * get_activation_name( activation_func ptr ){
         ptr == func ? func ## _derivative :
 
 activation_derivative get_activation_derivative( activation_func ptr ){
-	return
+    return
         CHECK_ACTIVATION_DERIV_PTR(softplus)
         CHECK_ACTIVATION_DERIV_PTR(softsign)
         CHECK_ACTIVATION_DERIV_PTR(hard_sigmoid)
@@ -113,7 +113,7 @@ activation_derivative get_activation_derivative( activation_func ptr ){
         CHECK_ACTIVATION_DERIV_PTR(softmax)
         CHECK_ACTIVATION_DERIV_PTR(sigmoid)
         CHECK_ACTIVATION_DERIV_PTR(tanh_act)
-		NULL;
+        NULL;
 }
 #undef CHECK_ACTIVATION_DERIV_PTR
 #endif
@@ -121,14 +121,14 @@ activation_derivative get_activation_derivative( activation_func ptr ){
 static void softmax( const int n, float *ar )
 {
     /* FIXME: This might overflow! */
-	float sum = 0.0f;
-	for ( int j = 0 ; j < n; j++ ){
-		ar[j] = expf( ar[j] );
-		sum += ar[j];
-	}
-	for ( int j = 0 ; j < n; j++ ){
-		ar[j] /= sum;
-	}
+    float sum = 0.0f;
+    for ( int j = 0 ; j < n; j++ ){
+        ar[j] = expf( ar[j] );
+        sum += ar[j];
+    }
+    for ( int j = 0 ; j < n; j++ ){
+        ar[j] /= sum;
+    }
 }
 
 static void relu( const int n, float *y )
@@ -144,12 +144,12 @@ static void relu( const int n, float *y )
         YMM1 = _mm256_load_ps(y + i + 8);
         YMM0 = _mm256_max_ps(zero, YMM0);
         YMM1 = _mm256_max_ps(zero, YMM1);
-		_mm256_store_ps( y + i, YMM0 );
-		_mm256_store_ps( y + i + 8, YMM1 );
+        _mm256_store_ps( y + i, YMM0 );
+        _mm256_store_ps( y + i + 8, YMM1 );
     }
 #endif
-	for( ; i < n; i++ )
-		y[i] = fmaxf(0.0f, y[i]);
+    for( ; i < n; i++ )
+        y[i] = fmaxf(0.0f, y[i]);
 }
 
 #ifdef __AVX2__
@@ -306,34 +306,34 @@ static void tanh_act( const int n, float *y )
         _mm256_store_ps(y + i + 8, YMM3);
     }
 #endif  /* __AVX2__ */
-	for( ; i < n; i++ )
-		y[i] = tanhf(y[i]);
+    for( ; i < n; i++ )
+        y[i] = tanhf(y[i]);
 }
 
 static void exponential( const int n, float *ar )
 {
-	for( int i = 0; i < n; i++ )
-		ar[i] = expf(ar[i]);
+    for( int i = 0; i < n; i++ )
+        ar[i] = expf(ar[i]);
 }
 
 static void softplus( const int n, float *ar )
 {
-	for( int i = 0; i < n; i++ )
-		ar[i] = logf( expf(ar[i]) + 1.0f ) ;
+    for( int i = 0; i < n; i++ )
+        ar[i] = logf( expf(ar[i]) + 1.0f ) ;
 }
 
 static void softsign( const int n, float *ar )
 {
-	for( int i = 0; i < n; i++ )
-		ar[i] = ar[i] / (fabsf(ar[i]) + 1.0f ) ;
+    for( int i = 0; i < n; i++ )
+        ar[i] = ar[i] / (fabsf(ar[i]) + 1.0f ) ;
 }
 
 static void hard_sigmoid( const int n, float *ar )
 {
-	for( int i = 0; i < n; i++ )
-		ar[i] = ar[i] < -2.5f ? 0.0f :
-                ar[i] >  2.5f ? 1.0f :
-                0.2f * ar[i] + 0.5f ;
+    for( int i = 0; i < n; i++ )
+        ar[i] = ar[i] < -2.5f ? 0.0f :
+            ar[i] >  2.5f ? 1.0f :
+            0.2f * ar[i] + 0.5f ;
 }
 
 #if defined(TRAINING_FEATURES)
@@ -401,14 +401,14 @@ static void relu_derivative        ( const int n, const float *activation, float
         YMM0 = _mm256_cmp_ps(YMM0, zero, _CMP_LE_OS);
         YMM1 = _mm256_cmp_ps(YMM1, zero, _CMP_LE_OS);
 
-        YMM0 = _mm256_blendv_ps( zero, ones, YMM0);
-        YMM1 = _mm256_blendv_ps( zero, ones, YMM1);
+        YMM0 = _mm256_blendv_ps( ones, zero, YMM0);
+        YMM1 = _mm256_blendv_ps( ones, zero, YMM1);
 
         YMM2 = _mm256_loadu_ps(ar + i);
         YMM3 = _mm256_loadu_ps(ar + i + 8);
 
-		_mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
-		_mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
+        _mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
+        _mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
     }
 #endif /* __AVX2__ */
     for(; i < n; i++ )
@@ -437,8 +437,8 @@ static void sigmoid_derivative     ( const int n, const float *activation, float
         YMM2 = _mm256_loadu_ps(ar + i);
         YMM3 = _mm256_loadu_ps(ar + i + 8);
 
-		_mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
-		_mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
+        _mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
+        _mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
     }
 #endif /* __AVX2__ */
     for(; i < n; i++ )
@@ -466,8 +466,8 @@ static void tanh_act_derivative    ( const int n, const float *activation, float
         YMM2 = _mm256_loadu_ps(ar + i);
         YMM3 = _mm256_loadu_ps(ar + i + 8);
 
-		_mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
-		_mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
+        _mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
+        _mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
     }
 #endif /* __AVX2__ */
     for( ; i < n; i++ )
