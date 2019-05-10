@@ -5,6 +5,7 @@
 #define __SIMD_H__
 
 #include <stdlib.h>
+#include <stdint.h>
 
 #if defined(__SSE__) /* FIXME or other SIMD technologies */
 

@@ -24,33 +24,54 @@
 #ifndef __OPTIMIZER_H__
 #define __OPTIMIZER_H__
 #include "neuralnet.h"
-#include "c_npy.h"
+#include "loss.h"
+#include "metrics.h"
 
 #include <stdlib.h>  /* malloc/free in macros */
 #include <stdio.h>   /* fprintf in macro */
+#include <stdbool.h>   /* fprintf in macro */
 
-#define OPTIMIZER(v) (optimizer_t*)(v)
+#define OPTIMIZER(v) ((optimizer_t*)(v))
+
+#define MAX_METRICS 5
 
 typedef struct _optimizer_t optimizer_t;
 struct _optimizer_t {
-	float (*run_epoch) (const optimizer_t *self, const cmatrix_t *train_X, const cmatrix_t *train_Y, 
-                                                const cmatrix_t *test_X, const cmatrix_t *test_Y, unsigned int batch_size );
+    void (*run_epoch)( const optimizer_t *opt,
+        const unsigned int n_train_samples, const float *train_X, const float *train_Y,
+        const unsigned int n_valid_samples, const float *valid_X, const float *valid_Y, float *result );
+
 	void (*free) (optimizer_t *self);
     
     neuralnet_t *nn;
     unsigned long long int iterations;
-    bool shuffle;
-    void (*progress)( char *label, int x, int n ); 
+    bool     shuffle;
+    int      batchsize;
+//    void     (*progress) ( char *label, int x, int n ); /* Naa... */
+    metric_func metrics[MAX_METRICS + 1];  /* NULL terminated */
 };
 
-static inline float optimizer_run_epoch( const optimizer_t *self, const cmatrix_t *train_X, const cmatrix_t *train_Y, 
-                                                const cmatrix_t *test_X, const cmatrix_t *test_Y, unsigned int batch_size )
+static inline void optimizer_run_epoch( const optimizer_t *self,
+        const unsigned int n_train_samples, const float *train_X, const float *train_Y,
+        const unsigned int n_valid_samples, const float *valid_X, const float *valid_Y, float *result )
 {
-	return self->run_epoch( self, train_X, train_Y, test_X, test_Y, batch_size );
+	self->run_epoch( self, n_train_samples, train_X, train_Y, n_valid_samples, valid_X, valid_Y, result );
 }
 
-static inline void optimizer_free( optimizer_t *self){
+static inline void optimizer_free( optimizer_t *self)
+{
 	self->free( self );
+}
+
+
+static inline int optimizer_get_n_metrics( const optimizer_t *opt )
+{
+    int i = 0;
+    for ( ; i < MAX_METRICS ; i++ )
+        if (!opt->metrics[i])
+            break;
+
+    return i;
 }
 
 #if defined(__GNUC__)
@@ -66,8 +87,9 @@ static inline void optimizer_free( optimizer_t *self){
 #endif
 
 #define OPTIMIZER_DEFINE(name,...) \
-static float name ## _run_epoch( const optimizer_t *opt, const cmatrix_t *train_X, const cmatrix_t *train_Y, \
-                      const cmatrix_t *test_X, const cmatrix_t *test_Y, unsigned int batch_size ); \
+static void name ## _run_epoch( const optimizer_t *self, \
+        const unsigned int n_train_samples, const float *train_X, const float *train_Y, \
+        const unsigned int n_valid_samples, const float *valid_X, const float *valid_Y, float *result );  \
 DLLEXPORT name ## _t * name ## _new( neuralnet_t *nn, void * UNUSED(config)) \
 {	\
 	name ## _t *newopt = malloc( sizeof( name ## _t ) ); \
@@ -78,6 +100,11 @@ DLLEXPORT name ## _t * name ## _new( neuralnet_t *nn, void * UNUSED(config)) \
 	newopt->opt.run_epoch = name ## _run_epoch; \
 	newopt->opt.free = (void(*)(optimizer_t*)) free; \
     newopt->opt.nn = nn; \
+    newopt->opt.iterations = 0; \
+    newopt->opt.shuffle = true; \
+    newopt->opt.batchsize = 1; \
+    newopt->opt.metrics[0] = get_metric_func( get_loss_name( nn->loss ) ); \
+    newopt->opt.metrics[1] = NULL; \
 	__VA_ARGS__ ; \
 	return newopt; \
 }
