@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h> 
 #if __WIN32
 #include <windows.h>

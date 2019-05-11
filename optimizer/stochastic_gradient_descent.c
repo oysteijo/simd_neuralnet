@@ -1,4 +1,5 @@
 #include "stochastic_gradient_descent.h"
+#include "progress.h"
 #include "simd.h"
 #include <stdlib.h>   /* malloc/free in macros */
 #include <stdio.h>    /* fprintf in macro */
@@ -8,7 +9,7 @@
 #include <immintrin.h>
 
 
-OPTIMIZER_DEFINE(SGD);
+OPTIMIZER_DEFINE(SGD, newopt->learning_rate = 0.01f; newopt->decay = 0.0f );
 
 /* FIXME optimizer common code */
 /* Hmmm ? Shouldn't this function rather take in a optimizer? Or maybe not? Maybe it should be independent of optimizer? */
@@ -23,9 +24,6 @@ static void evaluate( neuralnet_t *nn, const int n_valid_samples, const float *v
     int n_metrics = 0;
     while ( *mf_ptr++ )
         n_metrics++;
-
-    printf("n-Metrics: %d\n", n_metrics );
-
 
     memset( results, 0, n_metrics * sizeof(float)); // float total_error = 0.0f;
 
@@ -43,6 +41,11 @@ static void evaluate( neuralnet_t *nn, const int n_valid_samples, const float *v
     float *res = results;
     for ( int i = 0; i < n_metrics; i++ )
         *res++ /= (float) n_valid_samples;
+
+    res = results;
+    for ( int i = 0; i < n_metrics; i++ )
+        printf( "%s: %5.5e", get_metric_name( metrics[i] ), *res++ );
+
 }
 
 static void fisher_yates_shuffle( unsigned int n, unsigned int *arr )
@@ -184,6 +187,9 @@ static void SGD_run_epoch( const optimizer_t *opt,
             // cblas_saxpy( n_out * n_inp, -learning_rate, ptr, 1, nn->layer[l].weight, 1 );
             ptr += n_inp * n_out;
         }
+#if 1
+        progress_bar("Training: ", i, n_train_samples-1 );
+#endif
     }
     free( pivot );
     free( grad );

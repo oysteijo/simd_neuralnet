@@ -64,13 +64,16 @@ int main( int argc, char *argv[] )
 
     int n_epochs = 20;
     srand( 42 );
+    float *results = calloc( 2 * n_epochs, sizeof(float));
+    
     for ( int epoch = 0; epoch < n_epochs; epoch++ ){
 
-        optimizer_run_epoch( sgd, n_train_samples, train_X->data, train_Y->data,
-                                  n_test_samples,  test_X->data, test_Y->data , results );
+        optimizer_run_epoch( sgd, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
+                                  n_test_samples,  (float*) test_X->data, (float*) test_Y->data , results + 2*epoch);
 
     }
 
+    free(results);
     /* log and report */
     neuralnet_save( nn, "after-20-epochs.npz" );
     neuralnet_free( nn );

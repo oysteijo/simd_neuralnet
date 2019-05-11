@@ -235,7 +235,7 @@ int main( int argc, char *argv[] )
         pivot[i] = i;
 
     int n_epochs = 20;
-    srand( 42 );
+    srand( 70 );
     for ( int epoch = 0; epoch < n_epochs; epoch++ ){
 
         float *train_X_ptr = (float*) train_X->data;
@@ -258,9 +258,11 @@ int main( int argc, char *argv[] )
                 // cblas_saxpy( n_out * n_inp, -learning_rate, ptr, 1, nn->layer[l].weight, 1 );
                 ptr += n_inp * n_out;
             }
+#if 1
             char label[20];
             sprintf(label, "Epoch %2d: ", epoch);
             progress_bar(label, i, n_samples-1 );
+#endif
         }
         fisher_yates_shuffle( pivot, n_samples );
 
