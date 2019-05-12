@@ -103,7 +103,7 @@ void scale_and_add_vector( unsigned int n, float *y, const float scale, const fl
 }
 #endif
 
-typedef float (*metric_func)      (unsigned int n, const float *y_pred, const float *y_real );
+// typedef float (*metric_func)      (unsigned int n, const float *y_pred, const float *y_real );
 
 static float backgammon_scaled_absolute_error( unsigned int n, const float *y_pred, const float *y_real )
 {
@@ -234,7 +234,7 @@ int main( int argc, char *argv[] )
     for ( unsigned int i = 0; i < n_samples; i++ )
         pivot[i] = i;
 
-    int n_epochs = 20;
+    int n_epochs = 1;
     srand( 70 );
     for ( int epoch = 0; epoch < n_epochs; epoch++ ){
 

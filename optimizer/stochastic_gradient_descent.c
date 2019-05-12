@@ -44,7 +44,7 @@ static void evaluate( neuralnet_t *nn, const int n_valid_samples, const float *v
 
     res = results;
     for ( int i = 0; i < n_metrics; i++ )
-        printf( "%s: %5.5e", get_metric_name( metrics[i] ), *res++ );
+        printf( "%s: %5.5e  ", get_metric_name( metrics[i] ), *res++ );
 
 }
 
@@ -132,9 +132,10 @@ static void SGD_run_epoch( const optimizer_t *opt,
     }
     for ( unsigned int i = 0; i < n_train_samples; i++ )
         pivot[i] = i;
-
+#if 0
     if( sgd->opt.shuffle )
         fisher_yates_shuffle( n_train_samples, pivot );
+#endif
 
     float *train_X_ptr = (float*) train_X;
     float *train_Y_ptr = (float*) train_Y;
@@ -154,7 +155,6 @@ static void SGD_run_epoch( const optimizer_t *opt,
         return;
     }
 
-
     /* Epoch start */
     for ( unsigned int i = 0; i < n_train_samples ;  ){
 
@@ -168,8 +168,9 @@ static void SGD_run_epoch( const optimizer_t *opt,
             for ( unsigned int w = 0; w < n_parameters; w++ ) /*  Improve this */
                 batch_grad[w] += grad[w];
         }
+        assert ( b == 1 );
         for ( unsigned int w = 0; w < n_parameters; w++ ) /*  Improve this */
-            batch_grad[w] /=  b + 1.0f;
+            batch_grad[w] /=  (float) b;
         
         /* OK... */
         if (sgd->decay > 0.0f )
@@ -206,6 +207,7 @@ static void SGD_run_epoch( const optimizer_t *opt,
     /* and if validation is given - do it */
     if (valid_X && valid_Y && n_valid_samples > 0 ){
         evaluate( nn, n_valid_samples, valid_X, valid_Y, OPTIMIZER(sgd)->metrics, results + n_metrics );
+        printf("\n");
     }
 
 #if 0

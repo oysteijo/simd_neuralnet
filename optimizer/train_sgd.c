@@ -62,8 +62,8 @@ int main( int argc, char *argv[] )
     
 
 
-    int n_epochs = 20;
-    srand( 42 );
+    int n_epochs = 1;
+    srand( 70 );
     float *results = calloc( 2 * n_epochs, sizeof(float));
     
     for ( int epoch = 0; epoch < n_epochs; epoch++ ){
@@ -72,6 +72,8 @@ int main( int argc, char *argv[] )
                                   n_test_samples,  (float*) test_X->data, (float*) test_Y->data , results + 2*epoch);
 
     }
+
+    printf(" mse: %e  , mse: %e\n", results[0], results[1]);
 
     free(results);
     /* log and report */

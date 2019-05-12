@@ -33,8 +33,6 @@
 
 #define OPTIMIZER(v) ((optimizer_t*)(v))
 
-#define MAX_METRICS 5
-
 typedef struct _optimizer_t optimizer_t;
 struct _optimizer_t {
     void (*run_epoch)( const optimizer_t *opt,
@@ -48,7 +46,7 @@ struct _optimizer_t {
     bool     shuffle;
     int      batchsize;
 //    void     (*progress) ( char *label, int x, int n ); /* Naa... */
-    metric_func metrics[MAX_METRICS + 1];  /* NULL terminated */
+    metric_func metrics[10];  /* NULL terminated */
 };
 
 static inline void optimizer_run_epoch( const optimizer_t *self,
@@ -66,12 +64,13 @@ static inline void optimizer_free( optimizer_t *self)
 
 static inline int optimizer_get_n_metrics( const optimizer_t *opt )
 {
-    int i = 0;
-    for ( ; i < MAX_METRICS ; i++ )
-        if (!opt->metrics[i])
-            break;
+    metric_func *mf_ptr = opt->metrics;
 
-    return i;
+    int n_metrics = 0;    
+    while ( *mf_ptr++ )
+        n_metrics++;
+
+    return n_metrics;
 }
 
 #if defined(__GNUC__)
