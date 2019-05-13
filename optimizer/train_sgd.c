@@ -8,18 +8,12 @@
 #include "strtools.h"
 #include "progress.h"
 
-#include <cblas.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include <time.h>
 #include <assert.h>
-
-#include "simd.h"
-#include <immintrin.h>
-
 
 STRSPLIT_INIT
 // STRSPLIT_LENGTH_INIT
@@ -55,30 +49,38 @@ int main( int argc, char *argv[] )
     neuralnet_t *nn = neuralnet_new( argv[1], split );
     assert( nn );
     strsplit_free(split);
-    neuralnet_set_loss( nn, "mean_squared_error" );
+    neuralnet_set_loss( nn, "binary_crossentropy" );
 
 
-    optimizer_t *sgd = OPTIMIZER(SGD_new( nn, NULL ));
-    
+    optimizer_t *sgd = optimizer_new( nn, 
+            OPTIMIZER_CONFIG(
+                .batchsize = 1,
+                .shuffle = true,
+                .run_epoch = SGD_run_epoch,
+                .settings  = SGD_SETTINGS( .learning_rate = 0.002 ),
+                .metrics   = ((metric_func[]){ get_metric_func( "mean_squared_error"), NULL })
+                )
+            );
 
+    int n_metrics = optimizer_get_n_metrics( sgd );
 
-    int n_epochs = 1;
+    int n_epochs = 20;
     srand( 70 );
-    float *results = calloc( 2 * n_epochs, sizeof(float));
+    float *results = calloc( 2 * n_metrics * n_epochs, sizeof(float));
     
     for ( int epoch = 0; epoch < n_epochs; epoch++ ){
 
         optimizer_run_epoch( sgd, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
                                   n_test_samples,  (float*) test_X->data, (float*) test_Y->data , results + 2*epoch);
 
+        printf(" mse: %e  , mse: %e\n", results[2*epoch], results[2*epoch + 1] );
     }
-
-    printf(" mse: %e  , mse: %e\n", results[0], results[1]);
 
     free(results);
     /* log and report */
     neuralnet_save( nn, "after-20-epochs.npz" );
     neuralnet_free( nn );
+    free( sgd );
     c_npy_matrix_array_free( train_test );
     return 0;
 }    

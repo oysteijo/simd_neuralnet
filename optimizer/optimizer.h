@@ -2,23 +2,31 @@
  */
 
 /** \struct _optimizer_t
- * \brief Abstract type/interface type to hold different optimizers
-
+ * \brief structure to hold all optimizer data. The optimizer data type must be set up with the relevalt
+ * parameters through the OPTIMIZER_CONFIG() macro. The structure also keeps a reference to the neural network.
+ * 
  * Typical usage:
- * This is the typical way of creating an optimizer instance. The code below shows how to instansiate
- * the implementation neuralnet_optimizer_t and composite_optimizer_t.
 
-        optimizer_t *sgd = OPTIMIZER(stochastic_gradient_descent_new( SGD_OPTIMIZER_ARGS( .learning_rate = 0.01 )));
+    optimizer_t * myopt = optimizer_new(
+            nn,
+            OPTIMIZER_CONFIG(
+                .batchsize = 32,
+                .shuffle   = true,
+                .metrics   = METRIC_LIST(
+                    get_metric_func ("mean_absolute_error"),
+                    get_metric_func ("mean_squared_error")),
+                .callbacks = CALLBACK_LIST( ... ),
+                .run_epoch = SGD_run_epoch,
+                .setting   = SGD_SETTINGS(
+                    .learning_rate = 0.01f,
+                    .decay         = 0.0f,
+                    .momentum      = 0.9f,
+                    .nesterov      = true),
+                )
+            );
 
- * The interface assures the 'run_epoch' method to be implemented, and this method can be called like:
 
-        optimizer_run_epoch( sgd, train_X, train_Y, test_X, test_Y, 1 );
-
- * There is also a free method for all optimizers and a standard for creating.
- * For convienience, there are two macros defined, OPTIMIZER_DECLARE and
- * OPTIMIZER_DEFINE, for use when generating new implementations. OPTIMIZER_DECLARE
- * is typically used in the .h file of an implementation and OPTIMIZER_DEFINE
- * typically used in a .c file of an implementation.
+   optimizer_run_epoch( myopt, n_samples, train_X, train_Y );
  */
 
 #ifndef __OPTIMIZER_H__
@@ -33,11 +41,12 @@
 
 #define OPTIMIZER(v) ((optimizer_t*)(v))
 
+
 typedef struct _optimizer_t optimizer_t;
+typedef void (*epoch_func)( optimizer_t *opt, const unsigned int n_samples, const float *X, const float *Y );
 struct _optimizer_t {
-    void (*run_epoch)( const optimizer_t *opt,
-        const unsigned int n_train_samples, const float *train_X, const float *train_Y,
-        const unsigned int n_valid_samples, const float *valid_X, const float *valid_Y, float *result );
+    void (*run_epoch)( optimizer_t *opt,
+        const unsigned int n_train_samples, const float *train_X, const float *train_Y);
 
 	void (*free) (optimizer_t *self);
     
@@ -46,70 +55,45 @@ struct _optimizer_t {
     bool     shuffle;
     int      batchsize;
 //    void     (*progress) ( char *label, int x, int n ); /* Naa... */
-    metric_func metrics[10];  /* NULL terminated */
+    metric_func *metrics;  /* NULL terminated */
+//    void (*callbacks)[](optimizer_t *opt, float *result, void *data );
+    unsigned int *pivot;
+    float *grad;
+    float *batchgrad;
+    void  *settings;
 };
 
-static inline void optimizer_run_epoch( const optimizer_t *self,
+void optimizer_run_epoch( optimizer_t *self,
         const unsigned int n_train_samples, const float *train_X, const float *train_Y,
-        const unsigned int n_valid_samples, const float *valid_X, const float *valid_Y, float *result )
-{
-	self->run_epoch( self, n_train_samples, train_X, train_Y, n_valid_samples, valid_X, valid_Y, result );
-}
+        const unsigned int n_valid_samples, const float *valid_X, const float *valid_Y, float *result );
 
-static inline void optimizer_free( optimizer_t *self)
-{
-	self->free( self );
-}
 
+typedef struct _optimizer_config_t optimizer_config_t;
+struct _optimizer_config_t {
+    int batchsize;
+    bool shuffle;
+    metric_func *metrics;
+    // callback_func *callbacks;
+    epoch_func run_epoch;
+    void *settings;
+} ;
+
+#define OPTIMIZER_CONFIG(...)  &((optimizer_config_t)  \
+            { .batchsize = 32, .shuffle = true, .metrics   = NULL, __VA_ARGS__ } ) 
+
+optimizer_t *optimizer_new( neuralnet_t *nn, void *data );
+void         optimizer_free( optimizer_t *opt );
 
 static inline int optimizer_get_n_metrics( const optimizer_t *opt )
 {
+#if 1
     metric_func *mf_ptr = opt->metrics;
 
     int n_metrics = 0;    
     while ( *mf_ptr++ )
         n_metrics++;
-
+#endif 
     return n_metrics;
 }
-
-#if defined(__GNUC__)
-#define UNUSED(c) c __attribute__((__unused__))
-#else
-#define UNUSED(c)
-#endif
-
-#if defined(_WIN32) || defined(WIN32)
-#define DLLEXPORT __declspec(dllexport)
-#else
-#define DLLEXPORT
-#endif
-
-#define OPTIMIZER_DEFINE(name,...) \
-static void name ## _run_epoch( const optimizer_t *self, \
-        const unsigned int n_train_samples, const float *train_X, const float *train_Y, \
-        const unsigned int n_valid_samples, const float *valid_X, const float *valid_Y, float *result );  \
-DLLEXPORT name ## _t * name ## _new( neuralnet_t *nn, void * UNUSED(config)) \
-{	\
-	name ## _t *newopt = malloc( sizeof( name ## _t ) ); \
-	if ( !newopt ) {\
-		fprintf( stderr ,"Can't allocate memory for '" #name "_t' optimizer type.\n"); \
-		return NULL; \
-	} \
-	newopt->opt.run_epoch = name ## _run_epoch; \
-	newopt->opt.free = (void(*)(optimizer_t*)) free; \
-    newopt->opt.nn = nn; \
-    newopt->opt.iterations = 0; \
-    newopt->opt.shuffle = true; \
-    newopt->opt.batchsize = 1; \
-    newopt->opt.metrics[0] = get_metric_func( get_loss_name( nn->loss ) ); \
-    newopt->opt.metrics[1] = NULL; \
-	__VA_ARGS__ ; \
-	return newopt; \
-}
-
-#define OPTIMIZER_DECLARE(name) \
-typedef struct _ ## name ## _t name ## _t; \
-name ## _t * name ## _new( neuralnet_t *nn, void * config); 
 
 #endif  /* __OPTIMIZER_H__ */
