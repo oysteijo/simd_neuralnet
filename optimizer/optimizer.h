@@ -32,7 +32,6 @@
 #ifndef __OPTIMIZER_H__
 #define __OPTIMIZER_H__
 #include "neuralnet.h"
-#include "loss.h"
 #include "metrics.h"
 
 #include <stdlib.h>  /* malloc/free in macros */
@@ -86,13 +85,12 @@ void         optimizer_free( optimizer_t *opt );
 
 static inline int optimizer_get_n_metrics( const optimizer_t *opt )
 {
-#if 1
     metric_func *mf_ptr = opt->metrics;
 
     int n_metrics = 0;    
     while ( *mf_ptr++ )
         n_metrics++;
-#endif 
+
     return n_metrics;
 }
 

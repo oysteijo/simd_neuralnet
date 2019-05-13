@@ -95,6 +95,7 @@ void SGD_run_epoch( optimizer_t *opt,
             sgd->learning_rate *= 1.0f / (1.0f + sgd->decay * (float) opt->iterations);
         opt->iterations++;
 
+        /* DISCUSS: This code may be better suited in neuralnet.c */
         const float *ptr = opt->batchgrad;
         for ( int l = 0; l < nn->n_layers; l++ ){
             const int n_inp = nn->layer[l].n_input;
@@ -108,7 +109,7 @@ void SGD_run_epoch( optimizer_t *opt,
         }
 #if 1
         /* Argh! The progress bar only prints out at some values if i (there is a mod operation). This
-         * call will therefor do nothing for some values a batchsize. */
+         * call will therefor do nothing for some values of batchsize. */
         progress_bar("Training: ", i, n_train_samples-1 );
 #endif
     }
