@@ -31,8 +31,8 @@ int main( int argc, char *argv[] )
 
     cmatrix_t *train_X = train_test[0];
     cmatrix_t *train_Y = train_test[1];
-    cmatrix_t *test_X = train_test[2];
-    cmatrix_t *test_Y = train_test[3];
+    cmatrix_t *test_X  = train_test[2];
+    cmatrix_t *test_Y  = train_test[3];
 
     /* if any of these asserts fails, try to open the weight in python and save with
      * np.ascontiguousarray( matrix ) */
@@ -47,17 +47,17 @@ int main( int argc, char *argv[] )
     /* It does not handle any whitespace in front of (or trailing) */
     char **split = strsplit( argv[2], ',' );
     neuralnet_t *nn = neuralnet_new( argv[1], split );
-    assert( nn );
     strsplit_free(split);
+    assert( nn );
     neuralnet_set_loss( nn, "binary_crossentropy" );
 
 
     optimizer_t *sgd = optimizer_new( nn, 
             OPTIMIZER_CONFIG(
                 .batchsize = 1,
-                .shuffle = true,
+                .shuffle   = true,
                 .run_epoch = SGD_run_epoch,
-                .settings  = SGD_SETTINGS( .learning_rate = 0.002 ),
+                .settings  = SGD_SETTINGS( .learning_rate = 0.05f ),
                 .metrics   = ((metric_func[]){ get_metric_func( "mean_squared_error"), NULL })
                 )
             );
@@ -68,12 +68,9 @@ int main( int argc, char *argv[] )
     srand( 70 );
     float *results = calloc( 2 * n_metrics * n_epochs, sizeof(float));
     
-    for ( int epoch = 0; epoch < n_epochs; epoch++ ){
-
+    for ( int i = 0; i < n_epochs; i++ ){
         optimizer_run_epoch( sgd, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
-                                  n_test_samples,  (float*) test_X->data, (float*) test_Y->data , results + 2*epoch);
-
-        printf(" mse: %e  , mse: %e\n", results[2*epoch], results[2*epoch + 1] );
+                                  n_test_samples,  (float*) test_X->data, (float*) test_Y->data, results+2*i );
     }
 
     free(results);
