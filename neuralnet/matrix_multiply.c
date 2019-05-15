@@ -1,6 +1,16 @@
 #include "matrix_multiply.h"
 #include <immintrin.h>
 
+void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const float *v, float *y )
+{
+    const float *m_ptr = matrix;
+    for( int i = 0; i < n_rows; i++ ){
+        const float *v_ptr = v;
+        for( int j = 0; j < n_cols; j++ )
+            y[i] += *v_ptr++ * *m_ptr++;
+    }
+}
+
 /**
   * This is plain vector dot matrix and is written to be used in backprop. It is not general */
 void vector_matrix_multiply( int n_rows, int n_cols, const float *v, const float *matrix, float *y )
@@ -56,23 +66,6 @@ static inline float horizontalsum_avx( __m256 x )
 	hsum = _mm256_add_ps(hsum, _mm256_permute2f128_ps(hsum, hsum, 0x1));
 	_mm_store_ss(&sumAVX, _mm_hadd_ps( _mm256_castps256_ps128(hsum), _mm256_castps256_ps128(hsum) ) );
 	return sumAVX;
-}
-
-void matrix_vector_multiply( int m, int n, const float *weight, const float *y, float *out )
-{
-	const unsigned int count = m >> 3;
-	for (int i = 0; i < n; i++) {
-		const float  *y_ptr = y;
-		const float  *weight_ptr = weight + ( i * m );
-		__m256 sum = _mm256_setzero_ps ();
-		for (int j = count; j; j--, weight_ptr += 8, y_ptr += 8) /* Check if faster: unroll w prefetch */
-#if defined(__AVX2__)
-			sum = _mm256_fmadd_ps( _mm256_load_ps(y_ptr), _mm256_load_ps(weight_ptr), sum);
-#else
-			sum = _mm256_add_ps (sum, _mm256_mul_ps(_mm256_load_ps(y_ptr), _mm256_load_ps(weight_ptr)));
-#endif
-		out[i] = horizontalsum_avx( sum );
-	}
 }
 
 void matrix_multiply_general( int n, int m, const float *weight, const float *bias, const float *input, float *y )

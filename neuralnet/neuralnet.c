@@ -334,7 +334,7 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
         const int n_inp = nn->layer[layer].n_input;
         const int n_out = nn->layer[layer].n_output;
         if( layer != nn->n_layers-1 ) {
-#if 1
+#if 0
             cblas_sgemv( CblasRowMajor, CblasNoTrans,
                     nn->layer[layer+1].n_input,
                     nn->layer[layer+1].n_output,
@@ -347,8 +347,8 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
 #else
             /* Oh no! Now I know. The cblas_segmv() function calculates m * v, however my function calculates v * m!!! */
             matrix_vector_multiply(
-                    nn->layer[layer+1].n_output,  /* m */
                     nn->layer[layer+1].n_input,   /* n */
+                    nn->layer[layer+1].n_output,  /* m */
                     nn->layer[layer+1].weight,    /* matrix */
                     grad_b[layer+1],              /* v (The vector) */
                     grad_b[layer] );              /* The result (y) */
