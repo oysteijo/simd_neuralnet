@@ -334,6 +334,7 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
         const int n_inp = nn->layer[layer].n_input;
         const int n_out = nn->layer[layer].n_output;
         if( layer != nn->n_layers-1 ) {
+#if 1
             cblas_sgemv( CblasRowMajor, CblasNoTrans,
                     nn->layer[layer+1].n_input,
                     nn->layer[layer+1].n_output,
@@ -343,12 +344,22 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
                     grad_b[layer+1], 1,
                     0.0f, /* beta */
                     grad_b[layer], 1 );
+#else
+            /* Oh no! Now I know. The cblas_segmv() function calculates m * v, however my function calculates v * m!!! */
+            matrix_vector_multiply(
+                    nn->layer[layer+1].n_output,  /* m */
+                    nn->layer[layer+1].n_input,   /* n */
+                    nn->layer[layer+1].weight,    /* matrix */
+                    grad_b[layer+1],              /* v (The vector) */
+                    grad_b[layer] );              /* The result (y) */
+#endif
         }
         /* FIXME: This will be a pointer to a funk */
         nn->layer[layer].activation_derivative( n_out, activations[layer+1], grad_b[layer] );
         
         /* This is actually the outer product */
-        cblas_sger(CblasRowMajor, /* you’re using row-major storage */
+#if 0
+        cblas_sger(CblasRowMajor, /* you're using row-major storage */
            n_inp,                 /* the matrix X has dx1 rows ...  */
            n_out,                 /*  ... and dx2 columns.          */
            1.0,                   /* scale factor to apply to x1x2' */
@@ -358,6 +369,9 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
            1,                     /* stride between elements of x2. */
            grad_w[layer],
            n_out);                /* leading dimension of matrix X. */
+#else
+        vector_vector_outer( n_inp, n_out, activations[layer], grad_b[layer], grad_w[layer] );
+#endif
     }
 }
 #endif /* TRAINING_FEATURES */

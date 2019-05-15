@@ -1,5 +1,53 @@
 #include "matrix_multiply.h"
 #include <immintrin.h>
+
+/**
+  * This is plain vector dot matrix and is written to be used in backprop. It is not general */
+void vector_matrix_multiply( int n_rows, int n_cols, const float *v, const float *matrix, float *y )
+{
+    for ( int i = 0; i < n_rows ; i++ ){
+		float const v_value = v[i];
+		const float *matrix_ptr = matrix + ( i * n_cols );
+        float  *y_ptr = y;
+        int j = 0;
+#ifdef __AVX8__
+        __m256 scale = _mm256_set1_ps( v_value );
+        for( ; j <= ((n_cols)-8); j += 8, y_ptr += 8, matrix_ptr += 8) {
+            /* Unforuneately this has to go unaligned. Can that be fixed? */
+#if defined(__AVX2__)
+            _mm256_storeu_ps(y_ptr, _mm256_fmadd_ps( _mm256_loadu_ps(matrix_ptr), scale, _mm256_loadu_ps(y_ptr)));
+#else
+            _mm256_storeu_ps(y_ptr, _mm256_add_ps(_mm256_loadu_ps(y_ptr), _mm256_mul_ps(_mm256_loadu_ps(matrix_ptr), scale)));
+#endif
+        }
+#endif
+        for ( ; j < n_cols; j++ )
+            *y_ptr++ += v_value * *matrix_ptr++;
+    }
+}
+
+void vector_vector_outer( int n_rows, int n_cols, const float *x, const float *y, float *matrix )
+{
+    /* At entry the matrix should be initialized to zeros. This is also requiered by cblas_sger() so there is no loss */
+    for ( int i = 0; i < n_rows; i++ ){
+        const float a = x[i];
+        if( a ) {
+            int j = 0;
+            float *matrix_ptr = matrix + ( i * n_cols );
+            const float *y_ptr = y;
+#ifdef __AVX__
+            __m256 scale = _mm256_set1_ps( a );
+            for( ; j <= ((n_cols)-8); j += 8, y_ptr += 8, matrix_ptr += 8) {
+                /* Unforuneately this has to go unaligned. Can that be fixed? */
+                _mm256_storeu_ps( matrix_ptr, _mm256_mul_ps( scale, _mm256_loadu_ps( y_ptr )) );
+            }
+#endif
+            for( ; j < n_cols; j++ )
+                *matrix_ptr++ = a * *y_ptr++;
+        }
+    }
+}
+
 #if defined(__AVX__)
 static inline float horizontalsum_avx( __m256 x )
 {
@@ -8,6 +56,23 @@ static inline float horizontalsum_avx( __m256 x )
 	hsum = _mm256_add_ps(hsum, _mm256_permute2f128_ps(hsum, hsum, 0x1));
 	_mm_store_ss(&sumAVX, _mm_hadd_ps( _mm256_castps256_ps128(hsum), _mm256_castps256_ps128(hsum) ) );
 	return sumAVX;
+}
+
+void matrix_vector_multiply( int m, int n, const float *weight, const float *y, float *out )
+{
+	const unsigned int count = m >> 3;
+	for (int i = 0; i < n; i++) {
+		const float  *y_ptr = y;
+		const float  *weight_ptr = weight + ( i * m );
+		__m256 sum = _mm256_setzero_ps ();
+		for (int j = count; j; j--, weight_ptr += 8, y_ptr += 8) /* Check if faster: unroll w prefetch */
+#if defined(__AVX2__)
+			sum = _mm256_fmadd_ps( _mm256_load_ps(y_ptr), _mm256_load_ps(weight_ptr), sum);
+#else
+			sum = _mm256_add_ps (sum, _mm256_mul_ps(_mm256_load_ps(y_ptr), _mm256_load_ps(weight_ptr)));
+#endif
+		out[i] = horizontalsum_avx( sum );
+	}
 }
 
 void matrix_multiply_general( int n, int m, const float *weight, const float *bias, const float *input, float *y )
