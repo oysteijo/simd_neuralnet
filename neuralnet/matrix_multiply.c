@@ -5,8 +5,20 @@
 #include <cblas.h>
 #endif
 
-/* This is quite hard to make much more effective with SIMD instructions. I can give it a shot in some ifdefs, but
-   I'll leave an alternative to cblas as well, as I think that maight me the best option for this functions. */
+#ifdef __AVX__  
+static inline float horizontalsum_avx( __m256 x )
+{
+	float sumAVX = 0.0f;
+	__m256 hsum = _mm256_hadd_ps(x, x);
+	hsum = _mm256_add_ps(hsum, _mm256_permute2f128_ps(hsum, hsum, 0x1));
+	_mm_store_ss(&sumAVX, _mm_hadd_ps( _mm256_castps256_ps128(hsum), _mm256_castps256_ps128(hsum) ) );
+	return sumAVX;
+}
+#endif
+
+/* This is quite hard to make much more effective with SIMD instructions. I can give it a shot in some ifdefs.
+   (UPDATE: I just did, and it saves a few fractions! Yeah!), but I'll leave an alternative to cblas as well,
+   as I think that might be the best option for this function. */
 void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const float *v, float *y )
 {
 #ifdef USE_CBLAS
@@ -16,11 +28,23 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
     const float *m_ptr = matrix;
     for( int i = 0; i < n_rows; i++ ){
         const float *v_ptr = v;
+        int j = 0;
+#ifdef __AVX__
+		__m256 sum = _mm256_setzero_ps ();
+		for (; j < ((n_cols)-8); j += 8, m_ptr += 8, v_ptr += 8) /* Check if faster: unroll w prefetch */
+   #if defined(__AVX2__)
+			sum = _mm256_fmadd_ps( _mm256_load_ps(v_ptr), _mm256_load_ps(m_ptr), sum);
+   #else
+			sum = _mm256_add_ps (sum, _mm256_mul_ps(_mm256_load_ps(v_ptr), _mm256_load_ps(m_ptr)));
+   #endif
+		y[i] = horizontalsum_avx( sum );
+#endif
         for( int j = 0; j < n_cols; j++ )
             y[i] += *v_ptr++ * *m_ptr++;
     }
 #endif
 }
+
 
 void vector_vector_outer( int n_rows, int n_cols, const float *x, const float *y, float *matrix )
 {
