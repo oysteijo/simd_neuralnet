@@ -57,20 +57,21 @@ int main( int argc, char *argv[] )
                 .batchsize = 1,
                 .shuffle   = true,
                 .run_epoch = SGD_run_epoch,
-                .settings  = SGD_SETTINGS( .learning_rate = 0.05f ),
+                .settings  = SGD_SETTINGS( .learning_rate = 0.002f ),
                 .metrics   = ((metric_func[]){ get_metric_func( "mean_squared_error"), NULL })
                 )
             );
 
     int n_metrics = optimizer_get_n_metrics( sgd );
 
-    int n_epochs = 20;
+    int n_epochs = 1;
     srand( 70 );
     float *results = calloc( 2 * n_metrics * n_epochs, sizeof(float));
     
     for ( int i = 0; i < n_epochs; i++ ){
         optimizer_run_epoch( sgd, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
                                   n_test_samples,  (float*) test_X->data, (float*) test_Y->data, results+2*i );
+        printf("epoch: %d  mse: %e  val_mse: %e\n", i, results[2*i], results[2*i+1]);
     }
 
     free(results);

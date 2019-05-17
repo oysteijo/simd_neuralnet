@@ -347,4 +347,20 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
         vector_vector_outer( n_inp, n_out, activations[layer], grad_b[layer], grad_w[layer] );
     }
 }
+
+/* DISCUSS: This code may be better suited in neuralnet.c -- Yes it is! */
+void neuralnet_update( neuralnet_t *nn, const float alpha, const float *grad )
+{ 
+    const float *ptr = grad;
+    for ( int l = 0; l < nn->n_layers; l++ ){
+        const int n_inp = nn->layer[l].n_input;
+        const int n_out = nn->layer[l].n_output;
+        /* Update the biases */
+        vector_scale_and_accumulate( n_out, nn->layer[l].bias, alpha, ptr );
+        ptr += n_out;
+        /* Update the weights */
+        vector_scale_and_accumulate( n_out * n_inp, nn->layer[l].weight, alpha, ptr );
+        ptr += n_inp * n_out;
+    }
+}
 #endif /* TRAINING_FEATURES */
