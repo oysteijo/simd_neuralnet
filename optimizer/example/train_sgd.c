@@ -76,7 +76,7 @@ int main( int argc, char *argv[] )
 
     free(results);
     /* log and report */
-    neuralnet_save( nn, "after-20-epochs.npz" );
+    neuralnet_save( nn, "after-10-epochs.npz" );
     neuralnet_free( nn );
     free( sgd );
     c_npy_matrix_array_free( train_test );

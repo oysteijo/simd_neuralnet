@@ -2,6 +2,7 @@
 #include "simd.h"
 #include "evaluate.h"
 
+#include <string.h>
 #include <time.h>
 #include <assert.h>
 
@@ -57,6 +58,8 @@ optimizer_t *optimizer_new( neuralnet_t *nn, void *data )
     newopt->pivot      = NULL; /* This will be allocated in the main loop */
     newopt->grad       = simd_malloc( n_param * sizeof(float) ); /* FIXME: Check allocation */
     newopt->batchgrad  = simd_malloc( n_param * sizeof(float) );
+    newopt->velocity   = simd_malloc( n_param * sizeof(float) );
+    memset( newopt->velocity, 0, n_param * sizeof(float));
 
     return newopt;
 }
@@ -68,6 +71,7 @@ void optimizer_free( optimizer_t *opt )
         free( opt->pivot );
     free( opt->grad );
     free( opt->batchgrad );
+    free( opt->velocity );
     free( opt );
     opt = NULL;
 }

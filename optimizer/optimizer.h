@@ -59,6 +59,7 @@ struct _optimizer_t {
     unsigned int *pivot;
     float *grad;
     float *batchgrad;
+    float *velocity;
     void  *settings;
 };
 

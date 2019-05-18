@@ -5,30 +5,21 @@
 #include <cblas.h>
 #endif
 
-/** 
- * Implements y <- y + scale * b   (Which is saxpy, isn't it?)
- * */
-/* Hehe - a call to cblas_saxpy instead of this primitive loop, is actually slower!! */
-void vector_scale_and_accumulate( const int n, float *y, const float scale, const float *b )
+void vector_accumulate_unaligned( const int n, float *y, const float *b )
 {
 #ifdef USE_CBLAS
-    cblas_saxpy( n, scale, b, 1, y, 1 );
+    cblas_saxpy( n, 1.0f, b, 1, y, 1 );
 #else
     float *y_ptr = y;
     const float *b_ptr = b;
 
     int i = 0;
 #ifdef __AVX__
-    __m256 scalevec = _mm256_set1_ps(scale);
     for(; i <= ((n)-8); i += 8, y_ptr += 8, b_ptr += 8 )
-#if defined(__AVX2__)
-        _mm256_storeu_ps(y_ptr, _mm256_fmadd_ps( _mm256_loadu_ps(b_ptr), scalevec, _mm256_loadu_ps(y_ptr)));
-#else
-        _mm256_storeu_ps(y_ptr, _mm256_add_ps(_mm256_loadu_ps(y_ptr), _mm256_mul_ps(_mm256_loadu_ps(b_ptr), scalevec)));
-#endif
+        _mm256_storeu_ps(y_ptr, _mm256_add_ps(_mm256_loadu_ps(y_ptr), _mm256_loadu_ps(b_ptr) ));
 #endif
     for (; i < n; i++ )
-        *y_ptr++ += scale * *b_ptr++;
+        *y_ptr++ += *b_ptr++;
 #endif /* USE_CBLAS */
 }
 

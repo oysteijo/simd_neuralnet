@@ -32,7 +32,7 @@ void          neuralnet_predict           ( const neuralnet_t *nn, const float *
 void          neuralnet_set_loss          (       neuralnet_t *nn, const char *loss_name );
 void          neuralnet_backpropagation   ( const neuralnet_t *nn, const float *input, const float *desired, float *gradient);
 void          neuralnet_save              ( const neuralnet_t *nn, const char *filename);
-void          neuralnet_update            (       neuralnet_t *nn, const float alpha, const float *grad );
+void          neuralnet_update            (       neuralnet_t *nn, const float *delta_w );
 #endif
 
 static inline int neuralnet_get_n_layers  ( const neuralnet_t *nn ) { return nn->n_layers; }
