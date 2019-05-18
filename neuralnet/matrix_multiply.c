@@ -58,7 +58,7 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
         int j = 0;
 #ifdef __AVX__
 		__m256 sum = _mm256_setzero_ps ();
-		for (; j < ((n_cols)-8); j += 8, m_ptr += 8, v_ptr += 8) /* Check if faster: unroll w prefetch */
+		for (; j <= ((n_cols)-8); j += 8, m_ptr += 8, v_ptr += 8) /* Check if faster: unroll w prefetch */
    #if defined(__AVX2__)
 			sum = _mm256_fmadd_ps( _mm256_load_ps(v_ptr), _mm256_load_ps(m_ptr), sum);
    #else
@@ -66,7 +66,7 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
    #endif
 		y[i] = horizontalsum_avx( sum );
 #endif
-        for( int j = 0; j < n_cols; j++ )
+        for(; j < n_cols; j++ )
             y[i] += *v_ptr++ * *m_ptr++;
     }
 #endif
@@ -122,7 +122,7 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
 			if (inp == 1.0f){
                 int j = 0;
 #ifdef __AVX__
-				for (; j < ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8) 
+				for (; j <= ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8) 
 					_mm256_store_ps(y_ptr, _mm256_add_ps (_mm256_load_ps(y_ptr), _mm256_load_ps( weight_ptr )));
 #endif /*  __AVX__ */
                 for( ; j < m; j++ )
