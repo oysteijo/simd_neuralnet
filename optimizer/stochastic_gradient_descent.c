@@ -49,8 +49,13 @@ void SGD_run_epoch( optimizer_t *opt,
         const unsigned int n_train_samples, const float *train_X, const float *train_Y )
 {
     sgd_settings_t *sgd = (sgd_settings_t*) opt->settings;
-    printf( "learning_rate: %.4f\nmomentum: %.4f\ndecay: %.4f\nNesterov: %s\n",
+
+    static bool do_print_settings = true;
+    if ( do_print_settings ){
+        printf( "learning_rate: %.4f\nmomentum: %.4f\ndecay: %.4f\nNesterov: %s\n",
             sgd->learning_rate, sgd->momentum, sgd->decay, sgd->nesterov ? "True" : "False");
+        do_print_settings = false;
+    }
 
     neuralnet_t *nn = opt->nn;
     const unsigned int n_parameters = neuralnet_total_n_parameters( nn );
@@ -84,9 +89,11 @@ void SGD_run_epoch( optimizer_t *opt,
 
         float *delta_w = opt->batchsize > 1 ? opt->batchgrad : opt->grad;
         vector_scale( n_parameters, delta_w, -sgd->learning_rate );
-#if 0
+#if 1
         if ( sgd->momentum > 0.0f ){
             vector_scale( n_parameters, opt->velocity, sgd->momentum );
+            if( sgd->nesterov )
+                neuralnet_update( nn, opt->velocity );
             vector_accumulate( n_parameters, delta_w, opt->velocity );
         }
 #endif

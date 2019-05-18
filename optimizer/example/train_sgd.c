@@ -54,10 +54,10 @@ int main( int argc, char *argv[] )
 
     optimizer_t *sgd = optimizer_new( nn, 
             OPTIMIZER_CONFIG(
-                .batchsize = 1,
+                .batchsize = 8,
                 .shuffle   = true,
                 .run_epoch = SGD_run_epoch,
-                .settings  = SGD_SETTINGS( .learning_rate = 0.01f ),
+                .settings  = SGD_SETTINGS( .learning_rate = 0.01f, .momentum = 0.9f, .nesterov = true ),
                 .metrics   = ((metric_func[]){ get_metric_func( "mean_squared_error"), NULL })
                 )
             );
