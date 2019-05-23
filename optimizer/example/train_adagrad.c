@@ -8,6 +8,10 @@
 #include "strtools.h"
 #include "progress.h"
 
+#include "logger.h"
+#include "modelcheckpoint.h"
+#include "earlystopping.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -64,14 +68,40 @@ int main( int argc, char *argv[] )
 
     int n_metrics = optimizer_get_n_metrics( adagrad );
 
-    int n_epochs = 10;
+    int n_epochs = 600;
     srand( 70 );
     float *results = calloc( 2 * n_metrics * n_epochs, sizeof(float));
+
+    logdata_t logdata = {
+        .epoch_count = 1,
+        .no_stdout   = false, 
+        .filename    = NULL 
+    };
+
+    checkpointdata_t cpdata = {
+        .filename = NULL,
+        .greater_is_better = false,
+        .monitor_idx = -1,
+        .verbose  = true
+
+    };
     
-    for ( int i = 0; i < n_epochs; i++ ){
+    earlystoppingdata_t esdata = {
+        .patience          = 10,
+        .greater_is_better = false,
+        .monitor_idx       = -1,
+        .early_stopping_flag = false
+    };
+
+    
+    for ( int i = 0; i < n_epochs && !esdata.early_stopping_flag; i++ ){
         optimizer_run_epoch( adagrad, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
                                   n_test_samples,  (float*) test_X->data, (float*) test_Y->data, results+2*i );
-        printf("epoch: %d  mse: %e  val_mse: %e\n", i, results[2*i], results[2*i+1]);
+
+        logger( adagrad, results+2*i, true, (void *) &logdata );
+        modelcheckpoint( adagrad, results+2*i, true, (void *) &cpdata );
+        earlystopping( adagrad, results+2*i, true, (void*) &esdata );
+        // printf("epoch: %d  mse: %e  val_mse: %e\n", i, results[2*i], results[2*i+1]);
     }
 
     free(results);

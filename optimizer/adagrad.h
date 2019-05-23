@@ -6,7 +6,6 @@ typedef struct _adagrad_settings_t adagrad_settings_t;
 struct _adagrad_settings_t
 {
     float learning_rate;
-    float decay;
 };
 
 void adagrad_run_epoch( optimizer_t *opt,
@@ -16,7 +15,7 @@ void adagrad_run_epoch( optimizer_t *opt,
  * Maybe a better name would be *_PARAMS(...) ?  */
 #define ADAGRAD_SETTINGS(...) \
     &((adagrad_settings_t)  \
-            { .learning_rate = 0.01, .decay=0.0f, __VA_ARGS__ })
+            { .learning_rate = 0.01, __VA_ARGS__ })
 
 #endif /* __ADAGRAD_H__ */
 

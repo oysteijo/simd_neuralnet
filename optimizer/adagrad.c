@@ -72,13 +72,6 @@ void adagrad_run_epoch( optimizer_t *opt,
 {
     adagrad_settings_t *adagrad = (adagrad_settings_t*) opt->settings;
 
-    static bool do_print_settings = true;
-    if ( do_print_settings ){
-        printf( "learning_rate: %.4f\ndecay: %.4f\n",
-            adagrad->learning_rate, adagrad->decay );
-        do_print_settings = false;
-    }
-
     neuralnet_t *nn = opt->nn;
     const unsigned int n_parameters = neuralnet_total_n_parameters( nn );
 
@@ -105,8 +98,6 @@ void adagrad_run_epoch( optimizer_t *opt,
             vector_divide_by_scalar( n_parameters, opt->batchgrad, (float) b );
         
         /* OK... */
-        if (adagrad->decay > 0.0f )
-            adagrad->learning_rate *= 1.0f / (1.0f + adagrad->decay * (float) opt->iterations);
         opt->iterations++;
 
         float *delta_w = opt->batchsize > 1 ? opt->batchgrad : opt->grad;

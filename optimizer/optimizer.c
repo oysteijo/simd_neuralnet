@@ -95,17 +95,17 @@ void optimizer_run_epoch( optimizer_t *self,
     evaluate( self->nn, n_train_samples, train_X, train_Y, self->metrics, results );  
 
     /* and if validation is given - do it */
-    if (valid_X && valid_Y && n_valid_samples > 0 ){
+    bool has_valid = valid_X && valid_Y && n_valid_samples > 0;
+    if( has_valid ){
         evaluate( self->nn, n_valid_samples, valid_X, valid_Y, self->metrics, results + n_metrics );
     }
 
-    /* callbacks... Just typing something, it's a code sketch */
 #if 0
-    if ( sgd->opt.n_callbacks > 0 )
-        for( cb = 0; cb < sgd->opt.n_callbacks; cb++)
-            sgd->opt.callback[cb]( OPTIMIZER( sgd ), train_X, train_Y, test_X, test_Y, batch_size );
-#endif
-//    return 0.0f;
+    callback_t *array_of_callbacks = CALLBACK( base_logger, NULL );
 
+    callback_t *cb_ptr = array_of_callbacks;
+    while ( *cb_ptr++ )
+        cb_ptr->func( self, results, has_valid, cb_ptr->data );
+#endif
 }
 

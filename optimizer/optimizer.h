@@ -55,7 +55,7 @@ struct _optimizer_t {
     int      batchsize;
 //    void     (*progress) ( char *label, int x, int n ); /* Naa... */
     metric_func *metrics;  /* NULL terminated */
-//    void (*callbacks)[](optimizer_t *opt, float *result, void *data );
+//    callback_t *callbacks;
     unsigned int *pivot;
     float *grad;
     float *batchgrad;
@@ -73,7 +73,7 @@ struct _optimizer_config_t {
     int batchsize;
     bool shuffle;
     metric_func *metrics;
-    // callback_func *callbacks;
+//    callback_t  *callbacks;
     epoch_func run_epoch;
     void *settings;
 } ;
