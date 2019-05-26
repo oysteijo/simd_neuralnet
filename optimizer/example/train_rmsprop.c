@@ -1,4 +1,4 @@
-#include "adagrad.h"
+#include "RMSprop.h"
 #include "c_npy.h"
 #include "neuralnet.h"
 #include "activation.h"
@@ -56,17 +56,17 @@ int main( int argc, char *argv[] )
     neuralnet_set_loss( nn, "binary_crossentropy" );
 
 
-    optimizer_t *adagrad = optimizer_new( nn, 
+    optimizer_t *RMSprop = optimizer_new( nn, 
             OPTIMIZER_CONFIG(
                 .batchsize = 256,
                 .shuffle   = true,
-                .run_epoch = adagrad_run_epoch,
-                .settings  = ADAGRAD_SETTINGS( .learning_rate = 0.01f ),
+                .run_epoch = RMSprop_run_epoch,
+                .settings  = RMSPROP_SETTINGS( .learning_rate = 0.01f ),
                 .metrics   = ((metric_func[]){ get_metric_func( "mean_squared_error"), NULL })
                 )
             );
 
-    int n_metrics = optimizer_get_n_metrics( adagrad );
+    int n_metrics = optimizer_get_n_metrics( RMSprop );
 
     int n_epochs = 10;
     srand( 70 );
@@ -95,12 +95,12 @@ int main( int argc, char *argv[] )
 
     
     for ( int i = 0; i < n_epochs && !esdata.early_stopping_flag; i++ ){
-        optimizer_run_epoch( adagrad, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
+        optimizer_run_epoch( RMSprop, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
                                   n_test_samples,  (float*) test_X->data, (float*) test_Y->data, results+2*i );
 
-        logger( adagrad, results+2*i, true, (void *) &logdata );
-        // modelcheckpoint( adagrad, results+2*i, true, (void *) &cpdata );
-        // earlystopping( adagrad, results+2*i, true, (void*) &esdata );
+        logger( RMSprop, results+2*i, true, (void *) &logdata );
+        // modelcheckpoint( RMSprop, results+2*i, true, (void *) &cpdata );
+        // earlystopping( RMSprop, results+2*i, true, (void*) &esdata );
         // printf("epoch: %d  mse: %e  val_mse: %e\n", i, results[2*i], results[2*i+1]);
     }
 
@@ -108,7 +108,7 @@ int main( int argc, char *argv[] )
     /* log and report */
     neuralnet_save( nn, "after-10-epochs.npz" );
     neuralnet_free( nn );
-    free( adagrad );
+    free( RMSprop );
     c_npy_matrix_array_free( train_test );
     return 0;
 }    

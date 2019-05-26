@@ -10,7 +10,9 @@ dep = $(obj:.o=.d)  # one dependency file for each source
 # dependency library
 C_NPY_LIBPATH = ../c_npy
 NEURALNET_LIBPATH = ../neuralnet
-CFLAGS += -I$(C_NPY_LIBPATH) -I$(NEURALNET_LIBPATH)
+CALLBACK_LIBPATH = ../callback
+OPTIMIZER_LIBPATH = ../optimizer
+CFLAGS += -I$(C_NPY_LIBPATH) -I$(NEURALNET_LIBPATH) -I$(CALLBACK_LIBPATH) -I$(OPTIMIZER_LIBPATH)
 LDFLAGS += -L$(C_NPY_LIBPATH) -L$(NEURALNET_LIBPATH) -lneuralnet -lc_npy
 
 # This should obly be turned off when you do not need any training.

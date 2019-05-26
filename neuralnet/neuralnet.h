@@ -1,7 +1,7 @@
 #ifndef __NN_NEURALNET_H__
 #define __NN_NEURALNET_H__
 
-#define NN_MAX_LAYERS 7
+#define NN_MAX_LAYERS 8
 
 typedef struct _neuralnet_t neuralnet_t;
 typedef struct _layer_t layer_t;

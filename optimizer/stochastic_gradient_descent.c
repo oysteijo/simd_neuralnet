@@ -65,6 +65,11 @@ void SGD_run_epoch( optimizer_t *opt,
 
     for ( unsigned int i = 0; i < n_train_samples ;  ){
 
+        if ( sgd->momentum > 0.0f ){
+            vector_scale( n_parameters, opt->velocity, sgd->momentum );
+            if( sgd->nesterov )  /* Oh no!  I have to backup the original weights and then restore them after the grad computation! */
+                neuralnet_update( nn, opt->velocity );
+        }
         /* Batch start */
         if ( opt->batchsize > 1 )
             memset( opt->batchgrad, 0, n_parameters * sizeof(float));  /* Clear the batch grad */
@@ -87,22 +92,15 @@ void SGD_run_epoch( optimizer_t *opt,
             sgd->learning_rate *= 1.0f / (1.0f + sgd->decay * (float) opt->iterations);
         opt->iterations++;
 
-        float *delta_w = opt->batchsize > 1 ? opt->batchgrad : opt->grad;
-        vector_scale( n_parameters, delta_w, -sgd->learning_rate );
-#if 1
-        if ( sgd->momentum > 0.0f ){
-            vector_scale( n_parameters, opt->velocity, sgd->momentum );
-            if( sgd->nesterov )
-                neuralnet_update( nn, opt->velocity );
-            vector_accumulate( n_parameters, delta_w, opt->velocity );
-        }
-#endif
-        neuralnet_update( nn, delta_w );
+        float *neg_eta_grad = opt->batchsize > 1 ? opt->batchgrad : opt->grad;
+        vector_scale( n_parameters, neg_eta_grad, -sgd->learning_rate );
 
-        // neuralnet_update( nn, -sgd->learning_rate, opt->batchgrad );
-#if 1
-        /* Argh! The progress bar only prints out at some values if i (there is a mod operation). This
-         * call will therefor do nothing for some values of batchsize. */
-#endif
+        if ( sgd->momentum > 0.0f ){
+            /* Comute velocity update */
+            vector_accumulate( n_parameters, opt->velocity, neg_eta_grad );
+            /* Apply update */
+            neuralnet_update( nn, opt->velocity );
+        } else
+            neuralnet_update( nn, neg_eta_grad );
     }
 }
