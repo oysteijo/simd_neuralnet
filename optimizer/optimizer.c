@@ -53,6 +53,8 @@ optimizer_t *optimizer_new( neuralnet_t *nn, void *data )
     newopt->settings   = conf->settings;
     newopt->run_epoch  = conf->run_epoch;
 
+    newopt->iterations = 0;
+
     /* now we do the internal data stuff */
     const unsigned int n_param = neuralnet_total_n_parameters( nn );
     newopt->pivot      = NULL; /* This will be allocated in the main loop */
@@ -60,6 +62,13 @@ optimizer_t *optimizer_new( neuralnet_t *nn, void *data )
     newopt->batchgrad  = simd_malloc( n_param * sizeof(float) );
     newopt->velocity   = simd_malloc( n_param * sizeof(float) );
     memset( newopt->velocity, 0, n_param * sizeof(float));
+
+    /* Adam moments */
+    newopt->s   = simd_malloc( n_param * sizeof(float) );
+    newopt->r   = simd_malloc( n_param * sizeof(float) );
+    memset( newopt->s, 0, n_param * sizeof(float));
+    memset( newopt->r, 0, n_param * sizeof(float));
+
 
     return newopt;
 }
@@ -72,6 +81,8 @@ void optimizer_free( optimizer_t *opt )
     free( opt->grad );
     free( opt->batchgrad );
     free( opt->velocity );
+    free( opt->s );
+    free( opt->r );
     free( opt );
     opt = NULL;
 }

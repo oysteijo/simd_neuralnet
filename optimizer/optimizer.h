@@ -60,7 +60,14 @@ struct _optimizer_t {
     float *grad;
     float *batchgrad;
     float *velocity;
+
+    /* Adam 1st and 2nd moments */
+    float *s;
+    float *r;
+
+
     void  *settings;
+
 };
 
 void optimizer_run_epoch( optimizer_t *self,
