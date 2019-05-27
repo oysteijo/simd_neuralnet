@@ -6,7 +6,7 @@ typedef struct _adam_settings_t adam_settings_t;
 struct _adam_settings_t
 {
     float learning_rate;  /* Called step size in Goodfellow et al. */
-    float beta_1, beta_2; /* Called rho_1 and rho2 in Goodfellow et al., but this takes name from keras code. */
+    const float beta_1, beta_2; /* Called rho_1 and rho2 in Goodfellow et al., but this takes name from keras code. */
 };
 
 void adam_run_epoch( optimizer_t *opt,
