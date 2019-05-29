@@ -67,7 +67,7 @@ void SGD_run_epoch( optimizer_t *opt,
 
         if ( sgd->momentum > 0.0f ){
             vector_scale( n_parameters, opt->velocity, sgd->momentum );
-            if( sgd->nesterov )  /* Oh no!  I have to backup the original weights and then restore them after the grad computation! */
+            if( sgd->nesterov )  
                 neuralnet_update( nn, opt->velocity );
         }
         /* Batch start */
@@ -96,11 +96,14 @@ void SGD_run_epoch( optimizer_t *opt,
         vector_scale( n_parameters, neg_eta_grad, -sgd->learning_rate );
 
         if ( sgd->momentum > 0.0f ){
-            /* Comute velocity update */
+            /* Compute velocity update */
             vector_accumulate( n_parameters, opt->velocity, neg_eta_grad );
-            /* Apply update */
+        }
+         
+        /* Apply update */
+        if ( sgd->momentum > 0.0f && !sgd->nesterov )  /* if nesterov==true we have already updated based on the velocity */
             neuralnet_update( nn, opt->velocity );
-        } else
+        else
             neuralnet_update( nn, neg_eta_grad );
     }
 }
