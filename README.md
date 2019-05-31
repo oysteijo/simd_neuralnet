@@ -12,16 +12,18 @@ neural network in the verification. The weights and other parameters of other ne
 libraries should therefore be interchangeable with the weights of these.
 
 Say you train a neural network from Keras, and then you want to use it in your C coded application?
-Then you can simply store the weights from your Keras neural network and loed them into this
+Then you can simply store the weights from your Keras neural network and load them into this
 codes, and you whole neural network is totally independent of both Python and Keras (and a GPU).
 
 ## Limitations
-To be able to achive the above, we need to set some limitations.
+To be able to achieve the above, we need to set some limitations.
 
  * **`float32` precision only!** The code will use SIMD instructions, so double precision will slow things down, and float16 is not precise enough and has limited support.
  * **Stochastic training only!** No fancy on the training side. No batch or mini-batches or fancy optimizers.
+   (*Update* Well... I have to admit that after some coding I now have stochastic and batch training support, an I have
+    implemented SGD with momentum and Nesterov, and AdaGrad and RMSprop and Adam... so this statment is really not valid anymore)
  * **Fully connect feed forward neural networks only!** No support for LSTM, convolutional layers, RNN or whatever.
- * **Limited number of additional features!** No weight initializations methods, etc.
+ * **Limited number of additional features!** No weight initializations methods, etc. (*Update:* I do have an initializing tool that can initialize with xavier (aka glorot_uniform) or kaiming (aka he_normal).  
  
 ### Loss functions implemented
 The following loss functions are implemented.
@@ -44,7 +46,10 @@ The following loss functions are implemented.
   * exponential
   
 An other limitation might be that the number of units in a hidden layer may have to be a multiple of the number of floats
-you can fit in a SIMD register. With SSE this number is 4. With AVX this number is 8. With AVX-512 the number will be 16. There must (of course) be possible to have an abritary number of inputs and outputs. 
+you can fit in a SIMD register. With SSE this number is 4. With AVX this number is 8. With AVX-512 the number will be 16. There must (of course) be possible to have an arbitrary number of inputs and outputs. 
+
+## Status today (31st May 2019)
+I got o a lot of things working now. I actually am really happy about this tools now. I need some cleanup here and there. See the issues.
 
 ## Status today (2nd May 2019)
 Yes! I strongly believe that Keras, the Python reference and my C implementation now get the same gradients.
