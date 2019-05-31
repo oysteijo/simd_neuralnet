@@ -31,7 +31,7 @@ void          neuralnet_predict           ( const neuralnet_t *nn, const float *
 #if defined(TRAINING_FEATURES)
 void          neuralnet_set_loss          (       neuralnet_t *nn, const char *loss_name );
 void          neuralnet_backpropagation   ( const neuralnet_t *nn, const float *input, const float *desired, float *gradient);
-void          neuralnet_save              ( const neuralnet_t *nn, const char *filename);
+void          neuralnet_save              ( const neuralnet_t *nn, const char *fmt, ...);
 void          neuralnet_update            (       neuralnet_t *nn, const float *delta_w );
 #endif
 

@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <string.h>             /* for memcpy */
+#include <stdarg.h>
 #include <stdbool.h>
 #include <assert.h>
 
@@ -201,8 +202,43 @@ void neuralnet_predict( const neuralnet_t *nn, const float *input, float *out )
 }
 
 #if defined(TRAINING_FEATURES)
-void neuralnet_save( const neuralnet_t *nn, const char *filename )
+#define _MAX_FILENAME_LEN 128
+void neuralnet_save( const neuralnet_t *nn, const char *fmt, ... )
 {
+    if( !nn ){
+        fprintf( stderr, "Warning: Cannot save neural network. No neuralnet given.\n" );
+        return;
+    }
+
+    if( !fmt ){
+        fprintf( stderr, "Warning: Cannot save neural network. No filename given.\n" );
+        return;
+    }
+
+    /* Fist get the full filename */
+    va_list ap1, ap2;
+    int len;
+
+    va_start( ap1, fmt );
+    va_copy( ap2, ap1 );
+    len = vsnprintf( NULL, 0, fmt, ap1 );
+    va_end( ap1 );
+
+    if( len > _MAX_FILENAME_LEN ){
+        /* If someone is trying to cook up a special filename that can contain executable code, I think it is wise
+           to limit the length of the filename */
+        fprintf( stderr, "Warning: Cannot save neural network. No filename too long."
+                " Please limit the filename to %d characters.\n", _MAX_FILENAME_LEN );
+        return;
+    }
+
+
+    char filename[len+1];
+    vsprintf( filename, fmt, ap2 );
+    va_end( ap2 );
+
+    /* And then the rest is the same... */
+
     cmatrix_t *array[nn->n_layers*2 + 1]; /* bias and weight for each layer pluss a terminating NULL; */
 
     for (int i = 0; i < nn->n_layers ; i++ ){
