@@ -1,6 +1,8 @@
 # simd_neuralnet
 Feed-forward neural network implementation in C with SIMD instructions.
 
+BTW: simd_neuralnet is a bit of a misnomer. It is not SIMD instructions apart from AVX and AVX2 instructions in some of the most heavy functions. Can anyone come up with a better name? It is a neural network library written in C. I'm not sure what else makes this library different from the other libraries out there.
+
 ## The idea.
 At current this is just a study project for myself to improve my abilities to implement a 
 feed forward neural network in C. A lot of this code will be based on code from some of my
