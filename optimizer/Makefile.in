@@ -1,6 +1,6 @@
 
 CC     = gcc
-CFLAGS = -std=c99 -Wall -Wextra -Wno-override-init -O3 -mavx2 -mfma $(dbg) $(profile)
+CFLAGS = -std=c99 -Wall -Wextra -Wno-override-init -O3 -mavx2 -mfma -fopenmp $(dbg) $(profile)
 LDFLAGS = $(profile) 
 
 src = $(wildcard *.c)
@@ -15,8 +15,7 @@ OPTIMIZER_LIBPATH = ../optimizer
 CFLAGS += -I$(C_NPY_LIBPATH) -I$(NEURALNET_LIBPATH) -I$(CALLBACK_LIBPATH) -I$(OPTIMIZER_LIBPATH)
 LDFLAGS += -L$(C_NPY_LIBPATH) -L$(NEURALNET_LIBPATH) -lneuralnet -lc_npy
 
-# This should obly be turned off when you do not need any training.
-DEFINES = -DTRAINING_FEATURES
+DEFINES = 
 CFLAGS += $(DEFINES)
 
 alib = liboptimizers.a

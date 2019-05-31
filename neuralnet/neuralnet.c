@@ -6,7 +6,7 @@
 #include "matrix_multiply.h"
 #include "c_npy.h"
 
-#if defined(TRAINING_FEATURES)
+#ifndef PREDICTION_ONLY
 #include "loss.h"
 #include "cblas.h"
 #endif
@@ -201,7 +201,7 @@ void neuralnet_predict( const neuralnet_t *nn, const float *input, float *out )
     }
 }
 
-#if defined(TRAINING_FEATURES)
+#ifndef PREDICTION_ONLY
 #define _MAX_FILENAME_LEN 128
 void neuralnet_save( const neuralnet_t *nn, const char *fmt, ... )
 {
@@ -399,4 +399,4 @@ void neuralnet_update( neuralnet_t *nn, const float *delta_w )
         ptr += n_inp * n_out;
     }
 }
-#endif /* TRAINING_FEATURES */
+#endif /* PREDICTION_ONLY */

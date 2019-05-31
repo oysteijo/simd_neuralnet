@@ -11,7 +11,7 @@ struct _layer_t
     int    n_input, n_output;
     float *weight, *bias;
     void    (*activation_func) (const int n, float *ar);
-#if defined(TRAINING_FEATURES)
+#ifndef PREDICTION_ONLY
     void    (*activation_derivative) (const int n, const float *activation, float *ar);
 #endif
 };
@@ -20,7 +20,7 @@ struct _neuralnet_t
 {
     int     n_layers;
     layer_t layer[NN_MAX_LAYERS];
-#if defined(TRAINING_FEATURES)
+#ifndef PREDICTION_ONLY
     void    (*loss)  (const unsigned int n, const float *y_pred, const float *y_true, float *loss );
 #endif
 };
@@ -28,7 +28,7 @@ struct _neuralnet_t
 neuralnet_t * neuralnet_new               ( const char *filename, char *activation_funcs[] );
 void          neuralnet_free              (       neuralnet_t *nn); 
 void          neuralnet_predict           ( const neuralnet_t *nn, const float *input, float *output);
-#if defined(TRAINING_FEATURES)
+#ifndef PREDICTION_ONLY
 void          neuralnet_set_loss          (       neuralnet_t *nn, const char *loss_name );
 void          neuralnet_backpropagation   ( const neuralnet_t *nn, const float *input, const float *desired, float *gradient);
 void          neuralnet_save              ( const neuralnet_t *nn, const char *fmt, ...);

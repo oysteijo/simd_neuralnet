@@ -50,7 +50,7 @@ static void sigmoid     ( const int n, float *ar );
 /* Argh! "tanh" is already defined in math.h  (C99). We give this a different name */
 static void tanh_act    ( const int n, float *ar );
 
-#if defined(TRAINING_FEATURES)
+#ifndef PREDICTION_ONLY
 static void softplus_derivative    ( const int n, const float *activation, float *ar );
 static void softsign_derivative    ( const int n, const float *activation, float *ar );
 static void hard_sigmoid_derivative( const int n, const float *activation, float *ar );
@@ -98,7 +98,7 @@ const char * get_activation_name( activation_func ptr ){
 #undef CHECK_ACTIVATION_NAME
 #undef CHECK_ACTIVATION_PTR
 
-#if defined(TRAINING_FEATURES)
+#ifndef PREDICTION_ONLY
 #define CHECK_ACTIVATION_DERIV_PTR(func) \
         ptr == func ? func ## _derivative :
 
@@ -336,8 +336,7 @@ static void hard_sigmoid( const int n, float *ar )
             0.2f * ar[i] + 0.5f ;
 }
 
-#if defined(TRAINING_FEATURES)
-
+#ifndef PREDICTION_ONLY
 static void softplus_derivative    ( const int n, const float *activation, float *ar )
 {
     for( int i=0; i < n; i++ ){
@@ -474,4 +473,4 @@ static void tanh_act_derivative    ( const int n, const float *activation, float
         ar[i] *= 1.0f-activation[i]*activation[i];
 
 }
-#endif
+#endif /* PREDICTION_ONLY */

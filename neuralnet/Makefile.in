@@ -13,8 +13,8 @@ CFLAGS += -I$(C_NPY_LIBPATH)
 LDFLAGS += -L$(C_NPY_LIBPATH) -lc_npy
 
 # This should obly be turned off when you do not need any training.
-#DEFINES = -DTRAINING_FEATURES -DUSE_CBLAS
-DEFINES = -DTRAINING_FEATURES
+#DEFINES = -DUSE_CBLAS
+DEFINES = 
 CFLAGS += $(DEFINES)
 
 alib = libneuralnet.a
