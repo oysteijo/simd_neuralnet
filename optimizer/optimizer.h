@@ -33,6 +33,7 @@
 #define __OPTIMIZER_H__
 #include "neuralnet.h"
 #include "metrics.h"
+#include "progress.h"
 
 #include <stdlib.h>  /* malloc/free in macros */
 #include <stdio.h>   /* fprintf in macro */
@@ -53,7 +54,7 @@ struct _optimizer_t {
     unsigned long long int iterations;
     bool     shuffle;
     int      batchsize;
-//    void     (*progress) ( char *label, int x, int n ); /* Naa... */
+    void     (*progress)( int x, int n, const char *fmt, ...);
     metric_func *metrics;  /* NULL terminated */
 //    callback_t *callbacks;
     unsigned int *pivot;
@@ -67,7 +68,6 @@ struct _optimizer_t {
 
 
     void  *settings;
-
 };
 
 void optimizer_run_epoch( optimizer_t *self,
@@ -83,10 +83,11 @@ struct _optimizer_config_t {
 //    callback_t  *callbacks;
     epoch_func run_epoch;
     void *settings;
+    void (*progress)( int x, int n, const char *fmt, ...);
 } ;
 
 #define OPTIMIZER_CONFIG(...)  &((optimizer_config_t)  \
-            { .batchsize = 32, .shuffle = true, .metrics   = NULL, __VA_ARGS__ } ) 
+            { .batchsize = 32, .shuffle = true, .metrics   = NULL, .progress = progress_ascii, __VA_ARGS__ } ) 
 
 optimizer_t *optimizer_new( neuralnet_t *nn, void *data );
 void         optimizer_free( optimizer_t *opt );

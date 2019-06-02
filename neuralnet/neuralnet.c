@@ -215,7 +215,7 @@ void neuralnet_save( const neuralnet_t *nn, const char *fmt, ... )
         return;
     }
 
-    /* Fist get the full filename */
+    /* First get the full filename */
     va_list ap1, ap2;
     int len;
 

@@ -1,10 +1,12 @@
 #include "adam.h"
-#include "progress.h"
+#include "simd.h"
 #include <stdlib.h>   /* malloc/free in macros */
 #include <stdio.h>    /* fprintf in macro */
 #include <string.h>   /* memset */
 #include <math.h>
 #include <immintrin.h>
+
+#include <omp.h>
 
 static void vector_accumulate( const int n, float *a, const float *b )
 {
@@ -128,6 +130,7 @@ void adam_run_epoch( optimizer_t *opt,
 
     for ( unsigned int i = 0; i < n_train_samples ;  ){
 
+#if 0
         /* Batch start */
         if ( opt->batchsize > 1 )
             memset( opt->batchgrad, 0, n_parameters * sizeof(float));  /* Clear the batch grad */
@@ -141,21 +144,43 @@ void adam_run_epoch( optimizer_t *opt,
             /* FIXME: Consider how the progress indicator feedback should be handeled. Maybe as a callback? This seems wrong. */
             progress_bar("Training: ", i, n_train_samples-1 );
         }
-
         if( opt->batchsize > 1 )
             vector_divide_by_scalar( n_parameters, opt->batchgrad, (float) b );
+#endif
+        float SIMD_ALIGN(batchgrad[n_parameters]);
+        memset( batchgrad, 0, n_parameters * sizeof(float));  /* Clear the batch grad */
+
+        int remaining_samples = (int) n_train_samples - (int) i;
+        int max_loop = remaining_samples < opt->batchsize ? remaining_samples : opt->batchsize;
+        #pragma omp parallel for shared(i) reduction(+:batchgrad[:])
+        for ( int b = 0 ; b < max_loop; b++){
+            float SIMD_ALIGN(grad[n_parameters]);
+            neuralnet_backpropagation( nn, train_X + (opt->pivot[i] * n_input), train_Y + (opt->pivot[i] * n_output), grad );
+            vector_accumulate( n_parameters, batchgrad, grad );
+            #pragma omp atomic update
+            i++;
+        }
+        vector_divide_by_scalar( n_parameters, batchgrad, (float) max_loop );
+        opt->progress( i, n_train_samples, "Train: " );
         
-        float *g = opt->batchsize > 1 ? opt->batchgrad : opt->grad;
+        float *g = batchgrad;
 
         opt->iterations++;
         beta_1_corrected *= adam->beta_1;
         beta_2_corrected *= adam->beta_2;
 
-        update_biased_first_moment ( n_parameters, opt->s, g, adam->beta_1 );
-        update_biased_second_moment( n_parameters, opt->r, g, adam->beta_2 );
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            update_biased_first_moment ( n_parameters, opt->s, g, adam->beta_1 );
+            #pragma omp section
+            update_biased_second_moment( n_parameters, opt->r, g, adam->beta_2 );
+        }
+
         compute_update( n_parameters, g, opt->s, opt->r, beta_1_corrected, beta_2_corrected, adam->learning_rate );
 
         neuralnet_update( nn, g);
 
     }
+    printf("\n");
 }

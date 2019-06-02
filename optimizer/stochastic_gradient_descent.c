@@ -80,9 +80,8 @@ void SGD_run_epoch( optimizer_t *opt,
             /* then we add */
             if( opt->batchsize > 1 )
                 vector_accumulate( n_parameters, opt->batchgrad, opt->grad );
-            /* FIXME: Consider how the progress indicator feedback should be handeled. Maybe as a callback? This seems wrong. */
-            progress_bar("Training: ", i, n_train_samples-1 );
         }
+        opt->progress( i, n_train_samples, "Train: " );
 
         if( opt->batchsize > 1 )
             vector_divide_by_scalar( n_parameters, opt->batchgrad, (float) b );

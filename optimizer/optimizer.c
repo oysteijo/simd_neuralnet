@@ -52,6 +52,7 @@ optimizer_t *optimizer_new( neuralnet_t *nn, void *data )
     newopt->metrics    = conf->metrics;   /* Lots of checks can be done */
     newopt->settings   = conf->settings;
     newopt->run_epoch  = conf->run_epoch;
+    newopt->progress   = conf->progress;
 
     newopt->iterations = 0;
 
