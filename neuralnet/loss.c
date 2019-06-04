@@ -4,8 +4,6 @@
 #include <string.h>
 #include <math.h>
 
-typedef void (*loss_func)(unsigned int n, const float *y_pred, const float *y_real, float *loss );
-
 static void mean_squared_error            ( unsigned int n, const float *y_pred, const float *y_real, float *loss );
 static void mean_absolute_error           ( unsigned int n, const float *y_pred, const float *y_real, float *loss );
 static void mean_absolute_percentage_error( unsigned int n, const float *y_pred, const float *y_real, float *loss );

@@ -1,4 +1,4 @@
-#include "adam.h"
+#include "adamw.h"
 #include "simd.h"
 #include <stdlib.h>   /* malloc/free in macros */
 #include <stdio.h>    /* fprintf in macro */
@@ -7,6 +7,32 @@
 #include <immintrin.h>
 
 #include <omp.h>
+
+static void get_weights( const neuralnet_t *nn, float *weights )
+{
+    float *ptr = weights;
+    for ( int l = 0; l < nn->n_layers; l++ ){
+        const int n_inp = nn->layer[l].n_input;
+        const int n_out = nn->layer[l].n_output;
+        memcpy( ptr, nn->layer[l].bias, n_out * sizeof(float) );
+        ptr += n_out;
+        memcpy( ptr, nn->layer[l].weight, n_out * n_inp * sizeof(float) );
+        ptr += n_inp * n_out;
+    }
+}
+
+static void vector_scale( const int n, float *v, float scalar )
+{
+    int i = 0;
+    float *v_ptr = v;
+#ifdef __AVX__
+    __m256 v_scale = _mm256_set1_ps(scalar);
+    for ( ; i <= ((n)-8); i += 8, v_ptr += 8)
+        _mm256_store_ps(v_ptr, _mm256_mul_ps(_mm256_load_ps(v_ptr), v_scale));
+#endif
+    for( ; i < n; i++ )
+        *v_ptr++ *= scalar;
+}
 
 static void vector_accumulate( const int n, float *a, const float *b )
 {
@@ -114,10 +140,10 @@ static void compute_update( const int n, float *delta_w, const float *s, const f
 }
 
 
-void adam_run_epoch( optimizer_t *opt,
+void adamw_run_epoch( optimizer_t *opt,
         const unsigned int n_train_samples, const float *train_X, const float *train_Y )
 {
-    adam_settings_t *adam = (adam_settings_t*) opt->settings;
+    adamw_settings_t *adamw = (adamw_settings_t*) opt->settings;
 
     neuralnet_t *nn = opt->nn;
     const unsigned int n_parameters = neuralnet_total_n_parameters( nn );
@@ -130,23 +156,6 @@ void adam_run_epoch( optimizer_t *opt,
 
     for ( unsigned int i = 0; i < n_train_samples ;  ){
 
-#if 0
-        /* Batch start */
-        if ( opt->batchsize > 1 )
-            memset( opt->batchgrad, 0, n_parameters * sizeof(float));  /* Clear the batch grad */
-
-        int b = 0;
-        for ( ; b < opt->batchsize && i < n_train_samples; b++, i++ ){
-            neuralnet_backpropagation( nn, train_X + (opt->pivot[i] * n_input), train_Y + (opt->pivot[i] * n_output), opt->grad );
-            /* then we add */
-            if( opt->batchsize > 1 )
-                vector_accumulate( n_parameters, opt->batchgrad, opt->grad );
-            /* FIXME: Consider how the progress indicator feedback should be handeled. Maybe as a callback? This seems wrong. */
-            progress_bar("Training: ", i, n_train_samples-1 );
-        }
-        if( opt->batchsize > 1 )
-            vector_divide_by_scalar( n_parameters, opt->batchgrad, (float) b );
-#endif
         float SIMD_ALIGN(batchgrad[n_parameters]);
         memset( batchgrad, 0, n_parameters * sizeof(float));  /* Clear the batch grad */
 
@@ -166,20 +175,25 @@ void adam_run_epoch( optimizer_t *opt,
         float *g = batchgrad;
 
         opt->iterations++;
-        beta_1_corrected *= adam->beta_1;
-        beta_2_corrected *= adam->beta_2;
+        beta_1_corrected *= adamw->beta_1;
+        beta_2_corrected *= adamw->beta_2;
 
         #pragma omp parallel sections
         {
             #pragma omp section
-            update_biased_first_moment ( n_parameters, opt->s, g, adam->beta_1 );
+            update_biased_first_moment ( n_parameters, opt->s, g, adamw->beta_1 );
             #pragma omp section
-            update_biased_second_moment( n_parameters, opt->r, g, adam->beta_2 );
+            update_biased_second_moment( n_parameters, opt->r, g, adamw->beta_2 );
         }
 
-        compute_update( n_parameters, g, opt->s, opt->r, beta_1_corrected, beta_2_corrected, adam->learning_rate );
+        compute_update( n_parameters, g, opt->s, opt->r, beta_1_corrected, beta_2_corrected, adamw->learning_rate );
+
+        float SIMD_ALIGN(weights[n_parameters]);
+        get_weights( nn, weights );
+        vector_scale( n_parameters, weights, -adamw->weight_decay );
+        vector_accumulate( n_parameters, g, weights );
+
 
         neuralnet_update( nn, g);
-
     }
 }

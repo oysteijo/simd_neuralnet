@@ -37,6 +37,12 @@ for arg in "$@"; do
 done
 
 echo 'generating makefile ...'
+if [[ ! -v CC ]] ; then
+    c_compiler=gcc
+else
+    c_compiler="${CC}"
+fi
+
 echo "PREFIX = $prefix" >Makefile
 if $debugsym; then
     echo 'dbg = -g' >>Makefile
@@ -44,5 +50,8 @@ fi
 if $profilesym; then
     echo 'profile = -pg' >>Makefile
 fi
+
+echo 'CC = '$c_compiler'' >> Makefile
+
 cat Makefile.in >>Makefile
 echo 'configuration complete, type make to build.'

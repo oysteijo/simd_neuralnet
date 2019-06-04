@@ -1,5 +1,5 @@
 #ifndef __LOGGER_H__
-#define __ASELOGGER_H__
+#define __LOGGER_H__
 #include "optimizer.h"
 
 typedef struct _logdata_t 
@@ -10,5 +10,5 @@ typedef struct _logdata_t
 } logdata_t;
 
 void logger( const optimizer_t * opt, const float *epoch_results, bool validation_set_given, void *data );
-#endif /* __ASELOGGER_H__ */
+#endif /* __LOGGER_H__ */
 
