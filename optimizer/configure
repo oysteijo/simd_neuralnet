@@ -51,6 +51,13 @@ if $profilesym; then
     echo 'profile = -pg' >>Makefile
 fi
 
+if [ "$c_compiler"=="clang" ]
+then
+    echo 'w_init_override = -Wno-initializer-overrides' >> Makefile
+else
+    echo 'w_init_override = -Wno-override-init' >> Makefile
+fi
+
 echo 'CC = '$c_compiler'' >> Makefile
 
 cat Makefile.in >>Makefile
