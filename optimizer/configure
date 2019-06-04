@@ -30,7 +30,10 @@ for arg in "$@"; do
         echo '  --disable-debug: do not include debug symbols'
         echo '  --enable-profile: include profile symbols'
         echo '  --disable-profile: do not include profile symbols'
-        echo 'all invalid options are silently ignored'
+        echo 'all invalid options are silently ignored.'
+        echo
+        echo 'To set a special compiler (default is gcc), you can configure with setting CC environment variable like this:'
+        echo ' CC=clang ./configure'
         exit 0
         ;;
     esac
