@@ -60,7 +60,7 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
         for(; j < n_cols; j++ )
             y[i] += *v_ptr++ * *m_ptr++;
     }
-#endif
+#endif /* USE_CBLAS */
 }
 
 
