@@ -58,14 +58,13 @@ struct _optimizer_t {
     metric_func *metrics;  /* NULL terminated */
 //    callback_t *callbacks;
     unsigned int *pivot;
-    float *grad;
-    float *batchgrad;
+
+    /* Momentum velocity */
     float *velocity;
 
     /* Adam 1st and 2nd moments */
     float *s;
     float *r;
-
 
     void  *settings;
 };

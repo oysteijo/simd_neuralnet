@@ -59,14 +59,18 @@ optimizer_t *optimizer_new( neuralnet_t *nn, void *data )
     /* now we do the internal data stuff */
     const unsigned int n_param = neuralnet_total_n_parameters( nn );
     newopt->pivot      = NULL; /* This will be allocated in the main loop */
-    newopt->grad       = simd_malloc( n_param * sizeof(float) ); /* FIXME: Check allocation */
-    newopt->batchgrad  = simd_malloc( n_param * sizeof(float) );
+
+
+    /* FIXME: Loop? */
     newopt->velocity   = simd_malloc( n_param * sizeof(float) );
+    assert( newopt->velocity );
     memset( newopt->velocity, 0, n_param * sizeof(float));
 
     /* Adam moments */
     newopt->s   = simd_malloc( n_param * sizeof(float) );
     newopt->r   = simd_malloc( n_param * sizeof(float) );
+    assert( newopt->s );
+    assert( newopt->r );
     memset( newopt->s, 0, n_param * sizeof(float));
     memset( newopt->r, 0, n_param * sizeof(float));
 
@@ -79,8 +83,6 @@ void optimizer_free( optimizer_t *opt )
     assert( opt );
     if( opt->pivot )
         free( opt->pivot );
-    free( opt->grad );
-    free( opt->batchgrad );
     free( opt->velocity );
     free( opt->s );
     free( opt->r );
@@ -113,6 +115,7 @@ void optimizer_run_epoch( optimizer_t *self,
     }
 
 #if 0
+    /* The callback system is still under construction. Please call the callback functions in your main loop */
     callback_t *array_of_callbacks = CALLBACK( base_logger, NULL );
 
     callback_t *cb_ptr = array_of_callbacks;
