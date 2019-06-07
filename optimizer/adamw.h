@@ -17,7 +17,7 @@ void adamw_run_epoch( optimizer_t *opt,
  * Maybe a better name would be *_PARAMS(...) ?  */
 #define ADAMW_SETTINGS(...) \
     &((adamw_settings_t)  \
-            { .learning_rate = 0.001, .beta_1 = 0.9f, .beta_2 = 0.999f, .weight_decay = 1e-4f, __VA_ARGS__ })
+            { .learning_rate = 0.001f, .beta_1 = 0.9f, .beta_2 = 0.999f, .weight_decay = 1e-4f, __VA_ARGS__ })
 
 #endif /* __ADAMW_H__ */
 

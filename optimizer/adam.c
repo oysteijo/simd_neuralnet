@@ -1,5 +1,7 @@
 #include "adam.h"
 #include "simd.h"
+#include "vector_operations.h"
+
 #include <stdlib.h>   /* malloc/free in macros */
 #include <stdio.h>    /* fprintf in macro */
 #include <string.h>   /* memset */
@@ -7,32 +9,6 @@
 #include <immintrin.h>
 
 #include <omp.h>
-
-static void vector_accumulate( const int n, float *a, const float *b )
-{
-    int i = 0;
-    float *a_ptr = a;
-    const float *b_ptr = b;
-#ifdef __AVX__
-    for ( ; i <= ((n)-8); i += 8, a_ptr += 8, b_ptr += 8 )
-        _mm256_store_ps(a_ptr, _mm256_add_ps(_mm256_load_ps(a_ptr), _mm256_load_ps(b_ptr)));
-#endif
-    for (; i < n; i++ )
-        *a_ptr++ += *b_ptr++; 
-}
-
-static void vector_divide_by_scalar( const int n, float *v, float scalar )
-{
-    int i = 0;
-    float *v_ptr = v;
-#ifdef __AVX__
-    __m256 v_scale = _mm256_set1_ps(scalar);
-    for ( ; i <= ((n)-8); i += 8, v_ptr += 8)
-        _mm256_store_ps(v_ptr, _mm256_div_ps(_mm256_load_ps(v_ptr), v_scale));
-#endif
-    for( ; i < n; i++ )
-        *v_ptr++ /= scalar;
-}
 
 static void update_biased_first_moment( const int n , float *s, const float *g, const float rho )
 {
@@ -58,7 +34,6 @@ static void update_biased_first_moment( const int n , float *s, const float *g, 
     }
 }
 
-
 static void update_biased_second_moment( const int n, float *r, const float *g, const float rho )
 {
     int i = 0;
@@ -83,7 +58,6 @@ static void update_biased_second_moment( const int n, float *r, const float *g, 
     }
 }
 
-/* FIXME This needs coding .... */
 static void compute_update( const int n, float *delta_w, const float *s, const float *r, const float rho1, const float rho2, const float lr )
 {
     const float epsilon = 1.0e-8f;

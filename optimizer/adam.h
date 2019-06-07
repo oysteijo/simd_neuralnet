@@ -16,7 +16,7 @@ void adam_run_epoch( optimizer_t *opt,
  * Maybe a better name would be *_PARAMS(...) ?  */
 #define ADAM_SETTINGS(...) \
     &((adam_settings_t)  \
-            { .learning_rate = 0.001, .beta_1 = 0.9f, .beta_2 = 0.999f, __VA_ARGS__ })
+            { .learning_rate = 0.001f, .beta_1 = 0.9f, .beta_2 = 0.999f, __VA_ARGS__ })
 
 #endif /* __ADAM_H__ */
 
