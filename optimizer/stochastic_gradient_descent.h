@@ -16,5 +16,5 @@ void SGD_run_epoch( optimizer_t *opt,
  * Maybe a better name would be SGD_PARAMS(...)  */
 #define SGD_SETTINGS(...) \
     &((sgd_settings_t)  \
-            { .learning_rate = 0.01, .decay=0.0f, .momentum=0.0f, .nesterov=false, __VA_ARGS__ })
+            { .learning_rate = 0.01f, .decay=0.0f, .momentum=0.0f, .nesterov=false, __VA_ARGS__ })
 

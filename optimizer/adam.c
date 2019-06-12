@@ -1,5 +1,7 @@
 #include "adam.h"
 #include "simd.h"
+#include "vector_operations.h"
+
 #include <stdlib.h>   /* malloc/free in macros */
 #include <stdio.h>    /* fprintf in macro */
 #include <string.h>   /* memset */
@@ -7,32 +9,6 @@
 #include <immintrin.h>
 
 #include <omp.h>
-
-static void vector_accumulate( const int n, float *a, const float *b )
-{
-    int i = 0;
-    float *a_ptr = a;
-    const float *b_ptr = b;
-#ifdef __AVX__
-    for ( ; i <= ((n)-8); i += 8, a_ptr += 8, b_ptr += 8 )
-        _mm256_store_ps(a_ptr, _mm256_add_ps(_mm256_load_ps(a_ptr), _mm256_load_ps(b_ptr)));
-#endif
-    for (; i < n; i++ )
-        *a_ptr++ += *b_ptr++; 
-}
-
-static void vector_divide_by_scalar( const int n, float *v, float scalar )
-{
-    int i = 0;
-    float *v_ptr = v;
-#ifdef __AVX__
-    __m256 v_scale = _mm256_set1_ps(scalar);
-    for ( ; i <= ((n)-8); i += 8, v_ptr += 8)
-        _mm256_store_ps(v_ptr, _mm256_div_ps(_mm256_load_ps(v_ptr), v_scale));
-#endif
-    for( ; i < n; i++ )
-        *v_ptr++ /= scalar;
-}
 
 static void update_biased_first_moment( const int n , float *s, const float *g, const float rho )
 {
@@ -58,7 +34,6 @@ static void update_biased_first_moment( const int n , float *s, const float *g, 
     }
 }
 
-
 static void update_biased_second_moment( const int n, float *r, const float *g, const float rho )
 {
     int i = 0;
@@ -83,7 +58,6 @@ static void update_biased_second_moment( const int n, float *r, const float *g, 
     }
 }
 
-/* FIXME This needs coding .... */
 static void compute_update( const int n, float *delta_w, const float *s, const float *r, const float rho1, const float rho2, const float lr )
 {
     const float epsilon = 1.0e-8f;
@@ -122,49 +96,15 @@ void adam_run_epoch( optimizer_t *opt,
     neuralnet_t *nn = opt->nn;
     const unsigned int n_parameters = neuralnet_total_n_parameters( nn );
 
-    const int n_input  = nn->layer[0].n_input;
-    const int n_output = nn->layer[nn->n_layers-1].n_output;
-
     static float beta_1_corrected = 1.0f;
     static float beta_2_corrected = 1.0f;
 
     for ( unsigned int i = 0; i < n_train_samples ;  ){
 
-#if 0
-        /* Batch start */
-        if ( opt->batchsize > 1 )
-            memset( opt->batchgrad, 0, n_parameters * sizeof(float));  /* Clear the batch grad */
-
-        int b = 0;
-        for ( ; b < opt->batchsize && i < n_train_samples; b++, i++ ){
-            neuralnet_backpropagation( nn, train_X + (opt->pivot[i] * n_input), train_Y + (opt->pivot[i] * n_output), opt->grad );
-            /* then we add */
-            if( opt->batchsize > 1 )
-                vector_accumulate( n_parameters, opt->batchgrad, opt->grad );
-            /* FIXME: Consider how the progress indicator feedback should be handeled. Maybe as a callback? This seems wrong. */
-            progress_bar("Training: ", i, n_train_samples-1 );
-        }
-        if( opt->batchsize > 1 )
-            vector_divide_by_scalar( n_parameters, opt->batchgrad, (float) b );
-#endif
-        float SIMD_ALIGN(batchgrad[n_parameters]);
-        memset( batchgrad, 0, n_parameters * sizeof(float));  /* Clear the batch grad */
-
-        int remaining_samples = (int) n_train_samples - (int) i;
-        int max_loop = remaining_samples < opt->batchsize ? remaining_samples : opt->batchsize;
-        #pragma omp parallel for shared(i) reduction(+:batchgrad[:])
-        for ( int b = 0 ; b < max_loop; b++){
-            float SIMD_ALIGN(grad[n_parameters]);
-            neuralnet_backpropagation( nn, train_X + (opt->pivot[i] * n_input), train_Y + (opt->pivot[i] * n_output), grad );
-            vector_accumulate( n_parameters, batchgrad, grad );
-            #pragma omp atomic update
-            i++;
-        }
-        vector_divide_by_scalar( n_parameters, batchgrad, (float) max_loop );
+        float SIMD_ALIGN(g[n_parameters]);
+        optimizer_calc_batch_gradient( opt, n_train_samples, train_X, train_Y, &i, g );
         opt->progress( i, n_train_samples, "Train: " );
         
-        float *g = batchgrad;
-
         opt->iterations++;
         beta_1_corrected *= adam->beta_1;
         beta_2_corrected *= adam->beta_2;
