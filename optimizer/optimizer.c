@@ -18,7 +18,8 @@ static void prepare_shuffle_pivot( optimizer_t *opt, const unsigned n_train_samp
         }
         for ( unsigned int i = 0; i < n_train_samples; i++ )
             opt->pivot[i] = i;
-        srand( time (NULL ) );
+        /* srand( time (NULL ) ); */
+        srand( 69 );
     }
 }
 
@@ -89,6 +90,31 @@ void optimizer_free( optimizer_t *opt )
     free( opt );
     opt = NULL;
 }
+
+void optimizer_calc_batch_gradient( optimizer_t *opt, 
+        const unsigned int n_train_samples, const float *train_X, const float *train_Y,
+        unsigned int *i, float *batchgrad)
+{
+    neuralnet_t *nn = opt->nn;
+    const unsigned int n_parameters = neuralnet_total_n_parameters( nn );
+    memset( batchgrad, 0, n_parameters * sizeof(float));  /* Clear the batch grad */
+
+    const int n_input  = nn->layer[0].n_input;
+    const int n_output = nn->layer[nn->n_layers-1].n_output;
+
+    int remaining_samples = (int) n_train_samples - (int) *i;
+    int batchsize = remaining_samples < opt->batchsize ? remaining_samples : opt->batchsize;
+#pragma omp parallel for reduction(+:batchgrad[0:n_parameters])
+    for ( int b = 0 ; b < batchsize; b++){
+        const int idx = *i + b;
+        float SIMD_ALIGN(grad[n_parameters]);
+        neuralnet_backpropagation( nn, train_X + (opt->pivot[idx] * n_input), train_Y + (opt->pivot[idx] * n_output), grad );
+        vector_accumulate( n_parameters, batchgrad, grad );
+    }
+    *i += batchsize;
+    vector_divide_by_scalar( n_parameters, batchgrad, (float) batchsize );
+}
+
 
 void optimizer_run_epoch( optimizer_t *self,
         const unsigned int n_train_samples, const float *train_X, const float *train_Y,

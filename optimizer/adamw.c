@@ -10,6 +10,7 @@
 
 #include <omp.h>
 
+/* Discuss: Move this to neuralnet.c ? */
 static void get_weights( const neuralnet_t *nn, float *weights )
 {
     float *ptr = weights;
@@ -100,7 +101,6 @@ static void compute_update( const int n, float *delta_w, const float *s, const f
     }
 }
 
-
 void adamw_run_epoch( optimizer_t *opt,
         const unsigned int n_train_samples, const float *train_X, const float *train_Y )
 {
@@ -109,32 +109,16 @@ void adamw_run_epoch( optimizer_t *opt,
     neuralnet_t *nn = opt->nn;
     const unsigned int n_parameters = neuralnet_total_n_parameters( nn );
 
-    const int n_input  = nn->layer[0].n_input;
-    const int n_output = nn->layer[nn->n_layers-1].n_output;
-
     static float beta_1_corrected = 1.0f;
     static float beta_2_corrected = 1.0f;
 
+    /* One epoch */
     for ( unsigned int i = 0; i < n_train_samples ;  ){
 
-        float SIMD_ALIGN(batchgrad[n_parameters]);
-        memset( batchgrad, 0, n_parameters * sizeof(float));  /* Clear the batch grad */
-
-        int remaining_samples = (int) n_train_samples - (int) i;
-        int max_loop = remaining_samples < opt->batchsize ? remaining_samples : opt->batchsize;
-        #pragma omp parallel for shared(i) reduction(+:batchgrad[:])
-        for ( int b = 0 ; b < max_loop; b++){
-            float SIMD_ALIGN(grad[n_parameters]);
-            neuralnet_backpropagation( nn, train_X + (opt->pivot[i] * n_input), train_Y + (opt->pivot[i] * n_output), grad );
-            vector_accumulate( n_parameters, batchgrad, grad );
-            #pragma omp atomic update
-            i++;
-        }
-        vector_divide_by_scalar( n_parameters, batchgrad, (float) max_loop );
+        float SIMD_ALIGN(g[n_parameters]);
+        optimizer_calc_batch_gradient( opt, n_train_samples, train_X, train_Y, &i, g );
         opt->progress( i, n_train_samples, "Train: " );
         
-        float *g = batchgrad;
-
         opt->iterations++;
         beta_1_corrected *= adamw->beta_1;
         beta_2_corrected *= adamw->beta_2;
@@ -151,10 +135,6 @@ void adamw_run_epoch( optimizer_t *opt,
 
         float SIMD_ALIGN(weights[n_parameters]);
         get_weights( nn, weights );
-#if 0
-        vector_scale( n_parameters, weights, -adamw->weight_decay );
-        vector_accumulate( n_parameters, g, weights );
-#endif
         vector_saxpy( n_parameters, g, -adamw->weight_decay, weights);
 
         neuralnet_update( nn, g);

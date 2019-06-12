@@ -33,6 +33,7 @@
 #define __OPTIMIZER_H__
 #include "neuralnet.h"
 #include "metrics.h"
+#include "vector_operations.h"
 #include "progress.h"
 
 #include <stdlib.h>  /* malloc/free in macros */
@@ -68,6 +69,10 @@ struct _optimizer_t {
 
     void  *settings;
 };
+
+void optimizer_calc_batch_gradient( optimizer_t *opt, 
+        const unsigned int n_train_samples, const float *train_X, const float *train_Y,
+        unsigned int *i, float *batchgrad);
 
 void optimizer_run_epoch( optimizer_t *self,
         const unsigned int n_train_samples, const float *train_X, const float *train_Y,
