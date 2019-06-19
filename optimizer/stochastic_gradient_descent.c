@@ -39,7 +39,7 @@ void SGD_run_epoch( optimizer_t *opt,
         optimizer_calc_batch_gradient( opt, n_train_samples, train_X, train_Y, &i, batchgrad );
 
         /* Progress callback */
-        opt->progress( i, n_train_samples, "Train: " );
+        if( opt->progress) opt->progress( i, n_train_samples, "Train: " );
         
         /* Learning rate update */
         if (sgd->decay > 0.0f )

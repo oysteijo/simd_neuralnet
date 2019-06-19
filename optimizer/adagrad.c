@@ -56,7 +56,7 @@ void adagrad_run_epoch( optimizer_t *opt,
 
         float SIMD_ALIGN(batchgrad[n_parameters]);
         optimizer_calc_batch_gradient( opt, n_train_samples, train_X, train_Y, &i, batchgrad );
-        opt->progress( i, n_train_samples, "Train: " );
+        if( opt->progress ) opt->progress( i, n_train_samples, "Train: " );
         
         if (adagrad->decay > 0.0f )
             adagrad->learning_rate *= 1.0f / (1.0f + adagrad->decay * (float) opt->iterations);

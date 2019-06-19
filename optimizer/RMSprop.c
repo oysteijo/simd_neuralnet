@@ -9,14 +9,14 @@
 #include <math.h>
 #include <immintrin.h>
 
-static void accumulate_squared_gradient( const int n, float *r, const float *g, const float rho )
+static void accumulate_squared_gradient( const int n, float *r, const float *g, const float rho, const float b )
 {
     int i = 0;
     float *r_ptr = r;
     const float *g_ptr = g;
 #ifdef __AVX__
     __m256 rhov = _mm256_set1_ps( rho );
-    __m256 one_minus_rhov = _mm256_set1_ps( 1.0f - rho );
+    __m256 one_minus_rhov = _mm256_set1_ps( b );
     for( ; i <= ((n)-8); i += 8 , r_ptr += 8, g_ptr += 8 ){
         __m256 gv = _mm256_load_ps( g_ptr );
         _mm256_store_ps( r_ptr,
@@ -29,11 +29,11 @@ static void accumulate_squared_gradient( const int n, float *r, const float *g, 
 #endif
     for( ; i < n; i++, r_ptr++ ){
         const float gval = g[i];
-        *r_ptr = (rho * *r_ptr) + (1.0f - rho) * gval * gval;
+        *r_ptr = (rho * *r_ptr) + b * gval * gval;
     }
 }
 
-static void compute_update( const int n, float *delta_w, const float *r, const float lr )
+static void compute_velocity_update( const int n, float *delta_w, const float *r, const float lr )
 {
     const float epsilon = 1.0e-6f;
     int i = 0;
@@ -60,19 +60,38 @@ void RMSprop_run_epoch( optimizer_t *opt,
 
     for ( unsigned int i = 0; i < n_train_samples ;  ){
 
+        /* Apply interim update */
+        if ( RMSprop->momentum > 0.0f ){
+            vector_scale( n_parameters, opt->velocity, RMSprop->momentum );
+            if( RMSprop->nesterov )  
+                neuralnet_update( nn, opt->velocity );
+        }
+
         float SIMD_ALIGN(batchgrad[n_parameters]);
         optimizer_calc_batch_gradient( opt, n_train_samples, train_X, train_Y, &i, batchgrad );
-        opt->progress( i, n_train_samples, "Train: " );
+        if( opt->progress ) opt->progress( i, n_train_samples, "Train: " );
+
         
         if (RMSprop->decay > 0.0f )
             RMSprop->learning_rate *= 1.0f / (1.0f + RMSprop->decay * (float) opt->iterations);
         opt->iterations++;
 
         float *delta_w = batchgrad;
-        float *r = opt->velocity; 
+        float *r = opt->r; 
 
-        accumulate_squared_gradient( n_parameters, r, delta_w, RMSprop->rho );
-        compute_update( n_parameters, delta_w, r, RMSprop->learning_rate /*, epsilon? */ );
+        float SIMD_ALIGN(g2[n_parameters]);
+        vector_square_elements( n_parameters, g2, batchgrad );
+        vector_saxpby( n_parameters, r, 1.0f - RMSprop->rho, g2, RMSprop->rho );
+
+        // accumulate_squared_gradient( n_parameters, r, delta_w, RMSprop->rho, 1.0f - RMSprop->rho );
+        opt->velocity += -RMSprop->learning_rate * batchgrad / sqrt(r) ;
+        // compute_velocity_update( n_parameters, delta_w, r, RMSprop->learning_rate /*, epsilon? */ );
+        if ( RMSprop->momentum > 0.0f && !RMSprop->nesterov )  /* if nesterov==true we have already updated based on the velocity */
+            neuralnet_update( nn, opt->velocity );
+        else
+            neuralnet_update( nn, delta_w );
+
+
 
         neuralnet_update( nn, delta_w );
     }
