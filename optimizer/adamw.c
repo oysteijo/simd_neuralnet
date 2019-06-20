@@ -117,7 +117,7 @@ void adamw_run_epoch( optimizer_t *opt,
 
         float SIMD_ALIGN(g[n_parameters]);
         optimizer_calc_batch_gradient( opt, n_train_samples, train_X, train_Y, &i, g );
-        opt->progress( i, n_train_samples, "Train: " );
+        if(opt->progress) opt->progress( i, n_train_samples, "Train: " );
         
         opt->iterations++;
         beta_1_corrected *= adamw->beta_1;

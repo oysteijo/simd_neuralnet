@@ -1,4 +1,4 @@
-/* optimizer.h - Oystein Schonning-Johansen 2012-2014 
+/* optimizer.h - Oystein Schonning-Johansen 2019 
  */
 
 /** \struct _optimizer_t
@@ -57,7 +57,6 @@ struct _optimizer_t {
     int      batchsize;
     void     (*progress)( int x, int n, const char *fmt, ...);
     metric_func *metrics;  /* NULL terminated */
-//    callback_t *callbacks;
     unsigned int *pivot;
 
     /* Momentum velocity */
@@ -84,14 +83,19 @@ struct _optimizer_config_t {
     int batchsize;
     bool shuffle;
     metric_func *metrics;
-//    callback_t  *callbacks;
     epoch_func run_epoch;
     void *settings;
     void (*progress)( int x, int n, const char *fmt, ...);
 } ;
 
+
+/* These are the default values. The end user should not edit this but "override" at creation */
 #define OPTIMIZER_CONFIG(...)  &((optimizer_config_t)  \
-            { .batchsize = 32, .shuffle = true, .metrics   = NULL, .progress = progress_ascii, __VA_ARGS__ } ) 
+            { .batchsize = 32,                         \
+              .shuffle   = true,                       \
+              .metrics   = NULL,                       \
+              .progress  = progress_ascii,             \
+              __VA_ARGS__ } ) 
 
 optimizer_t *optimizer_new( neuralnet_t *nn, void *data );
 void         optimizer_free( optimizer_t *opt );
