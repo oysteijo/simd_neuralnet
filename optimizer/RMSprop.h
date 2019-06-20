@@ -8,6 +8,8 @@ struct _RMSprop_settings_t
     float learning_rate;
     float rho;
     float decay;
+    float momentum;
+    bool  nesterov;
 };
 
 void RMSprop_run_epoch( optimizer_t *opt,
@@ -17,7 +19,12 @@ void RMSprop_run_epoch( optimizer_t *opt,
  * Maybe a better name would be *_PARAMS(...) ?  */
 #define RMSPROP_SETTINGS(...) \
     &((RMSprop_settings_t)  \
-            { .learning_rate = 0.01f, .rho = 0.9f, .decay = 0.0f, __VA_ARGS__ })
+            { .learning_rate = 0.01f, \
+              .rho           = 0.9f , \
+              .decay         = 0.0f , \
+              .momentum      = 0.0f , \
+              .nesterov      = false, \
+              __VA_ARGS__ })
 
 #endif /* __RMSPROP_H__ */
 
