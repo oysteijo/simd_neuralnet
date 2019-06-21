@@ -97,6 +97,20 @@ void optimizer_calc_batch_gradient( optimizer_t *opt,
 {
     neuralnet_t *nn = opt->nn;
     const unsigned int n_parameters = neuralnet_total_n_parameters( nn );
+
+    /* There is a bug in OpenMP -- if using reduction on an aligned array, there will be threaded
+       copies of the arrays in each thread. These copies will not necesarrily be aligned, but rather
+       follow the previous in memory. Solving this can be done by padding. I've not seen this documented
+       but it seems to work. Hence this padding. */
+#ifdef __AVX__
+#define PADDING_SIZE 16
+    /* Hmmm.... maybe it doesn't work after all? it doesn't work with PADDING_SIZE=32, but
+       it works with PADDING_SIZE=16... why? Is this really a stable solution? */
+    const unsigned int n_param_padding = n_parameters + (PADDING_SIZE - n_parameters % PADDING_SIZE);
+    assert( (n_param_padding % PADDING_SIZE) == 0);
+#else
+    const unsigned int n_param_padding __attribute__((unused))  = n_parameters;
+#endif
     memset( batchgrad, 0, n_parameters * sizeof(float));  /* Clear the batch grad */
 
     const int n_input  = nn->layer[0].n_input;
@@ -104,7 +118,7 @@ void optimizer_calc_batch_gradient( optimizer_t *opt,
 
     int remaining_samples = (int) n_train_samples - (int) *i;
     int batchsize = remaining_samples < opt->batchsize ? remaining_samples : opt->batchsize;
-#pragma omp parallel for reduction(+:batchgrad[0:n_parameters])
+#pragma omp parallel for reduction(+:batchgrad[0:n_param_padding])
     for ( int b = 0 ; b < batchsize; b++){
         const int idx = *i + b;
         float SIMD_ALIGN(grad[n_parameters]);
