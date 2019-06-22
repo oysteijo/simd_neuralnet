@@ -2,6 +2,7 @@
 
 #include <stdint.h> 
 #include <string.h>
+#include <assert.h>
 #include <math.h>
 
 /* typedef float (*metric_func)(const int n, const float *y_pred, const float *y_real ); */
@@ -11,6 +12,9 @@ static float mean_absolute_error           ( const int n, const float *y_pred, c
 static float mean_absolute_percentage_error( const int n, const float *y_pred, const float *y_real );
 static float binary_crossentropy           ( const int n, const float *y_pred, const float *y_real );
 static float categorical_crossentropy      ( const int n, const float *y_pred, const float *y_real );
+
+/* Binary classification metrics */
+static float binary_accuracy               ( const int n, const float *y_pred, const float *y_real );
 
 static float epsilon = 1.0e-7f;
 
@@ -30,6 +34,8 @@ metric_func get_metric_func( const char * name ){
 		!strcmp( name, "categorical_crossentropy")       ? categorical_crossentropy :
 		!strcmp( name, "binary_crossentropy")            ? binary_crossentropy :
 
+		!strcmp( name, "binary_accuracy")            ? binary_accuracy :
+
 		NULL;
 }
 
@@ -40,6 +46,7 @@ const char * get_metric_name( metric_func ptr ){
 		ptr == mean_absolute_percentage_error ? "mean_absolute_percentage_error" :
 		ptr == binary_crossentropy            ? "binary_crossentropy" :
 		ptr == categorical_crossentropy       ? "categorical_crossentropy" :
+		ptr == binary_accuracy                ? "binary_accuracy" :
 		"(unknown)";
 }
 
@@ -110,5 +117,16 @@ static float categorical_crossentropy(const int n, const float *y_pred, const fl
         err += y_real[i] * logf( clipped_y_pred[i] );
 
     return -err / (float) n ;
+}
+
+static float binary_accuracy( const int n, const float *y_pred, const float *y_real )
+{
+    assert( n == 1 );
+    int i = 0;
+    assert( y_real[i] >= 0.0f );
+    assert( y_real[i] <= 1.0f );
+    float real = roundf( y_real[i] );
+    float pred = roundf( y_pred[i] );
+    return real == pred ? 1.0f : 0.0f;
 }
 
