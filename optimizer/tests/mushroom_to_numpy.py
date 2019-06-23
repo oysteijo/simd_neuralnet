@@ -18,11 +18,10 @@ for c in list(columns.keys()):
         continue
     if len(u) == 2:
         f = np.array(e, dtype=np.float32).reshape((-1,1))
-        print( f.shape )
     else:
         n_values = np.max(e) + 1
         f = np.eye(n_values)[e].astype(np.float32)
-        print( f.shape )
+    print( "{:25s}".format(c), f.shape )
     if features is None:
         features = f
     else:

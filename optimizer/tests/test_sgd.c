@@ -5,7 +5,7 @@
 #include "loss.h"
 #include "metrics.h"
 
-#include "strtools.h"
+// #include "strtools.h"
 #include "progress.h"
 
 #include <stdio.h>
@@ -15,18 +15,18 @@
 #include <time.h>
 #include <assert.h>
 
-STRSPLIT_INIT
+// STRSPLIT_INIT
 // STRSPLIT_LENGTH_INIT
-STRSPLIT_FREE_INIT
+// STRSPLIT_FREE_INIT
 
 int main( int argc, char *argv[] )
 {
-    if (argc != 4 ){
-        fprintf( stderr, "Usage: %s <weightsfile.npz> <list of activations> <trainsamples.npz>\n", argv[0] );
+    if (argc != 2 ){
+        fprintf( stderr, "Usage: %s configfile.txt\n", argv[0] );
         return 0;
     }
 
-    cmatrix_t **train_test = c_npy_matrix_array_read( argv[3]);
+    cmatrix_t **train_test = c_npy_matrix_array_read( "mushroom_train.npz" );
     if( !train_test ) return -1;
 
     cmatrix_t *train_X = train_test[0];
@@ -50,19 +50,16 @@ int main( int argc, char *argv[] )
     printf( "test_X shape: (%zu, %zu)\n", test_X->shape[0], test_X->shape[1] );
     printf( "test_Y shape: (%zu, %zu)\n", test_Y->shape[0], test_Y->shape[1] );
     /* It does not handle any whitespace in front of (or trailing) */
-    char **split = strsplit( argv[2], ',' );
-    neuralnet_t *nn = neuralnet_new( argv[1], split );
-    strsplit_free(split);
+    neuralnet_t *nn = neuralnet_new( "initial_mushroom_111_32_1.npz", (char*[]){ "relu", "sigmoid"} );
     assert( nn );
     neuralnet_set_loss( nn, "binary_crossentropy" );
 
-
     optimizer_t *sgd = optimizer_new( nn, 
             OPTIMIZER_CONFIG(
-                .batchsize = 8,
-                .shuffle   = true,
+                .batchsize = 16,
+                .shuffle   = false,
                 .run_epoch = SGD_run_epoch,
-                .settings  = SGD_SETTINGS( ), // .learning_rate = 0.01f, .momentum = 0.9f, .nesterov = true ),
+                .settings  = SGD_SETTINGS( .learning_rate = 0.01f, .momentum = 0.9f, .nesterov = true ),
                 .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
                     get_metric_func( "mean_squared_error"),
                     get_metric_func( "binary_accuracy" ), NULL }),
@@ -72,7 +69,7 @@ int main( int argc, char *argv[] )
 
     int n_metrics = optimizer_get_n_metrics( sgd );
 
-    int n_epochs = 100;
+    int n_epochs = 10;
     
     float results[2*n_metrics];
     

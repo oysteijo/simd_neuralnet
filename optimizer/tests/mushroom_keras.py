@@ -4,6 +4,7 @@ from keras.layers import Dense, Activation
 from keras import optimizers
 import numpy as np
 
+# FIXME: Clean upt this such that it can be initialized the same way as the C code 
 def build_model( hidden_layer_sizes=(32,) ):
     model = Sequential()
     is_input = True
@@ -15,18 +16,30 @@ def build_model( hidden_layer_sizes=(32,) ):
             model.add( Dense( s, activation="relu" ))
             #model.add( Dropout(0.3) )
     model.add( Dense(1, activation='sigmoid'))
-    optimizer = optimizers.SGD() # lr=0.01, momentum=0.9, nesterov=True)
+    optimizer = optimizers.SGD( lr=0.01, momentum=0.9, nesterov=True )
     #optimizer = optimizers.Nadam()
     model.compile( optimizer=optimizer, metrics=["mse", "acc"], loss='binary_crossentropy' )
     return model
     
-epochs = 100
+epochs = 10
 nn = build_model()
 arr = np.load("mushroom_train.npz")
 train_X, train_Y, test_X, test_Y = tuple(arr[x] for x in arr.files)
 
-init_weights = np.load("inital_mushrom_111_32_1.npz")
+init_weights = np.load("initial_mushroom_111_32_1.npz")
 init_weights_tuple = tuple( init_weights[x] for x in init_weights.files)
 nn.set_weights( init_weights_tuple )
-nn.fit(x=train_X, y=train_Y, batch_size=8, epochs=epochs, validation_data=(test_X, test_Y), verbose=2 )
+nn.fit(x=train_X, y=train_Y, batch_size=16, epochs=epochs, validation_data=(test_X, test_Y), verbose=2 )
+
+keras_weights = nn.get_weights()
+
+# Now we run the C code
+from subprocess import run
+run( ["./test_sgd", "dummy"] )
+
+arr = np.load("after-%d-epochs.npz" % epochs )
+dobos_weights = tuple( arr[x] for x in arr.files )
+
+for k, d in zip(keras_weights, dobos_weights ):
+    print( "MAE: ", np.mean( np.absolute( k - d )), "shape: ", k.shape)
 
