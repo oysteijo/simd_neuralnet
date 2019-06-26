@@ -2,6 +2,7 @@ import keras
 from keras.models import Sequential
 from keras.layers import Dense, Activation
 from keras import optimizers
+import keras.backend as K
 import numpy as np
 
 # FIXME: Clean upt this such that it can be initialized the same way as the C code 
@@ -29,17 +30,24 @@ train_X, train_Y, test_X, test_Y = tuple(arr[x] for x in arr.files)
 init_weights = np.load("initial_mushroom_111_32_1.npz")
 init_weights_tuple = tuple( init_weights[x] for x in init_weights.files)
 nn.set_weights( init_weights_tuple )
-nn.fit(x=train_X, y=train_Y, batch_size=16, epochs=epochs, validation_data=(test_X, test_Y), verbose=2 )
+nn.fit(x=train_X, y=train_Y, batch_size=16, epochs=epochs, validation_data=(test_X, test_Y), verbose=2, shuffle=False )
 
 keras_weights = nn.get_weights()
 
 # Now we run the C code
 from subprocess import run
-run( ["./test_sgd", "dummy"] )
+run( ["./test_sgd", "--learning_rate=%f" % K.eval(nn.optimizer.lr),
+        "--momentum=%f" % K.eval(nn.optimizer.momentum),
+        "--nesterov=%s" % "true" if nn.optimizer.nesterov else "false"] )
 
 arr = np.load("after-%d-epochs.npz" % epochs )
 dobos_weights = tuple( arr[x] for x in arr.files )
 
+tot_err = 0.0
+n_params = 0
 for k, d in zip(keras_weights, dobos_weights ):
-    print( "MAE: ", np.mean( np.absolute( k - d )), "shape: ", k.shape)
+    tot_err += np.absolute( k - d ).sum()
+    n_params += k.size
+
+print( "MAE: ", tot_err / n_params )
 

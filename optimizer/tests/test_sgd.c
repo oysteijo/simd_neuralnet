@@ -15,16 +15,86 @@
 #include <time.h>
 #include <assert.h>
 
+#include <getopt.h>
+
 // STRSPLIT_INIT
 // STRSPLIT_LENGTH_INIT
 // STRSPLIT_FREE_INIT
 
+static bool string_to_bool( const char *str )
+{
+    /* FIXME : a set/list of strings to try */
+    if( !strncmp( str, "true", 4 ) )
+        return true;
+
+    if( !strncmp( str, "True", 4 ) )
+        return true;
+
+    if( !strncmp( str, "Yes", 3 ) )
+        return true;
+
+    if( !strncmp( str, "1", 1 ) )
+        return true;
+
+    return false;
+}
+
 int main( int argc, char *argv[] )
 {
-    if (argc != 2 ){
-        fprintf( stderr, "Usage: %s configfile.txt\n", argv[0] );
-        return 0;
+    float learning_rate = 0.01f;
+    float momentum      = 0.0f;
+    bool nesterov       = false;
+
+    while (true) {
+        static struct option long_options[] =
+        {
+            {"learning_rate", required_argument, 0, 'l'},
+            {"momentum",      required_argument, 0, 'm'},
+            {"nesterov",      required_argument, 0, 'n'},
+            {0, 0, 0, 0}
+        };
+        /* getopt_long stores the option index here. */
+        int option_index = 0;
+        int c = getopt_long (argc, argv, "",
+                long_options, &option_index);
+
+        /* Detect the end of the options. */
+        if (c == -1)
+            break;
+
+        switch (c)
+        {
+            case 0:
+                /* If this option set a flag, do nothing else now. */
+                if (long_options[option_index].flag != 0)
+                    break;
+                printf ("option %s", long_options[option_index].name);
+                if (optarg)
+                    printf (" with arg %s", optarg);
+                printf ("\n");
+                break;
+
+            case 'l':
+                learning_rate = strtof( optarg, NULL );
+                break;
+
+            case 'm':
+                momentum = strtof( optarg, NULL );
+                break;
+
+            case 'n':
+                nesterov = string_to_bool( optarg );
+        }
     }
+
+    if ( momentum <= 0.0f && nesterov ){
+        printf( "Nesterov w/o momentum does not make sense. setting nesterov to false.\n");
+        nesterov = false;
+    }
+
+    printf( "Learning rate: %5.4f\n", learning_rate );
+    printf( "Momentum: %5.4f\n", momentum );
+    printf( "Nesterov: %s\n", nesterov ? "True" : "False" );
 
     cmatrix_t **train_test = c_npy_matrix_array_read( "mushroom_train.npz" );
     if( !train_test ) return -1;
@@ -59,7 +129,7 @@ int main( int argc, char *argv[] )
                 .batchsize = 16,
                 .shuffle   = false,
                 .run_epoch = SGD_run_epoch,
-                .settings  = SGD_SETTINGS( .learning_rate = 0.01f, .momentum = 0.9f, .nesterov = true ),
+                .settings  = SGD_SETTINGS( .learning_rate = learning_rate, .momentum = momentum, .nesterov = nesterov ),
                 .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
                     get_metric_func( "mean_squared_error"),
                     get_metric_func( "binary_accuracy" ), NULL }),
