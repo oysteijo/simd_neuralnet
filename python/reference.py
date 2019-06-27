@@ -63,7 +63,7 @@ class Layer(object):
 
 # And this is the neural network itself.
 class NeuralNet(object):
-    def __init__( self, weights, activations, loss, **kwargs ):
+    def __init__( self, weights, activations, loss=None, **kwargs ):
         if isinstance(weights,str):
             arr = np.load(weights)
             weights = tuple((arr[m] for m in arr))
@@ -102,6 +102,7 @@ class NeuralNet(object):
         return x
 
     def backpropagation( self, x, y):
+        assert self.loss is not None
         grad_w = [np.zeros( l.weight.shape, dtype=np.float32 ) for l in self.layers]
         grad_b = [np.zeros( l.bias.shape, dtype=np.float32 ) for l in self.layers]
         activations = [x]
