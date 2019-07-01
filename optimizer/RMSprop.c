@@ -11,7 +11,7 @@
 
 static void compute_velocity_update( const int n, float *delta_w, const float *r, const float lr )
 {
-    const float epsilon = 1.0e-6f;
+    const float epsilon = 1.0e-7f;
     int i = 0;
     const float *r_ptr = r;
 #ifdef __AVX__
@@ -19,7 +19,7 @@ static void compute_velocity_update( const int n, float *delta_w, const float *r
     const __m256 eps_v = _mm256_set1_ps(epsilon);
     for( ; i <= ((n)-8) ; i += 8, delta_w += 8, r_ptr += 8 ){
         _mm256_store_ps( delta_w, _mm256_mul_ps( _mm256_load_ps( delta_w ),
-                    _mm256_div_ps( lr_v, _mm256_sqrt_ps( _mm256_add_ps( eps_v, _mm256_load_ps( r_ptr ) )))));
+                    _mm256_div_ps( lr_v, _mm256_add_ps( eps_v, _mm256_sqrt_ps( _mm256_load_ps( r_ptr ) )))));
     }
 #endif
     for( ; i < n; i++)

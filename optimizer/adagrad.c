@@ -28,7 +28,7 @@ static void accumulate_squared_gradient( const int n, float *r, const float *g )
 
 static void compute_update( const int n, float *delta_w, const float *r, const float lr )
 {
-    const float epsilon = 1.0e-7f;
+    const float epsilon = 1.0e-7f; /* Same as default K.epsilon (when backend=TensorFlow) in Keras */
     int i = 0;
     const float *r_ptr = r;
 #ifdef __AVX__

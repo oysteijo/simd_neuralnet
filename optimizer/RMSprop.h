@@ -19,7 +19,7 @@ void RMSprop_run_epoch( optimizer_t *opt,
  * Maybe a better name would be *_PARAMS(...) ?  */
 #define RMSPROP_SETTINGS(...) \
     &((RMSprop_settings_t)  \
-            { .learning_rate = 0.01f, \
+            { .learning_rate = 0.001f, \
               .rho           = 0.9f , \
               .decay         = 0.0f , \
               .momentum      = 0.0f , \

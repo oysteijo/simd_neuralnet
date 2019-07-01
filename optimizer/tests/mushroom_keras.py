@@ -17,7 +17,8 @@ def build_model( hidden_layer_sizes=(32,) ):
             model.add( Dense( s, activation="relu" ))
             #model.add( Dropout(0.3) )
     model.add( Dense(1, activation='sigmoid'))
-    optimizer = optimizers.SGD( lr=0.01, momentum=0.9, nesterov=True )
+    #optimizer = optimizers.SGD( lr=0.01, momentum=0.9, nesterov=True )
+    optimizer = optimizers.RMSprop( )
     #optimizer = optimizers.Nadam()
     model.compile( optimizer=optimizer, metrics=["mse", "acc"], loss='binary_crossentropy' )
     return model
@@ -36,9 +37,12 @@ keras_weights = nn.get_weights()
 
 # Now we run the C code
 from subprocess import run
-run( ["./test_sgd", "--learning_rate=%f" % K.eval(nn.optimizer.lr),
-        "--momentum=%f" % K.eval(nn.optimizer.momentum),
-        "--nesterov=%s" % "true" if nn.optimizer.nesterov else "false"] )
+run( ["./test_rmsprop", "--learning_rate=%f" % K.eval(nn.optimizer.lr),
+        "--rho=%f" % K.eval(nn.optimizer.rho)] )
+#run( ["./test_sgd", "--learning_rate=%f" % K.eval(nn.optimizer.lr),
+#        "--momentum=%f" % K.eval(nn.optimizer.momentum),
+#        "--nesterov=%s" % "true" if nn.optimizer.nesterov else "false"] )
+#run( ["./test_adagrad", "--learning_rate=%f" % K.eval(nn.optimizer.lr)])
 
 arr = np.load("after-%d-epochs.npz" % epochs )
 dobos_weights = tuple( arr[x] for x in arr.files )
@@ -49,5 +53,5 @@ for k, d in zip(keras_weights, dobos_weights ):
     tot_err += np.absolute( k - d ).sum()
     n_params += k.size
 
-print( "MAE: ", tot_err / n_params )
+print( "Total MAE: {:7e}".format(tot_err / n_params ))
 
