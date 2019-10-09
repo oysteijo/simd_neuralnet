@@ -1,12 +1,29 @@
 #include "earlystopping.h"
-
 #include <stdio.h>
 #include <float.h>
-#include <assert.h>
 
-void earlystopping(const optimizer_t * opt, const float *epoch_results, bool validation_set_given, void *data )
+struct _earlystopping_t 
 {
-    earlystoppingdata_t *esdata = (earlystoppingdata_t*) data;
+    callback_t  cb;
+    /* Other data */
+    int   patience;
+    int   monitor_idx;
+    bool  greater_is_better;
+    bool  early_stopping_flag;
+};
+
+/* Define and set the defaults. OMG, this is ugly but it is general. */
+CALLBACK_DEFINE(earlystopping,
+        earlystopping_config *cfg  = (earlystopping_config*) config;
+        newcb->patience            = cfg->patience;
+        newcb->monitor_idx         = cfg->monitor_idx;
+        newcb->greater_is_better   = cfg->greater_is_better;
+        newcb->early_stopping_flag = false;
+);
+
+void earlystopping_callback_run( callback_t *cb, optimizer_t * opt, const float *epoch_results, bool validation_set_given )
+{
+    earlystopping_t *es = (earlystopping_t*) cb;
 
     static float best_so_far = FLT_MAX; 
     static int epochs_since_improvement = 0;
@@ -14,13 +31,13 @@ void earlystopping(const optimizer_t * opt, const float *epoch_results, bool val
     bool improvement = false;
     /* which index? */
     int n_metrics = optimizer_get_n_metrics( opt );
-    int idx = esdata->monitor_idx;
-    if ( esdata->monitor_idx < 0 )
+    int idx = es->monitor_idx;
+    if ( es->monitor_idx < 0 )
         idx = validation_set_given ? n_metrics : 0;
     /* Fixme. More checks */
 
     float score = epoch_results[idx];
-    if (esdata->greater_is_better) {
+    if (es->greater_is_better) {
         if ( score > best_so_far || best_so_far == FLT_MAX ){
             improvement = true;
             best_so_far = score;
@@ -38,10 +55,14 @@ void earlystopping(const optimizer_t * opt, const float *epoch_results, bool val
     }
 
     epochs_since_improvement++;
-    if ( epochs_since_improvement > esdata->patience ){
-        esdata->early_stopping_flag = true;
+    if ( epochs_since_improvement > es->patience ){
+        es->early_stopping_flag = true;
     }
 
     return;
 }
 
+bool earlystopping_do_stop( const earlystopping_t *es )
+{
+    return es->early_stopping_flag;
+}
