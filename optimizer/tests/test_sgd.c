@@ -143,12 +143,30 @@ int main( int argc, char *argv[] )
     
     float results[2*n_metrics];
     
+    /* Table heading */
+    printf("Epoch");
+    int longest_metric_name_len = 0;
+    for ( int j = 0; j < n_metrics ; j++ ){
+        int l = strlen( get_metric_name( sgd->metrics[j] ) );
+        if ( l > longest_metric_name_len )
+            longest_metric_name_len = l;
+    }
+
+    longest_metric_name_len++;
+    for ( int j = 0; j < n_metrics ; j++ )
+        printf("%*s", longest_metric_name_len, get_metric_name( sgd->metrics[j] ));
+    
+    for ( int j = 0; j < n_metrics ; j++ )
+        printf("%*s", longest_metric_name_len, get_metric_name( sgd->metrics[j] ));
+
+    printf("\n");
+    
     for ( int i = 0; i < n_epochs; i++ ){
         optimizer_run_epoch( sgd, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
                                   n_test_samples, (float*) test_X->data, (float*) test_Y->data, results );
-        printf( " %3d", i);
+        printf( "%4d ", i);  /* same leangth as "epoch" */
         for ( int j = 0; j < 2*n_metrics ; j++ )
-            printf("\t%7e", results[j] );
+            printf("%*.7e", longest_metric_name_len, results[j] );
         printf("\n");
     }
 
@@ -159,4 +177,3 @@ int main( int argc, char *argv[] )
     c_npy_matrix_array_free( train_test );
     return 0;
 }    
-    

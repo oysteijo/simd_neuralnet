@@ -6,7 +6,6 @@
 #include <stdlib.h>   /* malloc/free in macros */
 #include <stdio.h>    /* fprintf in macro */
 #include <string.h>   /* memset */
-#include <immintrin.h>
 
 void SGD_run_epoch( optimizer_t *opt,
         const unsigned int n_train_samples, const float *train_X, const float *train_Y )
