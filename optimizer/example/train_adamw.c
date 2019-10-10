@@ -77,7 +77,8 @@ int main( int argc, char *argv[] )
     callback_t *checkpoint = CALLBACK(modelcheckpoint_new( MODELCHECKPOINT_NEW( ) ));
     callback_t *earlystop  = CALLBACK(earlystopping_new  ( EARLYSTOPPING_NEW  ( .patience = 15 ) ));
 
-    const callback_t *cbarray[] = { logger, checkpoint, earlystop };
+    /* Set the callbacks in an array */
+    callback_t *cbarray[] = { logger, checkpoint, earlystop };
     const int n_callbacks = sizeof( cbarray ) / sizeof( cbarray[0] );
 
     for ( int i = 0; i < n_epochs && !earlystopping_do_stop( EARLYSTOPPING(earlystop)) ; i++ ){
