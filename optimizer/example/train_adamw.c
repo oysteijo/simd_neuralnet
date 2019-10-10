@@ -43,8 +43,8 @@ int main( int argc, char *argv[] )
      * np.ascontiguousarray( matrix ) */
     assert( train_X->fortran_order == false );
     assert( train_Y->fortran_order == false );
-    assert( test_X->fortran_order == false );
-    assert( test_Y->fortran_order == false );
+    assert( test_X->fortran_order  == false );
+    assert( test_Y->fortran_order  == false );
 
     const int n_train_samples = train_X->shape[0];
     const int n_test_samples = test_X->shape[0];
@@ -70,18 +70,18 @@ int main( int argc, char *argv[] )
     int n_metrics = optimizer_get_n_metrics( adamw );
 
     int n_epochs = 100;
-    float *results = calloc( 2 * n_metrics * n_epochs, sizeof(float));
+    float *results = calloc( 2 * n_metrics * n_epochs, sizeof(float)); /* I usually won't need one each epoch */
 
     /* Make some callbacks */
     callback_t *logger     = CALLBACK(logger_new         ( LOGGER_NEW         ( .filename="adamw.log" ) ));
     callback_t *checkpoint = CALLBACK(modelcheckpoint_new( MODELCHECKPOINT_NEW( ) ));
     callback_t *earlystop  = CALLBACK(earlystopping_new  ( EARLYSTOPPING_NEW  ( .patience = 15 ) ));
 
-    callback_t *cbarray[] = { logger, checkpoint, earlystop };
-    int n_callbacks = sizeof( cbarray ) / sizeof( cbarray[0] );
-    printf("This should be 3: %d\n", n_callbacks );
+    const callback_t *cbarray[] = { logger, checkpoint, earlystop };
+    const int n_callbacks = sizeof( cbarray ) / sizeof( cbarray[0] );
 
     for ( int i = 0; i < n_epochs && !earlystopping_do_stop( EARLYSTOPPING(earlystop)) ; i++ ){
+        /* Run the optimizer for one epoch */
         optimizer_run_epoch( adamw, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
                                   n_test_samples,  (float*) test_X->data, (float*) test_Y->data, results+2*i );
 
