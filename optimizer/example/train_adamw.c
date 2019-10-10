@@ -72,48 +72,27 @@ int main( int argc, char *argv[] )
     int n_epochs = 100;
     float *results = calloc( 2 * n_metrics * n_epochs, sizeof(float));
 
-    logdata_t logdata = {
-        .epoch_count = 361,
-        .no_stdout   = false, 
-        .filename    = "adamw.log" 
-    };
+    /* Make some callbacks */
+    callback_t *logger     = CALLBACK(logger_new         ( LOGGER_NEW         ( .filename="adamw.log" ) ));
+    callback_t *checkpoint = CALLBACK(modelcheckpoint_new( MODELCHECKPOINT_NEW( ) ));
+    callback_t *earlystop  = CALLBACK(earlystopping_new  ( EARLYSTOPPING_NEW  ( .patience = 15 ) ));
 
-    checkpointdata_t cpdata = {
-        .filename = NULL,
-        .greater_is_better = false,
-        .monitor_idx = -1,
-        .verbose  = false
-
-    };
-    
-#if 0
-    earlystoppingdata_t esdata = {
-        .patience          = 20,
-        .greater_is_better = false,
-        .monitor_idx       = -1,
-        .early_stopping_flag = false
-    };
-
-    callback_t *logger     = CALLBACK(logger_new( LOGGER_NEW( .filename="adamw.log" ) ));
-    callback_t *checkpoint = CALLBACK(checkpoint_new( CHECKPOINT_NEW( ) ));
-#endif 
-
-    callback_t *earlystop  = CALLBACK(earlystopping_new( EARLYSTOPPING_NEW( .patience = 5 ) ));
+    callback_t *cbarray[] = { logger, checkpoint, earlystop };
+    int n_callbacks = sizeof( cbarray ) / sizeof( cbarray[0] );
+    printf("This should be 3: %d\n", n_callbacks );
 
     for ( int i = 0; i < n_epochs && !earlystopping_do_stop( EARLYSTOPPING(earlystop)) ; i++ ){
         optimizer_run_epoch( adamw, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
                                   n_test_samples,  (float*) test_X->data, (float*) test_Y->data, results+2*i );
 
-#if 0 
-        callback_run( logger,          adamw, results+2*i, true );
-        callback_run( modelcheckpoint, adamw, results+2*i. true );
-#endif
-        callback_run( earlystop,       adamw, results+2*i, true );
-
-        logger         ( adamw, results+2*i, true, (void *) &logdata );
-        modelcheckpoint( adamw, results+2*i, true, (void *) &cpdata );
-//        earlystopping  ( adamw, results+2*i, true, (void *) &esdata );
+        /* Run all callbacks */
+        for( int j = 0; j < n_callbacks; j++ )
+            callback_run( cbarray[j], adamw, results+2*i, true );
     }
+
+    /* Cleanup */
+    for( int j = 0; j < n_callbacks; j++ )
+        callback_free( cbarray[j] );
 
     free(results);
     neuralnet_free( nn );

@@ -5,10 +5,28 @@
 #include <time.h>
 #include <assert.h>
 
-#define MAX_BUFFER 255
-void logger(const optimizer_t * opt, const float *epoch_results, bool validation_set_given, void *data )
+struct _logger_t 
 {
-    logdata_t *logdata = (logdata_t*) data;
+    callback_t  cb;
+    /* Other data */
+    int         epoch_count;
+    const char *filename;
+    bool        no_stdout;
+};
+
+/* Define and set the defaults. OMG, this is ugly but it is general. */
+CALLBACK_DEFINE(logger,
+        logger_config *cfg = (logger_config*) config;
+        newcb->epoch_count = cfg->epoch_count;
+        newcb->filename    = cfg->filename;
+        newcb->no_stdout   = cfg->no_stdout;
+);
+
+#define MAX_BUFFER 255
+void logger_callback_run( callback_t *cb, optimizer_t * opt, const float *epoch_results, bool validation_set_given )
+{
+    logger_t *log = (logger_t*) cb;
+
     char buffer[MAX_BUFFER + 1];
     char *ptr = buffer;
     time_t rawtime;
@@ -20,8 +38,8 @@ void logger(const optimizer_t * opt, const float *epoch_results, bool validation
     /* First the time, let's settle for the time of day, there will be other evidence to se the date and year.*/
     ptr += sprintf ( ptr, "[%02d:%02d:%02d] ",timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
 
-    /* Then the epoch count. The count is only stored in logdata. It is not in the optimizer */
-    ptr += sprintf ( ptr, "Epoch %3d ", logdata->epoch_count++ );
+    /* Then the epoch count. The count is only stored in log. It is not in the optimizer */
+    ptr += sprintf ( ptr, "Epoch %3d ", log->epoch_count++ );
 
     /* Now the metric values */
     int n_metrics = optimizer_get_n_metrics( opt ); // * ( 1 + (int)validation_set_given);
@@ -36,12 +54,12 @@ void logger(const optimizer_t * opt, const float *epoch_results, bool validation
     assert( ptr - buffer < MAX_BUFFER );
 
     /* Print it out */
-    if ( !logdata->no_stdout )
+    if ( !log->no_stdout )
         fprintf( stdout, "%s", buffer ); 
 
     FILE *fp = NULL;
-    if ( logdata->filename )
-        fp = fopen( logdata->filename, "a" );
+    if ( log->filename )
+        fp = fopen( log->filename, "a" );
 
     if ( fp ){
         fprintf( fp, "%s", buffer );
