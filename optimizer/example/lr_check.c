@@ -86,7 +86,6 @@ int main( int argc, char *argv[] )
 
     strsplit_free(split);
     free(results);
-    /* log and report */
     neuralnet_save( nn, "after-20-epochs.npz" );
     neuralnet_free( nn );
     free( sgd );

@@ -8,6 +8,7 @@
 #include "strtools.h"
 #include "progress.h"
 
+/* Callbacks */
 #include "logger.h"
 #include "modelcheckpoint.h"
 #include "earlystopping.h"
@@ -72,41 +73,30 @@ int main( int argc, char *argv[] )
     srand( 70 );
     float *results = calloc( 2 * n_metrics * n_epochs, sizeof(float));
 
-    logdata_t logdata = {
-        .epoch_count = 1,
-        .no_stdout   = false, 
-        .filename    = NULL 
-    };
+    /* Make some callbacks */
+    callback_t *logger     = CALLBACK(logger_new         ( LOGGER_NEW         ( .filename="adamw.log" ) ));
+    callback_t *checkpoint = CALLBACK(modelcheckpoint_new( MODELCHECKPOINT_NEW( ) ));
+    callback_t *earlystop  = CALLBACK(earlystopping_new  ( EARLYSTOPPING_NEW  ( .patience = 15 ) ));
 
-    checkpointdata_t cpdata = {
-        .filename = NULL,
-        .greater_is_better = false,
-        .monitor_idx = -1,
-        .verbose  = false
+    /* Set the callbacks in an array */
+    callback_t *cbarray[] = { logger, checkpoint, earlystop };
+    const int n_callbacks = sizeof( cbarray ) / sizeof( cbarray[0] );
 
-    };
-    
-    earlystoppingdata_t esdata = {
-        .patience          = 10,
-        .greater_is_better = false,
-        .monitor_idx       = -1,
-        .early_stopping_flag = false
-    };
-
-    
-    for ( int i = 0; i < n_epochs && !esdata.early_stopping_flag; i++ ){
+    for ( int i = 0; i < n_epochs && !earlystopping_do_stop( EARLYSTOPPING(earlystop)) ; i++ ){
         optimizer_run_epoch( RMSprop, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
                                   n_test_samples,  (float*) test_X->data, (float*) test_Y->data, results+2*i );
 
-        logger( RMSprop, results+2*i, true, (void *) &logdata );
-        // modelcheckpoint( RMSprop, results+2*i, true, (void *) &cpdata );
-        // earlystopping( RMSprop, results+2*i, true, (void*) &esdata );
-        // printf("epoch: %d  mse: %e  val_mse: %e\n", i, results[2*i], results[2*i+1]);
+        /* Run all callbacks */
+        for( int j = 0; j < n_callbacks; j++ )
+            callback_run( cbarray[j], RMSprop, results+2*i, true );
     }
 
+    /* Cleanup */
+    for( int j = 0; j < n_callbacks; j++ )
+        callback_free( cbarray[j] );
+
     free(results);
-    /* log and report */
-    neuralnet_save( nn, "after-10-epochs.npz" );
+    neuralnet_save( nn, "after-some-training.npz" );
     neuralnet_free( nn );
     free( RMSprop );
     c_npy_matrix_array_free( train_test );
