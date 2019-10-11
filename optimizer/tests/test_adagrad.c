@@ -133,7 +133,6 @@ int main( int argc, char *argv[] )
         printf("\n");
     }
 
-    /* log and report */
     neuralnet_save( nn, "after-%d-epochs.npz", n_epochs );
     neuralnet_free( nn );
     free( adagrad );

@@ -156,11 +156,11 @@ void optimizer_run_epoch( optimizer_t *self,
 
 #if 0
     /* The callback system is still under construction. Please call the callback functions in your main loop */
-    callback_t *array_of_callbacks = CALLBACK( base_logger, NULL );
-
-    callback_t *cb_ptr = array_of_callbacks;
-    while ( *cb_ptr++ )
-        cb_ptr->func( self, results, has_valid, cb_ptr->data );
+    /* I think there will be a design change. The callbacks *should* be called in the main loop. That is actually
+       better design than having the callbacks a part of the optimizer. After all they are quite independent.
+       (Well, at least sort of independent. I guess the callbacks have to know about the optimizer, but the
+       optimizer doesn't have to know about the callbacks.) Single responsibility. The optimizer do only
+       the optimization, the callbacks do their thing. They do not need to be connected. */
 #endif
 }
 

@@ -1,4 +1,4 @@
-#include "adagrad.h"
+#include "adamw.h"
 #include "c_npy.h"
 #include "neuralnet.h"
 #include "activation.h"
@@ -8,6 +8,7 @@
 #include "strtools.h"
 #include "progress.h"
 
+/* Callbacks */
 #include "logger.h"
 #include "modelcheckpoint.h"
 #include "earlystopping.h"
@@ -42,8 +43,8 @@ int main( int argc, char *argv[] )
      * np.ascontiguousarray( matrix ) */
     assert( train_X->fortran_order == false );
     assert( train_Y->fortran_order == false );
-    assert( test_X->fortran_order == false );
-    assert( test_Y->fortran_order == false );
+    assert( test_X->fortran_order  == false );
+    assert( test_Y->fortran_order  == false );
 
     const int n_train_samples = train_X->shape[0];
     const int n_test_samples = test_X->shape[0];
@@ -56,21 +57,20 @@ int main( int argc, char *argv[] )
     neuralnet_set_loss( nn, "binary_crossentropy" );
 
 
-    optimizer_t *adagrad = optimizer_new( nn, 
+    optimizer_t *adamw = optimizer_new( nn, 
             OPTIMIZER_CONFIG(
-                .batchsize = 256,
+                .batchsize = 16384,
                 .shuffle   = true,
-                .run_epoch = adagrad_run_epoch,
-                .settings  = ADAGRAD_SETTINGS( .learning_rate = 0.01f ),
+                .run_epoch = adamw_run_epoch,
+                .settings  = ADAMW_SETTINGS( .learning_rate = 0.001f, .weight_decay=1e-5f ),
                 .metrics   = ((metric_func[]){ get_metric_func( "mean_squared_error"), NULL })
                 )
             );
 
-    int n_metrics = optimizer_get_n_metrics( adagrad );
+    int n_metrics = optimizer_get_n_metrics( adamw );
 
-    int n_epochs = 10;
-    srand( 70 );
-    float *results = calloc( 2 * n_metrics * n_epochs, sizeof(float));
+    int n_epochs = 100;
+    float *results = calloc( 2 * n_metrics * n_epochs, sizeof(float)); /* I usually won't need one each epoch */
 
     /* Make some callbacks */
     callback_t *logger     = CALLBACK(logger_new         ( LOGGER_NEW         ( .filename="adamw.log" ) ));
@@ -81,18 +81,15 @@ int main( int argc, char *argv[] )
     callback_t *cbarray[] = { logger, checkpoint, earlystop };
     const int n_callbacks = sizeof( cbarray ) / sizeof( cbarray[0] );
 
-    
     for ( int i = 0; i < n_epochs && !earlystopping_do_stop( EARLYSTOPPING(earlystop)) ; i++ ){
         /* Run the optimizer for one epoch */
-        optimizer_run_epoch( adagrad, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
+        optimizer_run_epoch( adamw, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
                                   n_test_samples,  (float*) test_X->data, (float*) test_Y->data, results+2*i );
 
         /* Run all callbacks */
         for( int j = 0; j < n_callbacks; j++ )
-            callback_run( cbarray[j], adagrad, results+2*i, true );
+            callback_run( cbarray[j], adamw, results+2*i, true );
     }
-
-    neuralnet_save( nn, "after-some-training.npz" );
 
     /* Cleanup */
     for( int j = 0; j < n_callbacks; j++ )
@@ -100,7 +97,7 @@ int main( int argc, char *argv[] )
 
     free(results);
     neuralnet_free( nn );
-    free( adagrad );
+    optimizer_free( adamw );
     c_npy_matrix_array_free( train_test );
     return 0;
 }    

@@ -1,14 +1,20 @@
 #ifndef __LOGGER_H__
 #define __LOGGER_H__
-#include "optimizer.h"
+#include "callback.h"
 
-typedef struct _logdata_t 
+CALLBACK_DECLARE(logger);
+
+typedef struct _logger_config
 {
-    int         epoch_count;
+    const int   epoch_count;
     const char *filename;
-    bool        no_stdout;
-} logdata_t;
+    const bool  no_stdout;
+} logger_config;
 
-void logger( const optimizer_t * opt, const float *epoch_results, bool validation_set_given, void *data );
+/* The 'macros' */
+#define LOGGER(x) ((logger_t*)x)
+#define LOGGER_NEW(...) \
+    &((logger_config) { .epoch_count=0, .filename=NULL, .no_stdout=false, __VA_ARGS__ })
+
 #endif /* __LOGGER_H__ */
 
