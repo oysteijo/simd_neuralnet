@@ -8,7 +8,6 @@
 
 #ifndef PREDICTION_ONLY
 #include "loss.h"
-#include "cblas.h"
 #endif
 
 #include <stdio.h>

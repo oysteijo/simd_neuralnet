@@ -116,8 +116,8 @@ void optimizer_calc_batch_gradient( optimizer_t *opt,
     const int n_input  = nn->layer[0].n_input;
     const int n_output = nn->layer[nn->n_layers-1].n_output;
 
-    int remaining_samples = (int) n_train_samples - (int) *i;
-    int batchsize = remaining_samples < opt->batchsize ? remaining_samples : opt->batchsize;
+    const int remaining_samples = (int) n_train_samples - (int) *i;
+    const int batchsize = remaining_samples < opt->batchsize ? remaining_samples : opt->batchsize;
 #pragma omp parallel for reduction(+:batchgrad[0:n_param_padding])
     for ( int b = 0 ; b < batchsize; b++){
         const int idx = *i + b;
