@@ -120,10 +120,18 @@ activation_derivative get_activation_derivative( activation_func ptr ){
 
 static void softmax( const int n, float *ar )
 {
-    /* FIXME: This might overflow! */
+    /* TODO: This function is not SIMD vectorized yet!
+     * There is an excellent article on how to do it here:
+     * https://arxiv.org/pdf/2001.04438.pdf
+     * The Two-Pass Softmax Algorithm - Marat Dukhan and Artsiom Ablavatski */
     float sum = 0.0f;
+    float maxval = ar[0];
+    
+    for ( int j = 1 ; j < n; j++ )
+        if( ar[j] > maxval ) maxval = ar[j];
+
     for ( int j = 0 ; j < n; j++ ){
-        ar[j] = expf( ar[j] );
+        ar[j] = expf( ar[j] - maxval );
         sum += ar[j];
     }
     for ( int j = 0 ; j < n; j++ ){
