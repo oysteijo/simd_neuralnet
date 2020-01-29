@@ -118,27 +118,6 @@ activation_derivative get_activation_derivative( activation_func ptr ){
 #undef CHECK_ACTIVATION_DERIV_PTR
 #endif
 
-static void softmax( const int n, float *ar )
-{
-    /* TODO: This function is not SIMD vectorized yet!
-     * There is an excellent article on how to do it here:
-     * https://arxiv.org/pdf/2001.04438.pdf
-     * The Two-Pass Softmax Algorithm - Marat Dukhan and Artsiom Ablavatski */
-    float sum = 0.0f;
-    float maxval = ar[0];
-    
-    for ( int j = 1 ; j < n; j++ )
-        if( ar[j] > maxval ) maxval = ar[j];
-
-    for ( int j = 0 ; j < n; j++ ){
-        ar[j] = expf( ar[j] - maxval );
-        sum += ar[j];
-    }
-    for ( int j = 0 ; j < n; j++ ){
-        ar[j] /= sum;
-    }
-}
-
 static void relu( const int n, float *y )
 {
     int i = 0;
@@ -166,7 +145,6 @@ static void relu( const int n, float *y )
 #elif defined(_WIN32)
 # define ALIGN32_BEG __declspec(align(32))
 #endif
-
 
 #define _PS256_CONST(Name, Val)                                            \
   static const ALIGN32_BEG float _ps256_##Name[8] = { Val, Val, Val, Val, Val, Val, Val, Val }
@@ -249,6 +227,78 @@ static inline __m256 exp256_ps(__m256 x) {
 }
 #endif 
 
+#ifdef __SSE3__
+static inline float hsum_ps_sse3(__m128 v) {
+    __m128 shuf = _mm_movehdup_ps(v);        // broadcast elements 3,1 to 2,0
+    __m128 sums = _mm_add_ps(v, shuf);
+    shuf        = _mm_movehl_ps(shuf, sums); // high half -> low half
+    sums        = _mm_add_ss(sums, shuf);
+    return        _mm_cvtss_f32(sums);
+}
+#endif
+
+#ifdef __AVX2__
+/* Does horizontal sum - see:
+   https://stackoverflow.com/questions/6996764/fastest-way-to-do-horizontal-float-vector-sum-on-x86 */
+static inline float hsum256_ps_avx(__m256 v) {
+    __m128 vlow  = _mm256_castps256_ps128(v);
+    __m128 vhigh = _mm256_extractf128_ps(v, 1); // high 128
+    vlow  = _mm_add_ps(vlow, vhigh);     // add the low 128
+    return hsum_ps_sse3(vlow);         // and inline the sse3 version, which is optimal for AVX
+    // (no wasted instructions, and all of them are the 4B minimum)
+}
+#endif
+
+static void softmax( const int n, float *ar )
+{
+    /* There is an excellent article on how to do it here:
+     * https://arxiv.org/pdf/2001.04438.pdf
+     * The Two-Pass Softmax Algorithm - Marat Dukhan and Artsiom Ablavatski */
+    float sum = 0.0f;
+    float maxval = ar[0];
+    int j = 1;
+    
+    /* This follows the three-pass with re-loading (Algorithm 2 in the article).
+       However I have not found a fast SIMD way to find the maximum element.
+       If you get to a time critical training of a classification problem with
+       many classes, it may pay off implement the two-pass algorithm */
+    for (; j < n; j++ )
+        if( ar[j] > maxval ) maxval = ar[j];
+
+    j = 0;
+#ifdef __AVX2__
+    /* I'm intentionally only using one register to make the vectorization work for "8 or more"-class
+       classification problems. If using two registers, I will lose all vectorization for classification
+       problems with less than 16 classes. This is of course a trade off, and if you ever do a classification
+       problem with 16 or more classes, you could consider re-writing. */
+    __m256 max_v = _mm256_set1_ps( maxval );
+    __m256 sum_v = _mm256_set1_ps( 0.0f );
+    for (; j <= ((n)-8); j += 8) {
+        __m256 YMM0 = _mm256_load_ps(ar + j);
+        YMM0 = _mm256_sub_ps( YMM0, max_v );
+        YMM0 = exp256_ps(YMM0);
+        _mm256_store_ps( ar + j, YMM0 );
+        sum_v = _mm256_add_ps( sum_v, YMM0 );
+    }
+    sum += hsum256_ps_avx( sum_v );
+#endif
+    for (; j < n; j++ ){
+        ar[j] = expf( ar[j] - maxval );
+        sum += ar[j];
+    }
+    j = 0;
+#ifdef __AVX2__
+    __m256 sum4 = _mm256_set1_ps( sum );
+    for(; j <= ((n)-8); j+= 8 ) {
+        __m256 YMM0 = _mm256_load_ps( ar + j );
+        _mm256_store_ps( ar + j, _mm256_div_ps( YMM0, sum4 ) );
+    }
+#endif
+    for (; j < n; j++ ){
+        ar[j] /= sum;
+    }
+}
+
 static void sigmoid( const int n, float *y )
 {
     int i = 0;
@@ -318,6 +368,7 @@ static void tanh_act( const int n, float *y )
         y[i] = tanhf(y[i]);
 }
 
+/* These are really seldom used activation functions. We can vectorize these when needed */
 static void exponential( const int n, float *ar )
 {
     for( int i = 0; i < n; i++ )

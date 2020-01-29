@@ -1,4 +1,4 @@
-/* loss.h - Øystein Schønning-Johansen 2013 */
+/* loss.h - Øystein Schønning-Johansen 2013-2019 */
 #ifndef __LOSS_H__
 #define __LOSS_H__
 

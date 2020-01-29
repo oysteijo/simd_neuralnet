@@ -5,8 +5,6 @@
 #include <assert.h>
 #include <math.h>
 
-/* typedef float (*metric_func)(const int n, const float *y_pred, const float *y_real ); */
-
 static float mean_squared_error            ( const int n, const float *y_pred, const float *y_real );
 static float mean_absolute_error           ( const int n, const float *y_pred, const float *y_real );
 static float mean_absolute_percentage_error( const int n, const float *y_pred, const float *y_real );

@@ -22,7 +22,6 @@ loss_func get_loss_func( const char * name ){
 		!strcmp( name, "mean_absolute_percentage_error") ? mean_absolute_percentage_error :
 		!strcmp( name, "mape")                           ? mean_absolute_percentage_error :
 
-
 		!strcmp( name, "categorical_crossentropy")       ? categorical_crossentropy :
 		!strcmp( name, "binary_crossentropy")            ? binary_crossentropy :
 
