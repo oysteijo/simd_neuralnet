@@ -501,7 +501,7 @@ static void fill_data( unsigned int n, float (*dist)(), float scale, float *data
     for( char **iter = (char*[]){__VA_ARGS__, NULL}; *iter; iter++ )
 #define streq(a,b) (strcmp((a),(b)) == 0)
 
-void neuralnet_initialize_parameters( neuralnet_t *nn, ... )
+void neuralnet_initialize( neuralnet_t *nn, ... )
 {
     assert( nn );
 
@@ -519,9 +519,10 @@ void neuralnet_initialize_parameters( neuralnet_t *nn, ... )
         else if( strcmp( initializer, "kaiming" ) == 0 )
             fill_data( n_inp * n_out, random_normal, sqrtf(2.0f/n_inp), nn->layer[i].weight ); /* Kaiming */
         else {
-            /* OK ... initializer was neither "kaiming" nor "xavier", lets' do some guessing. */
+            /* OK ... initializer was neither "kaiming" nor "xavier", let's do some guessing. */
             bool initialized = false;
             const char *activation_name = get_activation_name( nn->layer[i].activation_func );
+            /* The concept is simple, if the activation is in this list -- use Xavier init */
             foreach_str( activation, "sigmoid", "tanh", "softmax", "hard_sigmoid", "softsign" ){
                 if( streq( *activation, activation_name ) ){
                     fill_data( n_inp * n_out, random_uniform, sqrtf(6.0f / (n_inp+n_out)), nn->layer[i].weight ); /* Xavier */
@@ -529,6 +530,7 @@ void neuralnet_initialize_parameters( neuralnet_t *nn, ... )
                     break;
                 }
             }
+            /* The concept is simple, if the activation is in this list -- use Kaiming init (aka He) */
             foreach_str( activation, "relu", "softplus" ){
                 if( streq( *activation, activation_name ) ){
                     fill_data( n_inp * n_out, random_normal, sqrtf(2.0f/n_inp), nn->layer[i].weight ); /* Kaiming */
@@ -537,7 +539,7 @@ void neuralnet_initialize_parameters( neuralnet_t *nn, ... )
                 }
             }
 
-            if(!initialized) { /* What the f... is this ? */
+            if(!initialized) { /* What the f... is this ? Well... maybe linear or exponential. BTW what about RBF? */
                 fprintf(stderr, "Warning: Initializers not recognized at layer %d. normal distributed random values used.\n", i);
                 fill_data( n_inp * n_out, random_normal, 1.0f, nn->layer[i].weight );
             }

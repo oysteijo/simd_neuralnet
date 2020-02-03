@@ -25,22 +25,22 @@ struct _neuralnet_t
 #endif
 };
 
-neuralnet_t * neuralnet_new                  ( const char *filename, char *activation_funcs[] );
-void          neuralnet_free                 (       neuralnet_t *nn); 
-void          neuralnet_predict              ( const neuralnet_t *nn, const float *input, float *output);
+neuralnet_t * neuralnet_new              ( const char *filename, char *activation_funcs[] );
+void          neuralnet_free             (       neuralnet_t *nn); 
+void          neuralnet_predict          ( const neuralnet_t *nn, const float *input, float *output);
 #ifndef PREDICTION_ONLY
-neuralnet_t * neuralnet_create               ( const int n_layers, ... );
-void          neuralnet_initialize_parameters(       neuralnet_t *nn, ... );
-void          neuralnet_set_loss             (       neuralnet_t *nn, const char *loss_name );
-void          neuralnet_backpropagation      ( const neuralnet_t *nn, const float *input, const float *desired, float *gradient);
-void          neuralnet_save                 ( const neuralnet_t *nn, const char *fmt, ...);
-void          neuralnet_update               (       neuralnet_t *nn, const float *delta_w );
+neuralnet_t * neuralnet_create           ( const int n_layers, ... );
+void          neuralnet_initialize       (       neuralnet_t *nn, ... );
+void          neuralnet_set_loss         (       neuralnet_t *nn, const char *loss_name );
+void          neuralnet_backpropagation  ( const neuralnet_t *nn, const float *input, const float *desired, float *gradient);
+void          neuralnet_save             ( const neuralnet_t *nn, const char *fmt, ...);
+void          neuralnet_update           (       neuralnet_t *nn, const float *delta_w );
 #endif
 
-static inline int neuralnet_get_n_layers     ( const neuralnet_t *nn ) { return nn->n_layers; }
+static inline int neuralnet_get_n_layers ( const neuralnet_t *nn ) { return nn->n_layers; }
 
 static inline
-unsigned int neuralnet_total_n_parameters    ( const neuralnet_t *nn )
+unsigned int neuralnet_total_n_parameters( const neuralnet_t *nn )
 {
     unsigned int count = 0;
     for ( int i = 0; i < nn->n_layers; i++ )
