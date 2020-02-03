@@ -14,6 +14,7 @@
 #include <string.h>             /* for memcpy */
 #include <stdarg.h>
 #include <stdbool.h>
+#include <math.h>
 #include <assert.h>
 
 #if defined(VERBOSE) 
@@ -383,7 +384,6 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
     }
 }
 
-/* DISCUSS: This code may be better suited in neuralnet.c -- Yes it is! */
 void neuralnet_update( neuralnet_t *nn, const float *delta_w )
 { 
     const float *ptr = delta_w;
@@ -398,4 +398,156 @@ void neuralnet_update( neuralnet_t *nn, const float *delta_w )
         ptr += n_inp * n_out;
     }
 }
+
+neuralnet_t * neuralnet_create( const int n_layers, ... )
+{
+    if( n_layers < 1 ){
+        fprintf( stderr, "You need at least one layer in your neural network. %d layers does not make sense.\n", n_layers );
+        return NULL;
+    } 
+    /* FIXME: I think we can do better. There should not be a hard limit. */
+    if( n_layers >  NN_MAX_LAYERS ){
+        fprintf( stderr, "Oh... you've hit a limit in the system -- please recompile and set NN_MAX_LAYERS to a higher value.");
+        return NULL;
+    } 
+
+    int sizes[n_layers+1];
+    char *activation_funcs[n_layers];
+    /* just empty these first, such that we can break out if a NULL is given */ 
+    for( int i = 0; i < n_layers; i++ )
+        activation_funcs[i] = NULL;
+
+    va_list argp;
+    va_start( argp, n_layers );
+    
+    for( int i = 0; i < n_layers+1; i++ )
+        sizes[i] = va_arg( argp, int );
+
+    for( int i = 0; i < n_layers; i++ ){
+        char *name = va_arg( argp, char* );
+        /* this break is why we filled with \0 */
+        if (!name) break;
+        activation_funcs[i] = name;
+    }
+    va_end( argp );
+
+    neuralnet_t *nn;
+
+    if ( (nn = malloc( sizeof( neuralnet_t ))) == NULL ){
+        fprintf( stderr, "Cannot allocate memory for 'neuralnet_t' type.\n");
+        return NULL;
+    }
+
+    nn->n_layers = n_layers;
+    for( int i = 0; i < nn->n_layers; i++ ){
+        nn->layer[i].n_input  = sizes[i];
+        nn->layer[i].n_output = sizes[i+1];
+    }
+
+    if( !_weights_memory_allocate( nn )){
+        fprintf(stderr, "Cannot allocate memory for neural net weights.\n");
+        free( nn );
+        return NULL;
+    }
+
+    /* Set the activation functions */
+    for( int i = 0; i < nn->n_layers; i++ ){
+        const char *func_name = activation_funcs[i];
+        nn->layer[i].activation_func = get_activation_func( func_name ? func_name : "linear" );
+    }
+
+    return nn;
+}
+
+/* functions for initializing weights of fresh neural networks */
+
+/* Returns a random float number from -1 to +1 with a uniform probability distribution. */
+static float random_uniform()
+{
+    return (float) 2.0f * (rand() / (float) RAND_MAX) - 1.0f;
+}
+
+static float random_normal()
+{
+    static float v, fac;
+    static bool use_prev = false;
+    float S, Z, u;
+    if(use_prev)
+        Z = v * fac;
+    else {
+        do {
+            u = random_uniform();  /* from -1 to +1 */
+            v = random_uniform();  /* from -1 to +1 */
+
+            S = u*u + v*v;
+        } while (S >= 1.0f);
+
+        fac = sqrtf( -2.0f * logf(S) / S );
+        Z = u * fac;
+    }
+
+    use_prev = !use_prev;
+    return Z;
+}
+
+static void fill_data( unsigned int n, float (*dist)(), float scale, float *data )
+{
+    float *ptr = data;
+    for ( unsigned int i = n; i--; )
+        *ptr++ = dist() * scale;
+}
+
+#define foreach_str( iter, ... ) \
+    for( char **iter = (char*[]){__VA_ARGS__, NULL}; *iter; iter++ )
+#define streq(a,b) (strcmp((a),(b)) == 0)
+
+void neuralnet_initialize( neuralnet_t *nn, ... )
+{
+    assert( nn );
+
+    va_list argp;
+    va_start( argp, nn );
+
+    for ( int i = 0; i < nn->n_layers ; i++ ){
+        const int n_inp = nn->layer[i].n_input;
+        const int n_out = nn->layer[i].n_output;
+
+        char *initializer = va_arg( argp, char* );
+
+        if( strcmp( initializer, "xavier" ) == 0 )
+            fill_data( n_inp * n_out, random_uniform, sqrtf(6.0f / (n_inp+n_out)), nn->layer[i].weight ); /* Xavier */
+        else if( strcmp( initializer, "kaiming" ) == 0 )
+            fill_data( n_inp * n_out, random_normal, sqrtf(2.0f/n_inp), nn->layer[i].weight ); /* Kaiming */
+        else {
+            /* OK ... initializer was neither "kaiming" nor "xavier", let's do some guessing. */
+            bool initialized = false;
+            const char *activation_name = get_activation_name( nn->layer[i].activation_func );
+            /* The concept is simple, if the activation is in this list -- use Xavier init */
+            foreach_str( activation, "sigmoid", "tanh", "softmax", "hard_sigmoid", "softsign" ){
+                if( streq( *activation, activation_name ) ){
+                    fill_data( n_inp * n_out, random_uniform, sqrtf(6.0f / (n_inp+n_out)), nn->layer[i].weight ); /* Xavier */
+                    initialized = true;
+                    break;
+                }
+            }
+            /* The concept is simple, if the activation is in this list -- use Kaiming init (aka He) */
+            foreach_str( activation, "relu", "softplus" ){
+                if( streq( *activation, activation_name ) ){
+                    fill_data( n_inp * n_out, random_normal, sqrtf(2.0f/n_inp), nn->layer[i].weight ); /* Kaiming */
+                    initialized = true;
+                    break;
+                }
+            }
+
+            if(!initialized) { /* What the f... is this ? Well... maybe linear or exponential. BTW what about RBF? */
+                fprintf(stderr, "Warning: Initializers not recognized at layer %d. normal distributed random values used.\n", i);
+                fill_data( n_inp * n_out, random_normal, 1.0f, nn->layer[i].weight );
+            }
+        }
+        /* Fill bias terms with zeros. OK? */
+        memset( nn->layer[i].bias, 0, n_out * sizeof(float));
+    }
+    va_end( argp );
+}
+
 #endif /* PREDICTION_ONLY */
