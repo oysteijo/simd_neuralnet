@@ -166,7 +166,10 @@ static void print_matrix( int m, int n, const float *v )
 
   @param nn The neural net that will do the forward calculaton. (aka. evaluate)
   @param input Pointer for an array of input features
-  @param out Pointer to an array of evaluated outputs
+  @param out Pointer to an array of predictions (outputs).
+
+  As said above, this function only take one sample, and one sample only. If you have a matrix
+  of multiple samples in each row, look at the code in `evaluate.c`.
 */
 void neuralnet_predict( const neuralnet_t *nn, const float *input, float *out )
 {
@@ -203,14 +206,28 @@ void neuralnet_predict( const neuralnet_t *nn, const float *input, float *out )
 
 #ifndef PREDICTION_ONLY
 #define _MAX_FILENAME_LEN 128
-void neuralnet_save( const neuralnet_t *nn, const char *fmt, ... )
+/**
+  @brief: Saves a neural network to the specified filename.
+
+  @param nn pointer to a `neuralnet_t` structure.
+  @param filename The filename where to store the neural network. The filename can contain string formating
+     symbols in `printf` style.
+
+  Example:
+  \code{.c}
+  neuralnet_save( nn, "after-%d-epochs.npz", epoch_count );
+  \endcode
+
+  Please note that the function do return, and any error will just output a warning in stderr. 
+ */
+void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
 {
     if( !nn ){
         fprintf( stderr, "Warning: Cannot save neural network. No neuralnet given.\n" );
         return;
     }
 
-    if( !fmt ){
+    if( !filename ){
         fprintf( stderr, "Warning: Cannot save neural network. No filename given.\n" );
         return;
     }
@@ -219,9 +236,9 @@ void neuralnet_save( const neuralnet_t *nn, const char *fmt, ... )
     va_list ap1, ap2;
     int len;
 
-    va_start( ap1, fmt );
+    va_start( ap1, filename );
     va_copy( ap2, ap1 );
-    len = vsnprintf( NULL, 0, fmt, ap1 );
+    len = vsnprintf( NULL, 0, filename, ap1 );
     va_end( ap1 );
 
     if( len > _MAX_FILENAME_LEN ){
@@ -233,8 +250,8 @@ void neuralnet_save( const neuralnet_t *nn, const char *fmt, ... )
     }
 
 
-    char filename[len+1];
-    vsprintf( filename, fmt, ap2 );
+    char real_filename[len+1];
+    vsprintf( real_filename, filename, ap2 );
     va_end( ap2 );
 
     /* And then the rest is the same... */
@@ -267,13 +284,29 @@ void neuralnet_save( const neuralnet_t *nn, const char *fmt, ... )
     }
     array[2*nn->n_layers] = NULL;
     
-    int retval = c_npy_matrix_array_write( filename, array );
+    int retval = c_npy_matrix_array_write( real_filename, array );
     if( retval != nn->n_layers*2 )
         printf("Warning: Arrays written: %d  !=  2 x n_layers     (n_layers=%d)\n", retval, nn->n_layers );
 
     for (int i = 0; i < 2*nn->n_layers ; i++ )
         free(array[i]);
 }
+
+/**
+  @brief: Set the loss function of neural network.
+  @param nn pointer to a `neuralnet_t` structure.
+  @param loss_name name of the desired loss function
+
+  This function sets the loss function for the neural network which is necessary for the backpropagation.
+  Basically, you cannot do any training on the neural network without setting this. However you can do predictions
+  on a neural network without it.
+
+  In addition to setting the loss functions, this function will also set the proper derivative function
+  which are used in the backpropagation algorithm.
+
+  This function will return, but it will print warnings to stderr if it finds something is strangely set up.
+ */
+
 
 void neuralnet_set_loss ( neuralnet_t *nn, const char *loss_name )
 {
@@ -316,6 +349,18 @@ void neuralnet_set_loss ( neuralnet_t *nn, const char *loss_name )
     }
 }
 
+/**
+  @brief: Calculates the gradient of the loss w.r.t all parameters in the neural network.
+
+  @param nn Pointer to a `neuralnet_t` structure 
+  @param input Pointer the the input vector (one sample)
+  @param target Pointer to the desired target values. (of the same sample as in input)
+  @param grad Pointer to the resulting gradient
+
+  Please note that `grad` is a pointer to **all** parameters of the neural network, following after each other.
+  It comes in order bias followed by weight from input to output direction.
+ */
+  
 void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const float *target, float *grad )
 {
     int n_biases = 0;
@@ -384,6 +429,14 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
     }
 }
 
+/**
+  @brief: A function to update all parameters in the neural network. This function is typically called from an optimizer.
+
+  @param nn Pointer to `neuralnet_t` structure.
+  @param delta_w Pointer to the delta of the parameters
+
+  Basically this function does:  params += delta_w
+ */
 void neuralnet_update( neuralnet_t *nn, const float *delta_w )
 { 
     const float *ptr = delta_w;
@@ -399,6 +452,31 @@ void neuralnet_update( neuralnet_t *nn, const float *delta_w )
     }
 }
 
+/**
+  @brief: Creates a new neural network structure and allocates memory for the parameters.
+
+  @param n_layers The desired number of layers in the neural network to be created. Note that the counting is modern,
+  such that the classic input->hidden->output structure which in the 90s where called a three layer MLP is
+  actually 2 layers in this system.
+  @param n_layer+1 numeric values to indicate the input and output sizes of the neural network.
+  @param n_layers string (const char*) values to specify the activation functions.
+
+  returns A newly created `neuralnet_t` structure.
+
+  Example:
+  A (classic) neural network with three inputs, four hidden nodes and 2 outputs can be defined like this:
+  \code{.c}
+  neuralnet_t *nn = neuralnet_create( 2,         // n_layers
+                                      3,         // n_input
+                                      4,         // n_hidden nodes
+                                      2,         // n_output
+                                      "tanh",    // hidden activation function
+                                      "sigmoid", // output activation function
+                                    );
+  \endcode
+
+  To initialize proper random parameter values, use `neuralnet_initialize()`.
+*/
 neuralnet_t * neuralnet_create( const int n_layers, ... )
 {
     if( n_layers < 1 ){

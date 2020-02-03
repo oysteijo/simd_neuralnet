@@ -17,6 +17,12 @@ Say you train a neural network from Keras, and then you want to use it in your C
 Then you can simply store the weights from your Keras neural network and load them into this
 codes, and you whole neural network is totally independent of both Python and Keras (and a GPU).
 
+## What is it good for?
+Since this is pure ANSI C this library will be perfect for embedded devices. I'm also using
+this library in a online learning system where only one sample is fed into the trainer at a time
+in a reinforcement learning pattern. This library then works perfectly since there is no need to
+struggle with python bindings or slow memory transfers to GPU memory.
+
 ## Limitations
 To be able to achieve the above, we need to set some limitations.
 
@@ -36,7 +42,7 @@ The following loss functions are implemented.
   * categorical_crossentropy
   
 ### Activations functions supported
-The following loss functions are implemented.
+The following activation functions are implemented.
   * sigmoid
   * tanh
   * softmax
@@ -49,20 +55,4 @@ The following loss functions are implemented.
   
 An other limitation might be that the number of units in a hidden layer may have to be a multiple of the number of floats
 you can fit in a SIMD register. With SSE this number is 4. With AVX this number is 8. With AVX-512 the number will be 16. There must (of course) be possible to have an arbitrary number of inputs and outputs. 
-
-## Status today (31st May 2019)
-I got o a lot of things working now. I actually am really happy about this tools now. I need some cleanup here and there. See the issues.
-
-## Status today (2nd May 2019)
-Yes! I strongly believe that Keras, the Python reference and my C implementation now get the same gradients.
-I still see that my simple SGD application does not give the error rates I expected, so I will try to compare,
-with Keras and other tools to check if it's something wrong with my code or with my expectations.
-
-## Status today (24th April 2019)
-The reference implementation in python seems to calculate the exact same values for the gradient as a corresponding model in Keras.
-Also, the C implementation seems to calculate the exact same gradient values as the reference. Also the activation functions
-has been implemented. The gradient calculation has not been tested for many network configurations.
-
-## Status today (18th April 2019)
-The reference implementation in python seems to calculate the exact same values for the gradient as a corresponding model in Keras.
 
