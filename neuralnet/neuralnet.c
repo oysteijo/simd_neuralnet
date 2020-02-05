@@ -470,7 +470,7 @@ void neuralnet_update( neuralnet_t *nn, const float *delta_w )
   A (classic) neural network with three inputs, four hidden nodes and 2 outputs can be defined like this:
   \code{.c}
   neuralnet_t *nn = neuralnet_create( 2,                           // n_layers
-                                    INT_ARRAY( 3, 4, 5 ),          // sizes
+                                    INT_ARRAY( 3, 4, 2 ),          // sizes
                                     STR_ARRAY( "tanh", "sigmoid" ) // activation functions
                                     );
   \endcode
@@ -489,7 +489,17 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
         return NULL;
     } 
 
-    /* FIXME: Sanity check on sizes? */
+    /* Sanity check on sizes */
+    for( int i = 0; i < n_layers; i++ )
+        if( sizes[i] < 1 ){
+            fprintf(stderr, "Input size in layer %d is %d. That does not make sense!\n", i, sizes[i]);
+            return NULL;
+        }
+    if( sizes[n_layers] < 1 ){
+        fprintf(stderr, "Output size of neural net is %d. That does not make sense!\n", sizes[n_layers]);
+        return NULL;
+    }
+
     neuralnet_t *nn;
     if ( (nn = malloc( sizeof( neuralnet_t ))) == NULL ){
         fprintf( stderr, "Cannot allocate memory for 'neuralnet_t' type.\n");
