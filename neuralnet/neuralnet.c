@@ -458,26 +458,26 @@ void neuralnet_update( neuralnet_t *nn, const float *delta_w )
   @param n_layers The desired number of layers in the neural network to be created. Note that the counting is modern,
   such that the classic input->hidden->output structure which in the 90s where called a three layer MLP is
   actually 2 layers in this system.
-  @param n_layer+1 numeric values to indicate the input and output sizes of the neural network.
-  @param n_layers string (const char*) values to specify the activation functions.
+  @param sizes An integer array if size n_layers+1. The int values indicate the input and output sizes of the layers in neural network.
+  @param activation_funcs An array of lenght n_layers with strings describing the activation function to be used..
 
-  returns A newly created `neuralnet_t` structure.
+  returns A newly created `neuralnet_t` structure, or NULL with failure.
+
+  There are two conveinient macros defined to hide compound literal if the arrays are not created
+  INT_ARRAY and STR_ARRAY,
 
   Example:
   A (classic) neural network with three inputs, four hidden nodes and 2 outputs can be defined like this:
   \code{.c}
-  neuralnet_t *nn = neuralnet_create( 2,         // n_layers
-                                      3,         // n_input
-                                      4,         // n_hidden nodes
-                                      2,         // n_output
-                                      "tanh",    // hidden activation function
-                                      "sigmoid", // output activation function
+  neuralnet_t *nn = neuralnet_create( 2,                           // n_layers
+                                    INT_ARRAY( 3, 4, 5 ),          // sizes
+                                    STR_ARRAY( "tanh", "sigmoid" ) // activation functions
                                     );
   \endcode
 
   To initialize proper random parameter values, use `neuralnet_initialize()`.
 */
-neuralnet_t * neuralnet_create( const int n_layers, ... )
+neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activation_funcs[] )
 {
     if( n_layers < 1 ){
         fprintf( stderr, "You need at least one layer in your neural network. %d layers does not make sense.\n", n_layers );
@@ -489,28 +489,8 @@ neuralnet_t * neuralnet_create( const int n_layers, ... )
         return NULL;
     } 
 
-    int sizes[n_layers+1];
-    char *activation_funcs[n_layers];
-    /* just empty these first, such that we can break out if a NULL is given */ 
-    for( int i = 0; i < n_layers; i++ )
-        activation_funcs[i] = NULL;
-
-    va_list argp;
-    va_start( argp, n_layers );
-    
-    for( int i = 0; i < n_layers+1; i++ )
-        sizes[i] = va_arg( argp, int );
-
-    for( int i = 0; i < n_layers; i++ ){
-        char *name = va_arg( argp, char* );
-        /* this break is why we filled with \0 */
-        if (!name) break;
-        activation_funcs[i] = name;
-    }
-    va_end( argp );
-
+    /* FIXME: Sanity check on sizes? */
     neuralnet_t *nn;
-
     if ( (nn = malloc( sizeof( neuralnet_t ))) == NULL ){
         fprintf( stderr, "Cannot allocate memory for 'neuralnet_t' type.\n");
         return NULL;

@@ -29,7 +29,10 @@ neuralnet_t * neuralnet_new              ( const char *filename, char *activatio
 void          neuralnet_free             (       neuralnet_t *nn); 
 void          neuralnet_predict          ( const neuralnet_t *nn, const float *input, float *output);
 #ifndef PREDICTION_ONLY
-neuralnet_t * neuralnet_create           ( const int n_layers, ... );
+/* Two macros to hide the compound literals */
+#define INT_ARRAY(...) (int[]){__VA_ARGS__}
+#define STR_ARRAY(...) (char*[]){__VA_ARGS__}
+neuralnet_t * neuralnet_create           ( const int n_layers, int sizes[], char *activation_funcs[] );
 void          neuralnet_initialize       (       neuralnet_t *nn, ... );
 void          neuralnet_set_loss         (       neuralnet_t *nn, const char *loss_name );
 void          neuralnet_backpropagation  ( const neuralnet_t *nn, const float *input, const float *desired, float *gradient);
