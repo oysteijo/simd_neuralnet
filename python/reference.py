@@ -6,7 +6,7 @@ def get_activation_func(str):
     return getattr(sys.modules[__name__], str)
 
 sigmoid      = lambda x: 1.0 / (np.exp( -x ) + 1.0)
-softmax      = lambda x: np.exp(x) / np.exp(x).sum()
+softmax      = lambda x: np.exp(x-x.max()) / np.exp(x-x.max()).sum()  # Subtracting x.max() for numerical stability.
 relu         = lambda x: np.maximum( x, 0, x)
 linear       = lambda x: x
 tanh         = np.tanh
