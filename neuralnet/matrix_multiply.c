@@ -1,5 +1,8 @@
 #include "matrix_multiply.h"
+
+#ifdef __AVX__ 
 #include <immintrin.h>
+#endif
 
 #ifdef USE_CBLAS
 #include <cblas.h>

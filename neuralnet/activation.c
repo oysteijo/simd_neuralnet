@@ -3,7 +3,9 @@
 #include <string.h>
 #include <math.h>
 
+#ifdef __AVX__
 #include <immintrin.h>
+#endif
 
 /*
 Just thinking out here.... This code needs a cleanup. It started as a implementation
