@@ -49,21 +49,39 @@ int main(int argc, char *argv[] )
     CHECK_NOT_NULL_MSG( nn,
             "Checking that neural network was created" );
 
+
     neuralnet_initialize( nn, "kaiming", "kaiming");  /* Normal distribution - scale sqrtf(2.0f/n_inp) */
 
-    float *params = malloc( 1000 * 1000 * sizeof(float));
+    int n_params = neuralnet_total_n_parameters(nn);
+
+    CHECK_INT_EQUALS_MSG( 1000000+10000+1000+10, n_params,
+           "Checking number of parameters in a bigger neural network" );
+
+    float *params = malloc( n_params * sizeof(float));
+    if( !params ){
+        fprintf(stderr, "Cannot allocate memory for testing 'parameters'. (Aborting test)\n" );
+        goto end_of_tests;
+    }
+
     neuralnet_get_parameters( nn, params );
     float mean = test_calculate_mean( 1000*1000, params+1000 );  /* Adding 1000 since the first thousand is bias */
+    float stddev = test_calculate_stddev( 1000*1000, params+1000 );  /* Adding 1000 since the first thousand is bias */
+
 
     CHECK_FLOAT_EQUALS_MSG( mean, 0.0f, 1.0e-5f,
             "Checking that mean of parameters are actually 0.0" ); 
+    fprintf(stderr, "\tmean of parameters: %g\n", mean);
+    fprintf(stderr, "\tstddev of parameters: %g\n", stddev);
+
+    fprintf(stderr, "\tmaximum of parameters: %g\n", test_calculate_max( 1000*1000, params+1000 ));
+    fprintf(stderr, "\tminimum of parameters: %g\n", test_calculate_min( 1000*1000, params+1000 ));
 
     free( params );
 
+end_of_tests:
     neuralnet_free( nn );
 
     printf("Total test done  : %d\n", test_count );
     printf("Total test failed: %d\n", fail_count );
     return 0;
 }
-    

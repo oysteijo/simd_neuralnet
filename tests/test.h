@@ -48,5 +48,46 @@ static inline float test_calculate_mean( size_t n, float *values )
     return sum / (float) n;
 }
 
+static inline float test_calculate_stddev( size_t n, float *values )
+{
+    if( n < 2 ) return 0.0f;
+
+    float stddev = 0.0f;
+
+    for ( unsigned int i = 0; i < n; i++ ){
+        const float val = values[i];
+        stddev = val*val;
+        float v = (stddev - (val*val/n)) / (n-1);
+        stddev = sqrtf( v / n );
+    }
+
+    return stddev;
+}
+
+static inline float test_calculate_max( size_t n, float *values )
+{
+    float maxval = *values;
+    float *ptr = values;
+    size_t counter = n;
+    while( counter-- ){
+        if( *ptr > maxval ) maxval = *ptr;;
+        ptr++;
+    }
+    return maxval;
+}
+
+static inline float test_calculate_min( size_t n, float *values )
+{
+    float minval = *values;
+    float *ptr = values;
+    size_t counter = n;
+    while( counter-- ){
+        if( *ptr < minval ) minval = *ptr;;
+        ptr++;
+    }
+    return minval;
+}
+
+
 #endif  /* __TEST_H__ */
 
