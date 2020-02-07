@@ -38,6 +38,7 @@ void          neuralnet_set_loss         (       neuralnet_t *nn, const char *lo
 void          neuralnet_backpropagation  ( const neuralnet_t *nn, const float *input, const float *desired, float *gradient);
 void          neuralnet_save             ( const neuralnet_t *nn, const char *fmt, ...);
 void          neuralnet_update           (       neuralnet_t *nn, const float *delta_w );
+void          neuralnet_get_parameters   ( const neuralnet_t *nn, float *params );
 #endif
 
 static inline int neuralnet_get_n_layers ( const neuralnet_t *nn ) { return nn->n_layers; }

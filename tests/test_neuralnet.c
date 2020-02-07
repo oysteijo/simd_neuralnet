@@ -1,33 +1,7 @@
+#include "test.h"
 #include "neuralnet.h"
+#include <stdlib.h>
 #include <stdio.h>
-// #include "test.h"
-//
-#define KNRM  "\x1B[0m"
-#define KRED  "\x1B[31m"
-#define KGRN  "\x1B[32m"
-#define KYEL  "\x1B[33m"
-#define KBLU  "\x1B[34m"
-#define KMAG  "\x1B[35m"
-#define KCYN  "\x1B[36m"
-#define KWHT  "\x1B[37m"
-#define OK   KGRN "(OK)" KNRM
-#define FAIL KRED "FAIL" KNRM
-
-#define CHECK_INT_EQUALS_MSG(a,b,msg)               \
-    test_count++;                                   \
-    fprintf(stderr, "%-70s: %s\n", msg , a==b ? OK : FAIL); \
-    if( a != b ) fail_count++;
-
-#define CHECK_NOT_NULL_MSG(a,msg)               \
-    test_count++;                                   \
-    fprintf(stderr, "%-70s: %s\n", msg , a!=NULL ? OK : FAIL); \
-    if( a == NULL ) fail_count++;
-
-#define CHECK_STR_EQUALS_MSG(a,b,msg)               \
-    test_count++;                                   \
-    fprintf(stderr, "%-70s: %s\n", msg , strcmp(a,b)==0 ? OK : FAIL); \
-    if( strcmp(a,b)==0 ) fail_count++;
-
 
 int main(int argc, char *argv[] )
 {
@@ -49,19 +23,43 @@ int main(int argc, char *argv[] )
             
     neuralnet_free( nn );
 
-    nn = neuralnet_create( 2,
+    /* Just testing some 'misconfigurations' */
+    neuralnet_t *nn2 = neuralnet_create( 2,
             INT_ARRAY( 3,4,2, -1 ),
             STR_ARRAY( NULL, "sigmoid", "blah" )); /* Should work? */
 
-    CHECK_NOT_NULL_MSG( nn,
+    CHECK_NOT_NULL_MSG( nn2,
             "Checking that neural network was created" );
     
-    CHECK_INT_EQUALS_MSG( 26, neuralnet_total_n_parameters(nn),
+    CHECK_INT_EQUALS_MSG( 26, neuralnet_total_n_parameters(nn2),
             "Checking that total number of parametes are 26" );
             
-    CHECK_INT_EQUALS_MSG( 2, neuralnet_get_n_layers(nn),
+    CHECK_INT_EQUALS_MSG( 2, neuralnet_get_n_layers(nn2),
             "Checking that total number of layers are 2" );
             
+    neuralnet_free( nn2 );
+
+    /* Test initialization */
+    /* Make a big neural network such that the central limit theorem can
+     * help us evaluate the correctness. */
+    nn = neuralnet_create( 2,
+            INT_ARRAY( 1000, 1000, 10 ),
+            STR_ARRAY( NULL ) );
+
+    CHECK_NOT_NULL_MSG( nn,
+            "Checking that neural network was created" );
+
+    neuralnet_initialize( nn, "kaiming", "kaiming");  /* Normal distribution - scale sqrtf(2.0f/n_inp) */
+
+    float *params = malloc( 1000 * 1000 * sizeof(float));
+    neuralnet_get_parameters( nn, params );
+    float mean = test_calculate_mean( 1000*1000, params+1000 );  /* Adding 1000 since the first thousand is bias */
+
+    CHECK_FLOAT_EQUALS_MSG( mean, 0.0f, 1.0e-5f,
+            "Checking that mean of parameters are actually 0.0" ); 
+
+    free( params );
+
     neuralnet_free( nn );
 
     printf("Total test done  : %d\n", test_count );

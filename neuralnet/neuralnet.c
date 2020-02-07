@@ -453,6 +453,27 @@ void neuralnet_update( neuralnet_t *nn, const float *delta_w )
 }
 
 /**
+  @brief: Get all parameters if the neural network.
+
+  @param nn Pointer to `neuralnet_t` structure.
+  @param params Pointer the all the parameters of the neural network (theta). Same order as expected in `neuralnet_update()`.
+
+  returns void
+ */
+void neuralnet_get_parameters( const neuralnet_t *nn, float *params )
+{
+    float *ptr = params;
+    for ( int l = 0; l < nn->n_layers; l++ ){
+        const int n_inp = nn->layer[l].n_input;
+        const int n_out = nn->layer[l].n_output;
+        memcpy( ptr, nn->layer[l].bias, n_out * sizeof(float) );
+        ptr += n_out;
+        memcpy( ptr, nn->layer[l].weight, n_out * n_inp * sizeof(float) );
+        ptr += n_inp * n_out;
+    }
+}
+
+/**
   @brief: Creates a new neural network structure and allocates memory for the parameters.
 
   @param n_layers The desired number of layers in the neural network to be created. Note that the counting is modern,
@@ -582,9 +603,9 @@ void neuralnet_initialize( neuralnet_t *nn, ... )
 
         char *initializer = va_arg( argp, char* );
 
-        if( strcmp( initializer, "xavier" ) == 0 )
+        if( streq( initializer, "xavier" ))
             fill_data( n_inp * n_out, random_uniform, sqrtf(6.0f / (n_inp+n_out)), nn->layer[i].weight ); /* Xavier */
-        else if( strcmp( initializer, "kaiming" ) == 0 )
+        else if( streq( initializer, "kaiming" ))
             fill_data( n_inp * n_out, random_normal, sqrtf(2.0f/n_inp), nn->layer[i].weight ); /* Kaiming */
         else {
             /* OK ... initializer was neither "kaiming" nor "xavier", let's do some guessing. */
