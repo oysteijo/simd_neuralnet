@@ -1,5 +1,6 @@
 #include "test.h"
 #include "neuralnet.h"
+#include <stdlib.h>
 #include <stdio.h>
 
 int main(int argc, char *argv[] )
@@ -50,8 +51,14 @@ int main(int argc, char *argv[] )
 
     neuralnet_initialize( nn, "kaiming", "kaiming");  /* Normal distribution - scale sqrtf(2.0f/n_inp) */
 
-    float *params = NULL;
-    neuralnet_get_params( nn, params );
+    float *params = malloc( 1000 * 1000 * sizeof(float));
+    neuralnet_get_parameters( nn, params );
+    float mean = test_calculate_mean( 1000*1000, params+1000 );  /* Adding 1000 since the first thousand is bias */
+
+    CHECK_FLOAT_EQUALS_MSG( mean, 0.0f, 1.0e-5f,
+            "Checking that mean of parameters are actually 0.0" ); 
+
+    free( params );
 
     neuralnet_free( nn );
 

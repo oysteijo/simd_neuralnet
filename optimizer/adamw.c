@@ -10,20 +10,6 @@
 
 #include <omp.h>
 
-/* Discuss: Move this to neuralnet.c ? */
-static void get_weights( const neuralnet_t *nn, float *weights )
-{
-    float *ptr = weights;
-    for ( int l = 0; l < nn->n_layers; l++ ){
-        const int n_inp = nn->layer[l].n_input;
-        const int n_out = nn->layer[l].n_output;
-        memcpy( ptr, nn->layer[l].bias, n_out * sizeof(float) );
-        ptr += n_out;
-        memcpy( ptr, nn->layer[l].weight, n_out * n_inp * sizeof(float) );
-        ptr += n_inp * n_out;
-    }
-}
-
 static void update_biased_first_moment( const int n , float *s, const float *g, const float rho )
 {
     int i = 0;
@@ -134,7 +120,7 @@ void adamw_run_epoch( optimizer_t *opt,
         compute_update( n_parameters, g, opt->s, opt->r, beta_1_corrected, beta_2_corrected, adamw->learning_rate );
 
         float SIMD_ALIGN(weights[n_parameters]);
-        get_weights( nn, weights );
+        neuralnet_get_parameters( nn, weights );
         vector_saxpy( n_parameters, g, -adamw->weight_decay, weights);
 
         neuralnet_update( nn, g);

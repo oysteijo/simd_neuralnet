@@ -1,6 +1,9 @@
 /* test.h */
 /* A simple include file to do some testing */
 
+#include <stddef.h>
+#include <math.h>
+
 #ifndef __TEST_H__
 #define __TEST_H__
 #define KNRM  "\x1B[0m"
@@ -28,6 +31,22 @@
     test_count++;                                   \
     fprintf(stderr, "%-70s: %s\n", msg , strcmp(a,b)==0 ? OK : FAIL); \
     if( strcmp(a,b)==0 ) fail_count++;
+
+#define CHECK_FLOAT_EQUALS_MSG(a,b,eps,msg) \
+    test_count++;  \
+    fprintf(stderr, "%-70s: %s\n", msg , fabsf( (a)-(b) ) <= eps ? OK : FAIL); \
+    if( fabsf( (a)-(b) ) > eps ) fail_count++;
+    
+static inline float test_calculate_mean( size_t n, float *values )
+{
+    float sum = 0.0f;
+    float *ptr = values;
+    size_t counter = n;
+    while( counter-- ){
+        sum += *ptr++;
+    }
+    return sum / (float) n;
+}
 
 #endif  /* __TEST_H__ */
 
