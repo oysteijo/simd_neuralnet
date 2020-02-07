@@ -582,9 +582,9 @@ void neuralnet_initialize( neuralnet_t *nn, ... )
 
         char *initializer = va_arg( argp, char* );
 
-        if( strcmp( initializer, "xavier" ) == 0 )
+        if( streq( initializer, "xavier" ))
             fill_data( n_inp * n_out, random_uniform, sqrtf(6.0f / (n_inp+n_out)), nn->layer[i].weight ); /* Xavier */
-        else if( strcmp( initializer, "kaiming" ) == 0 )
+        else if( streq( initializer, "kaiming" ))
             fill_data( n_inp * n_out, random_normal, sqrtf(2.0f/n_inp), nn->layer[i].weight ); /* Kaiming */
         else {
             /* OK ... initializer was neither "kaiming" nor "xavier", let's do some guessing. */
