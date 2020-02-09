@@ -37,6 +37,13 @@
     fprintf(stderr, "%-70s: %s\n", msg , fabsf( (a)-(b) ) <= eps ? OK : FAIL); \
     if( fabsf( (a)-(b) ) > eps ) fail_count++;
     
+#define CHECK_CONDITION_MSG(cond,msg) \
+    test_count++;  \
+    fprintf(stderr, "%-70s: %s\n", msg , (cond) ? OK : FAIL); \
+    if( !(cond) ) fail_count++;
+    
+/* I've prefixed these functions with 'test_' as they are only supposed to be
+ * used for testing. the implemetations are naiive and probably very slow. */
 static inline float test_calculate_mean( size_t n, float *values )
 {
     float sum = 0.0f;
@@ -52,16 +59,19 @@ static inline float test_calculate_stddev( size_t n, float *values )
 {
     if( n < 2 ) return 0.0f;
 
-    float stddev = 0.0f;
+    float    sum = 0.0f;
+    float sq_sum = 0.0f;
 
     for ( unsigned int i = 0; i < n; i++ ){
         const float val = values[i];
-        stddev = val*val;
-        float v = (stddev - (val*val/n)) / (n-1);
-        stddev = sqrtf( v / n );
+        sum    += val;
+        sq_sum += val*val;
     }
 
-    return stddev;
+    float mean = sum / n;
+    float var  = sq_sum / n - mean*mean;
+
+    return sqrtf( var );
 }
 
 static inline float test_calculate_max( size_t n, float *values )
@@ -88,6 +98,13 @@ static inline float test_calculate_min( size_t n, float *values )
     return minval;
 }
 
-
+#define print_test_summary(n_tests,fail_tests) \
+    fprintf(stderr, "------------------------------------\n"); \
+    fprintf(stderr, " Summary of '%s'.\n", __FILE__); \
+    fprintf(stderr, "------------------------------------\n"); \
+    fprintf(stderr, " Total tests run   :  %14d\n", n_tests); \
+    fprintf(stderr, " Total tests failed:  %14d\n", fail_tests); \
+    fprintf(stderr, "------------------------------------\n"); 
+    
 #endif  /* __TEST_H__ */
 

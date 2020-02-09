@@ -119,12 +119,12 @@ static float categorical_crossentropy(const int n, const float *y_pred, const fl
 
 static float binary_accuracy( const int n, const float *y_pred, const float *y_real )
 {
-    assert( n == 1 );
-    int i = 0;
-    assert( y_real[i] >= 0.0f );
-    assert( y_real[i] <= 1.0f );
-    float real = roundf( y_real[i] );
-    float pred = roundf( y_pred[i] );
-    return real == pred ? 1.0f : 0.0f;
+    float sum = 0.0f;
+    for( int i = 0; i < n; i++ ){
+        float real = roundf(fmin( fmax( y_real[i], 0.0f ) , 1.0f ));
+        float pred = roundf( y_pred[i] );
+        sum += real == pred ? 1.0f : 0.0f;
+    }
+    return sum / n;
 }
 

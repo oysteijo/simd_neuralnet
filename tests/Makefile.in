@@ -1,0 +1,56 @@
+
+CFLAGS = -std=c99 -Wall -Wextra -O3 $(arch) $(dbg) $(profile)
+LDFLAGS = $(profile) 
+
+src = $(wildcard *.c)
+obj = $(src:.c=.o)
+
+# dependency library
+C_NPY_LIBPATH = ../c_npy
+NEURALNET_LIBPATH = ../neuralnet
+CFLAGS += -I$(C_NPY_LIBPATH) -I$(NEURALNET_LIBPATH)
+LDFLAGS += -L$(NEURALNET_LIBPATH) -lneuralnet
+LDFLAGS += -L$(C_NPY_LIBPATH) -lc_npy
+LDFLAGS += -lm
+
+#DEFINES = -DUSE_CBLAS
+DEFINES = 
+CFLAGS += $(DEFINES)
+
+testprogs = test_neuralnet test_activation test_loss test_metrics
+
+testers: $(testprogs) 
+
+test_neuralnet: test_neuralnet.o 
+	$(CC) -o $@ $? $(LDFLAGS)
+test_activation: test_activation.o 
+	$(CC) -o $@ $? $(LDFLAGS)
+test_loss: test_loss.o 
+	$(CC) -o $@ $? $(LDFLAGS)
+test_metrics: test_metrics.o 
+	$(CC) -o $@ $? $(LDFLAGS)
+
+test_activation.c: generate_tests.py reference.py
+	python generate_tests.py
+test_loss.c: generate_tests.py reference.py
+	python generate_tests.py
+test_metrics.c: generate_tests.py reference.py
+	python generate_tests.py
+
+reference.py:
+	ln -s ../python/reference.py
+
+.PHONY: run
+run: $(testprogs)
+	$(foreach test,$(testprogs), $(shell ./$(test) ))
+	# End of tests 
+
+.PHONY: clean
+clean:
+	$(RM) $(obj) $(testprogs)
+
+.PHONY: distclean
+distclean:
+	$(RM) $(obj) $(testprogs) reference.py test_activation.c test_loss.c test_metrics.c Makefile *~
+	$(RM) -r __pycache__
+
