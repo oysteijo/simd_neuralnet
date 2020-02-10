@@ -27,30 +27,30 @@ main_end ="""
 }"""
 
 activations = [
-        "sigmoid",
-        "softmax",
-        "tanh",
-        "relu",
-        "hard_sigmoid",
-        "softplus",
-        "linear",
-        "softsign",
-        "exponential"]
+    "sigmoid",
+    "softmax",
+    "tanh",
+    "relu",
+    "hard_sigmoid",
+    "softplus",
+    "linear",
+    "softsign",
+    "exponential"]
 
 losses = [
-	"mean_squared_error" ,
-	"mean_absolute_error" ,
-	"mean_absolute_percentage_error" ,
-	"binary_crossentropy" ,
-	"categorical_crossentropy"]
+    "mean_squared_error" ,
+    "mean_absolute_error" ,
+    "mean_absolute_percentage_error" ,
+    "binary_crossentropy" ,
+    "categorical_crossentropy"]
 
 metrics = [
-	"mean_squared_error" ,
-	"mean_absolute_error" ,
-	"mean_absolute_percentage_error" ,
-	"binary_crossentropy" ,
-	"categorical_crossentropy" ,
-	"binary_accuracy"]
+    "mean_squared_error" ,
+    "mean_absolute_error" ,
+    "mean_absolute_percentage_error" ,
+    "binary_crossentropy" ,
+    "categorical_crossentropy" ,
+    "binary_accuracy"]
 
 def generate_activation_test( activation, testvec ):
     test_code = """
@@ -93,6 +93,9 @@ def generate_loss_test( loss, testvec ):
 
     py_loss = ref.get_loss_func( loss )
     for v in testvec:
+        # Absolute percentage error gets problem then the real value is close to 0 as it divides by real. We hence add one.
+        if "absolute_percentage" in loss:
+            v = 1 + v
         retstr += "    {\n"
         retstr += "        float SIMD_ALIGN(y_pred[{0}]) = {{ {1} }};\n".format(len(v), ", ".join( [str( elem )+"f" for elem in v ] ))
         retstr += "        float SIMD_ALIGN(y_real[{0}]) = {{ {1} }};\n".format(len(v), ", ".join( [str( elem*0.95 )+"f" for elem in v ] ))
@@ -108,10 +111,10 @@ def generate_loss_test( loss, testvec ):
 # Argh! I need some metrics, these metrics should be available in the python reference!
 mean_squared_error             = lambda y_pred, y_real: np.mean(np.square(y_pred - y_real), axis=-1)
 mean_absolute_error            = lambda y_pred, y_real: np.mean(np.abs(y_pred - y_real), axis=-1)
-mean_absolute_percentage_error = lambda y_pred, y_real: 100 * np.mean( np.abs(( y_pred - y_real ) / np.clip( np.abs(y_real), 1.0e-7, None)))
+mean_absolute_percentage_error = lambda y_pred, y_real: 100 * np.mean( np.abs(( y_pred - y_real ) / np.clip( np.abs(y_real), 1.0e-7, None)), axis=-1)
 
-binary_crossentropy            = lambda y_pred, y_real: -np.mean(y_real*np.log(y_pred)-(1.0-y_real)*(np.log(1.0-y_pred)))
-categorical_crossentropy       = lambda y_pred, y_real: -np.mean(y_real*np.log(y_pred))
+binary_crossentropy            = lambda y_pred, y_real: -np.mean(y_real*np.log(y_pred)+(1.0-y_real)*(np.log(1.0-y_pred)), axis=-1)
+categorical_crossentropy       = lambda y_pred, y_real: -np.mean(y_real*np.log(y_pred), axis=-1)
 binary_accuracy                = lambda y_pred, y_real: 1.0
 
 
@@ -129,6 +132,9 @@ def generate_metrics_test( metric, testvec ):
 
     py_metrics = getattr( sys.modules[__name__], metric )
     for v in testvec:
+        # Mean absolute percentage error as this is scaling by 0.95. It will therefore always git 5% error.
+        if "absolute_percentage" in metric:
+            break
         retstr += "    {\n"
         retstr += "        float SIMD_ALIGN(y_pred[{0}]) = {{ {1} }};\n".format(len(v), ", ".join( [str( elem )+"f" for elem in v ] ))
         retstr += "        float SIMD_ALIGN(y_real[{0}]) = {{ {1} }};\n".format(len(v), ", ".join( [str( elem*0.95 )+"f" for elem in v ] ))
@@ -137,6 +143,21 @@ def generate_metrics_test( metric, testvec ):
         test_out = py_metrics( v, v*0.95 )
         retstr += "        CHECK_FLOAT_EQUALS_MSG( {}f, val, 1.0e-6, \"Comparing metrics '{}' outputs\");\n".format(test_out, metric)
         retstr += "    }\n"
+
+    if "absolute_percentage" in metric:
+        y_real = np.arange(10, 20, dtype=np.float32)             # Number that are off zero
+        y_pred = y_real + np.random.random(y_real.shape) - 0.5   # some noise added 
+
+        retstr += "    {\n"
+        retstr += "        float SIMD_ALIGN(y_pred[{0}]) = {{ {1} }};\n".format(len(y_pred), ", ".join( [str( elem )+"f" for elem in y_pred ] ))
+        retstr += "        float SIMD_ALIGN(y_real[{0}]) = {{ {1} }};\n".format(len(y_real), ", ".join( [str( elem )+"f" for elem in y_real ] ))
+        retstr += "        float val = a( {}, y_pred, y_real );\n".format(len(y_pred))
+
+        test_out = py_metrics( y_pred, y_real )
+        retstr += "        CHECK_FLOAT_EQUALS_MSG( {}f, val, 1.0e-4, \"Comparing metrics '{}' outputs\");\n".format(test_out, metric)
+        #retstr += "        fprintf(stderr, \"{}f (python) ?= %g (simd_neuralnet)\\n\", val);\n".format(test_out)
+        retstr += "    }\n"
+    
     return retstr
 
 if __name__ == '__main__':
