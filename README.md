@@ -27,11 +27,7 @@ struggle with python bindings or slow memory transfers to GPU memory.
 To be able to achieve the above, we need to set some limitations.
 
  * **`float32` precision only!** The code will use SIMD instructions, so double precision will slow things down, and float16 is not precise enough and has limited support.
- * **Stochastic training only!** No fancy on the training side. No batch or mini-batches or fancy optimizers.
-   (*Update* Well... I have to admit that after some coding I now have stochastic and batch training support, an I have
-    implemented SGD with momentum and Nesterov, and AdaGrad and RMSprop and Adam... so this statment is really not valid anymore)
  * **Fully connect feed forward neural networks only!** No support for LSTM, convolutional layers, RNN or whatever.
- * **Limited number of additional features!** No weight initializations methods, etc. (*Update:* I do have an initializing tool that can initialize with xavier (aka glorot_uniform) or kaiming (aka he_normal).  
  
 ### Loss functions implemented
 The following loss functions are implemented.
@@ -52,7 +48,38 @@ The following activation functions are implemented.
   * relu
   * linear
   * exponential
-  
+
+### Parameter initialization methods implemented
+  * Xavier (aka Glorot uniform)
+  * Kaiming (aka He normal)
+
+### Optimizers implemented
+  * SGD (Stochastic Gradient Descent)
+  * RMSprop
+  * Adagrad
+  * Adam
+  * AdamW
+
+Most of these optimizers can also handle momentum and Nesterov momentum.
+
+### Metric functions implemented
+  * mean_squared_error
+  * mean_absolute_error
+  * mean_absolute_percentage_error
+  * binary_crossentropy
+  * categorical_crossentropy
+  * binary_accuracy
+
+### Plan ahead
+So, the idea is to keep this small and beautiful. Features, like:
+  * more activations
+  * more loss functions
+  * more initialization
+  * more optimizers
+  * more callbacks
+
+... can be added successivly as needed. Please make pull requests. 
+
 An other limitation might be that the number of units in a hidden layer may have to be a multiple of the number of floats
-you can fit in a SIMD register. With SSE this number is 4. With AVX this number is 8. With AVX-512 the number will be 16. There must (of course) be possible to have an arbitrary number of inputs and outputs. 
+you can fit in a SIMD register. With SSE this number is 4. With AVX this number is 8. With AVX-512 the number will be 16. There must (of course) be possible to have an arbitrary number of inputs and outputs. (Comment Feb. 2020: Is this still true?)
 
