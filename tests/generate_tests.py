@@ -1,4 +1,5 @@
 import reference as ref
+import metrics as refmetrics
 import numpy as np
 
 heading = """/* {} -- Automatically generated testfile. Modify '{}' to make changes */"""
@@ -14,6 +15,8 @@ includes = """
 main_start = """
 int main(int argc, char *argv[] )
 {
+    if(argc == 1)
+        fprintf(stderr, KBLU "Running '%%s'\\n" KNRM, argv[0] );
     int test_count = 0;
     int fail_count = 0;
 
@@ -108,16 +111,6 @@ def generate_loss_test( loss, testvec ):
         retstr += "    }\n"
     return retstr
 
-# Argh! I need some metrics, these metrics should be available in the python reference!
-mean_squared_error             = lambda y_pred, y_real: np.mean(np.square(y_pred - y_real), axis=-1)
-mean_absolute_error            = lambda y_pred, y_real: np.mean(np.abs(y_pred - y_real), axis=-1)
-mean_absolute_percentage_error = lambda y_pred, y_real: 100 * np.mean( np.abs(( y_pred - y_real ) / np.clip( np.abs(y_real), 1.0e-7, None)), axis=-1)
-
-binary_crossentropy            = lambda y_pred, y_real: -np.mean(y_real*np.log(y_pred)+(1.0-y_real)*(np.log(1.0-y_pred)), axis=-1)
-categorical_crossentropy       = lambda y_pred, y_real: -np.mean(y_real*np.log(y_pred), axis=-1)
-binary_accuracy                = lambda y_pred, y_real: 1.0
-
-
 def generate_metrics_test( metric, testvec ):
     test_code = """
     /* Tests for '{0}' */
@@ -130,10 +123,12 @@ def generate_metrics_test( metric, testvec ):
 
     retstr = test_code.format( metric )
 
-    py_metrics = getattr( sys.modules[__name__], metric )
+    py_metrics = refmetrics.get_metric_func( metric )
     for v in testvec:
         # Mean absolute percentage error as this is scaling by 0.95. It will therefore always git 5% error.
         if "absolute_percentage" in metric:
+            break
+        if "accuracy" in metric:
             break
         retstr += "    {\n"
         retstr += "        float SIMD_ALIGN(y_pred[{0}]) = {{ {1} }};\n".format(len(v), ", ".join( [str( elem )+"f" for elem in v ] ))
@@ -157,6 +152,20 @@ def generate_metrics_test( metric, testvec ):
         retstr += "        CHECK_FLOAT_EQUALS_MSG( {}f, val, 1.0e-4, \"Comparing metrics '{}' outputs\");\n".format(test_out, metric)
         #retstr += "        fprintf(stderr, \"{}f (python) ?= %g (simd_neuralnet)\\n\", val);\n".format(test_out)
         retstr += "    }\n"
+    
+    if "accuracy" in metric:
+        for y_pred in testvec:
+            y_real = np.random.choice([0,], size=y_pred.shape ).astype(np.float32)
+    
+            retstr += "    {\n"
+            retstr += "        float SIMD_ALIGN(y_pred[{0}]) = {{ {1} }};\n".format(len(y_pred), ", ".join( [str( elem )+"f" for elem in y_pred ] ))
+            retstr += "        float SIMD_ALIGN(y_real[{0}]) = {{ {1} }};\n".format(len(y_real), ", ".join( [str( elem )+"f" for elem in y_real ] ))
+            retstr += "        float val = a( {}, y_pred, y_real );\n".format(len(y_pred))
+    
+            test_out = py_metrics( y_pred, y_real )
+            retstr += "        CHECK_FLOAT_EQUALS_MSG( {}f, val, 1.0e-4, \"Comparing metrics '{}' outputs\");\n".format(test_out, metric)
+            #retstr += "        fprintf(stderr, \"{}f (python) ?= %g (simd_neuralnet)\\n\", val);\n".format(test_out)
+            retstr += "    }\n"
     
     return retstr
 

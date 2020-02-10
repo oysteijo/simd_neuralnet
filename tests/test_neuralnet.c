@@ -9,6 +9,9 @@ int main(int argc, char *argv[] )
     int test_count = 0;
     int fail_count = 0;
 
+    if(argc == 1)
+        fprintf(stderr, KBLU "Running '%s'\n" KNRM, argv[0] );
+
     fprintf(stderr, KBLU "Testing neuralnet_create." KNRM "\n" );
     neuralnet_t *nn = neuralnet_create( 2,
             INT_ARRAY( 3,4,2 ),

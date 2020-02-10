@@ -30,15 +30,17 @@ test_loss: test_loss.o
 test_metrics: test_metrics.o 
 	$(CC) -o $@ $? $(LDFLAGS)
 
-test_activation.c: generate_tests.py reference.py
+test_activation.c: generate_tests.py reference.py metrics.py
 	python3 generate_tests.py
-test_loss.c: generate_tests.py reference.py
+test_loss.c: generate_tests.py reference.py metrics.py
 	python3 generate_tests.py
-test_metrics.c: generate_tests.py reference.py
+test_metrics.c: generate_tests.py reference.py metrics.py
 	python3 generate_tests.py
 
 reference.py:
 	ln -s ../python/reference.py
+metrics.py:
+	ln -s ../python/metrics.py
 
 .PHONY: run
 run: $(testprogs)
@@ -51,6 +53,6 @@ clean:
 
 .PHONY: distclean
 distclean:
-	$(RM) $(obj) $(testprogs) reference.py reference.pyc test_activation.c test_loss.c test_metrics.c Makefile *~
+	$(RM) $(obj) $(testprogs) reference.py metrics.py  reference.pyc metrics.pyc  test_activation.c test_loss.c test_metrics.c Makefile *~
 	$(RM) -r __pycache__
 

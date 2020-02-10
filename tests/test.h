@@ -19,27 +19,27 @@
 
 #define CHECK_INT_EQUALS_MSG(a,b,msg)               \
     test_count++;                                   \
-    fprintf(stderr, "%-70s: %s\n", msg , a==b ? OK : FAIL); \
+    fprintf(stderr, "%-72s: %s\n", msg , a==b ? OK : FAIL); \
     if( a != b ) fail_count++;
 
 #define CHECK_NOT_NULL_MSG(a,msg)               \
     test_count++;                                   \
-    fprintf(stderr, "%-70s: %s\n", msg , a!=NULL ? OK : FAIL); \
+    fprintf(stderr, "%-72s: %s\n", msg , a!=NULL ? OK : FAIL); \
     if( a == NULL ) fail_count++;
 
 #define CHECK_STR_EQUALS_MSG(a,b,msg)               \
     test_count++;                                   \
-    fprintf(stderr, "%-70s: %s\n", msg , strcmp(a,b)==0 ? OK : FAIL); \
+    fprintf(stderr, "%-72s: %s\n", msg , strcmp(a,b)==0 ? OK : FAIL); \
     if( strcmp(a,b)==0 ) fail_count++;
 
 #define CHECK_FLOAT_EQUALS_MSG(a,b,eps,msg) \
     test_count++;  \
-    fprintf(stderr, "%-70s: %s\n", msg , fabsf( (a)-(b) ) <= eps ? OK : FAIL); \
+    fprintf(stderr, "%-72s: %s\n", msg , fabsf( (a)-(b) ) <= eps ? OK : FAIL); \
     if( fabsf( (a)-(b) ) > eps ) fail_count++;
     
 #define CHECK_CONDITION_MSG(cond,msg) \
     test_count++;  \
-    fprintf(stderr, "%-70s: %s\n", msg , (cond) ? OK : FAIL); \
+    fprintf(stderr, "%-72s: %s\n", msg , (cond) ? OK : FAIL); \
     if( !(cond) ) fail_count++;
     
 /* I've prefixed these functions with 'test_' as they are only supposed to be
