@@ -1,4 +1,6 @@
 #include "matrix_multiply.h"
+#include "simd.h"
+#include <assert.h>
 
 #ifdef __AVX__ 
 #include <immintrin.h>
@@ -93,9 +95,18 @@ void vector_vector_outer( int n_rows, int n_cols, const float *x, const float *y
 #endif /* USE_CBLAS */
 }
 
+/* Discuss: We can maybe check if if m is a multiple of ALIGN_SIZE at entry, and
+ * in case it is, we can load_ps and store_ps with aligned instead of unaligned.
+ * However, I'm not sure how much it will improve the performance.  */
 void vector_matrix_multiply( int n, int m, const float *weight, const float *bias, const float *input, float *y )
 {
     /* Use cblas_sgemv on this? */
+    /*
+    assert( is_aligned( weight ));
+    assert( is_aligned( bias ));
+    assert( is_aligned( input ));
+    assert( is_aligned( y ));
+    */
     const float *bias_ptr = bias;
 	float *y_ptr = y; 
     int i = 0;
@@ -110,14 +121,14 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
 
 	for (int i = 0; i < n; i++) {
 		float const inp = input[i];
-		const float *weight_ptr = weight + ( i * m );
+		const float *weight_ptr = weight + ( i * m );  /* Argh! if m is not a multiple of ALIGN_SIZE, the pointer wil be unaligned! :-( */
 		if (inp) {
-			float  *y_ptr = y;
+			float  *y_ptr = y;  /* same goes for this */
 			if (inp == 1.0f){
                 int j = 0;
 #ifdef __AVX__
 				for (; j <= ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8) 
-					_mm256_store_ps(y_ptr, _mm256_add_ps (_mm256_load_ps(y_ptr), _mm256_load_ps( weight_ptr )));
+					_mm256_storeu_ps(y_ptr, _mm256_add_ps (_mm256_loadu_ps(y_ptr), _mm256_loadu_ps( weight_ptr )));
 #endif /*  __AVX__ */
                 for( ; j < m; j++ )
                     *y_ptr++ += *weight_ptr++;
@@ -129,9 +140,9 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
 				__m256 scalevec = _mm256_set1_ps(inp);
 				for (; j < ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8){
    #if defined(__AVX2__)
-					_mm256_store_ps(y_ptr, _mm256_fmadd_ps( _mm256_load_ps(weight_ptr), scalevec, _mm256_load_ps(y_ptr)));
+					_mm256_storeu_ps(y_ptr, _mm256_fmadd_ps( _mm256_loadu_ps(weight_ptr), scalevec, _mm256_loadu_ps(y_ptr)));
    #else
-					_mm256_store_ps(y_ptr, _mm256_add_ps(_mm256_load_ps(y_ptr), _mm256_mul_ps(_mm256_load_ps(weight_ptr), scalevec)));
+					_mm256_storeu_ps(y_ptr, _mm256_add_ps(_mm256_loadu_ps(y_ptr), _mm256_mul_ps(_mm256_loadu_ps(weight_ptr), scalevec)));
    #endif  
                 }
 #endif

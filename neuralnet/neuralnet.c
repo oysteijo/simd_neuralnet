@@ -88,7 +88,6 @@ static char ** _activation_names_from_npy( cmatrix_t *m )
         ret[i] = ret[0] + i * (m->elem_size + 1);
 
     char *src = (char*) m->data;
-    char *dst = (char*) ret;
     for( unsigned int i = 0; i < m->shape[0]; i++, src += m->elem_size )
         memcpy( ret[i], src, m->elem_size );
     return ret;
@@ -352,34 +351,43 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
         array[2*i + 1]->elem_size    = sizeof(float) ;
         array[2*i + 1]->fortran_order= false ;
     }
-    /* activations */
+    /* an array for the activations */
     array[2*nn->n_layers] = calloc( 1, sizeof( cmatrix_t ));
     assert( array[2*nn->n_layers] );
     int longest_name = 0;
     for( int i = 0; i < nn->n_layers; i++ ){
-        int act_name_len =  strlen(get_activation_name( nn->layers[i].activation_func ));
+        int act_name_len =  strlen(get_activation_name( nn->layer[i].activation_func ));
         if( act_name_len > longest_name )
             longest_name = act_name_len;
     }
     char *activationdata = calloc( longest_name * nn->n_layers, sizeof(char) );
-    /* FIXME Fill the data. */
+    assert( activationdata );
+    /* Fill the data. */
+    char *ptr = activationdata;
+    for( int i = 0; i < nn->n_layers; i++, ptr += longest_name ){
+        const char * activation_name = get_activation_name( nn->layer[i].activation_func );
+        int len = strlen( activation_name );
+        memcpy( ptr, activation_name, len );
+    }        
+
     assert( activationdata );
     array[2*nn->n_layers]->data          = activationdata;
     array[2*nn->n_layers]->shape[0]      = nn->n_layers;
-    array[2*nn->n_layers]->dim           = 1;
+    array[2*nn->n_layers]->ndim          = 1;
     array[2*nn->n_layers]->endianness    = '|';
     array[2*nn->n_layers]->typechar      = 'S';
     array[2*nn->n_layers]->elem_size     = (size_t) longest_name;
     array[2*nn->n_layers]->fortran_order = false;
 
-
+    /* A terminating NULL */
     array[2*nn->n_layers + 1] = NULL;
     
     int retval = c_npy_matrix_array_write( real_filename, array );
-    if( retval != nn->n_layers*2 )
-        printf("Warning: Arrays written: %d  !=  2 x n_layers     (n_layers=%d)\n", retval, nn->n_layers );
+    if( retval != (nn->n_layers*2 + 1) )
+        printf("Warning: Arrays written: %d  !=  2 x n_layers + 1     (n_layers=%d)\n", retval, nn->n_layers );
 
-    for (int i = 0; i < 2*nn->n_layers ; i++ )
+    free( activationdata );
+    for (int i = 0; i < 2*nn->n_layers+1; i++ )
         free(array[i]);
 }
 

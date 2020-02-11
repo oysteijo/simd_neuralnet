@@ -1,7 +1,11 @@
 #include "test.h"
 #include "neuralnet.h"
+#include "simd.h"
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <assert.h>
 #include <time.h>
 
 int main(int argc, char *argv[] )
@@ -138,7 +142,46 @@ int main(int argc, char *argv[] )
     fprintf(stderr, "\ttheoretical minimum  : %+g\n", a );
     free( params );
 
-    /* TODO Still left to test load nad save */
+    /* predict, save, load and predict again */
+    float *inp = simd_malloc( n_inp * sizeof(float));
+    assert(inp);
+    for( int i = 0; i < n_inp; i++ )
+        inp[i] = 0.5f;
+
+    float SIMD_ALIGN(result[10]);
+    
+    fprintf(stderr, "Predicting 10 values:\n" );
+    neuralnet_predict( nn, inp, result );
+    for( int i = 0; i < 10; i++ )
+        fprintf(stderr, "%5.5f  ", result[i] );
+    fprintf(stderr, "\n" );
+
+    fprintf(stderr, "Saving neural network.\n" );
+
+    neuralnet_save( nn, "tmp_store_%d.npz", 12 );
+    CHECK_CONDITION_MSG( access( "tmp_store_12.npz", F_OK ) != -1,
+            "Checking that file got saved" );
+    /* free the neural network and reopen. Does it still predict the same values? */
+    neuralnet_free( nn );
+    CHECK_CONDITION_MSG( 1, "Got free'ed" );
+
+    nn = neuralnet_load( "tmp_store_12.npz" );
+    CHECK_NOT_NULL_MSG( nn,
+            "Checking that neural network was created" );
+    float SIMD_ALIGN(result_new[10]);
+
+    fprintf(stderr, "Predicting 10 values:\n" );
+    neuralnet_predict( nn, inp, result_new );
+    for( int i = 0; i < 10; i++ )
+        fprintf(stderr, "%5.5f  ", result_new[i] );
+    fprintf(stderr, "\n" );
+    for( int i = 0; i < 10; i++ )
+        fprintf(stderr, "%d : %5.5f ?= %5.5f  %s\n  ", i, result[i], result_new[i],
+              result[i] == result_new[i] ? OK : FAIL );
+    fprintf(stderr, "\n" );
+
+    free( inp );
+
 
 end_of_tests:
     neuralnet_free( nn );
