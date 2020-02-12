@@ -53,6 +53,6 @@ clean:
 
 .PHONY: distclean
 distclean:
-	$(RM) $(obj) $(testprogs) reference.py metrics.py  reference.pyc metrics.pyc  test_activation.c test_loss.c test_metrics.c Makefile *~
+	$(RM) $(obj) $(testprogs) reference.py metrics.py  reference.pyc metrics.pyc  test_activation.c test_loss.c test_metrics.c Makefile tmp_*.npz *~
 	$(RM) -r __pycache__
 

@@ -153,7 +153,7 @@ int main(int argc, char *argv[] )
     fprintf(stderr, "Predicting 10 values:\n" );
     neuralnet_predict( nn, inp, result );
     for( int i = 0; i < 10; i++ )
-        fprintf(stderr, "%5.5f  ", result[i] );
+        fprintf(stderr, "%5.5f ", result[i] );
     fprintf(stderr, "\n" );
 
     fprintf(stderr, "Saving neural network.\n" );
@@ -163,20 +163,16 @@ int main(int argc, char *argv[] )
             "Checking that file got saved" );
     /* free the neural network and reopen. Does it still predict the same values? */
     neuralnet_free( nn );
-    CHECK_CONDITION_MSG( 1, "Got free'ed" );
 
     nn = neuralnet_load( "tmp_store_12.npz" );
     CHECK_NOT_NULL_MSG( nn,
-            "Checking that neural network was created" );
+            "Checking that neural network was created from load" );
     float SIMD_ALIGN(result_new[10]);
 
-    fprintf(stderr, "Predicting 10 values:\n" );
+    fprintf(stderr, "Predicting same 10 values from same inputs:\n" );
     neuralnet_predict( nn, inp, result_new );
     for( int i = 0; i < 10; i++ )
-        fprintf(stderr, "%5.5f  ", result_new[i] );
-    fprintf(stderr, "\n" );
-    for( int i = 0; i < 10; i++ )
-        fprintf(stderr, "%d : %5.5f ?= %5.5f  %s\n  ", i, result[i], result_new[i],
+        fprintf(stderr, "%3d : %5.5f ?= %5.5f  %s\n", i, result[i], result_new[i],
               result[i] == result_new[i] ? OK : FAIL );
     fprintf(stderr, "\n" );
 
