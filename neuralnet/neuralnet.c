@@ -67,12 +67,38 @@ weight_alloc_error:
     return false;
 }
 
-/**
-  @brief Create a new neural network based ont specifications in file.
-  @param filename Filename to neural network file.
-  @return Pointer to newly created neural network. Returns NULL on failure. Use neuralnet_free() to free resources.
+/*
+#define C_NPY_MAX_DIMENSIONS 8
+typedef struct _cmatrix_t {
+    char    *data;
+    size_t   shape[ C_NPY_MAX_DIMENSIONS ];
+    int32_t  ndim;
+    char     endianness;
+    char     typechar;
+    size_t   elem_size;
+    bool     fortran_order;
+} cmatrix_t;
 */
-neuralnet_t *neuralnet_new( const char *filename, char *activation_funcs[] )
+
+static char ** _activation_names_from_npy( cmatrix_t *m )
+{
+    char ** ret = malloc( m->shape[0] * sizeof( char* ));
+    ret[0] = calloc( m->shape[0] * (m->elem_size + 1), sizeof(char) );  /* sizeof(char) is always 1! */
+    for( unsigned int i = 1; i < m->shape[0]; i++ )
+        ret[i] = ret[0] + i * (m->elem_size + 1);
+
+    char *src = (char*) m->data;
+    for( unsigned int i = 0; i < m->shape[0]; i++, src += m->elem_size )
+        memcpy( ret[i], src, m->elem_size );
+    return ret;
+}
+
+/**
+  @brief Create a new neural network based on specifications in file.
+  @param filename Filename to neural network file.
+  @return Pointer to newly created neural network. Returns NULL on failure. Use neuralnet_free() to free the resources.
+*/
+neuralnet_t *neuralnet_load( const char *filename) //, char *activation_funcs[] )
 {
     neuralnet_t *nn;
 
@@ -83,46 +109,89 @@ neuralnet_t *neuralnet_new( const char *filename, char *activation_funcs[] )
 
     /* FIXME: This code is still not production quality. */
     cmatrix_t **array;
+    cmatrix_t **weights_and_biases;
+    char      **activation_funcs = NULL;
+    int wb_idx = 0;
+
+    /* Start with copying data from the 'npy' file into an other array for weights and biases,
+       and the activation function names into another array */
     if( NULL != (array = c_npy_matrix_array_read( filename ))) {
         size_t len = c_npy_matrix_array_length( array );
-        nn->n_layers = len / 2;
-        for( int i = 0; i < nn->n_layers; i++ ){
-            nn->layer[i].n_input = array[i*2]->shape[0];
-            nn->layer[i].n_output = array[i*2]->shape[1];
-        }
-        if( !_weights_memory_allocate( nn )){
-            fprintf(stderr, "Cannot allocate memory for neural net weights.\n");
+
+        if (NULL == (weights_and_biases = malloc( len * sizeof( cmatrix_t * )))){
+            fprintf(stderr, "Cannot allocate temporary array for weights. (This is really unlikely!)\n" );
             free( nn );
+            c_npy_matrix_array_free( array );
             return NULL;
         }
-        for( int i = 0; i < nn->n_layers; i++ ){
-            cmatrix_t *weights   = array[i*2];
-            cmatrix_t *bias      = array[i*2+1];
-            memcpy( nn->layer[i].weight, weights->data, weights->shape[0] * weights->shape[1] * sizeof(float));
-            memcpy( nn->layer[i].bias, bias->data, bias->shape[0] * sizeof(float));
-            /* FIXME in far future: If the matrices are fortran order, reorganize them. Hmmm ... maybe
-             * such feature belong in c_npy? */ 
-            assert( weights->fortran_order == false );
-            assert( bias->fortran_order == false );
+        for( unsigned int i = 0; i < len; i++) {
+            cmatrix_t *m = array[i];
+            if( m->typechar == 'f' )
+                weights_and_biases[wb_idx++] = m;
+            else if( m->typechar == 'S' )
+                activation_funcs = _activation_names_from_npy( m );
+            else {
+                fprintf( stderr, "Element type of numpy array is neither 'float32' or ascii charaters. Cannot open file '%s'.\n", filename );
+                free( nn );
+                if(activation_funcs){
+                    free( activation_funcs[0] );
+                    free( activation_funcs );
+                }
+                free( weights_and_biases );
+                c_npy_matrix_array_free( array );
+                return NULL;
+            }
         }
-        
-        /* Oh! What a memory leak!? */
-        c_npy_matrix_array_free( array ); 
-
-        /* Set the activation functions */
-        if ( activation_funcs == NULL ) /* NULL passed into function */
-            for( int i = 0; i < nn->n_layers; i++ )
-                nn->layer[i].activation_func = get_activation_func("linear");
-
-        for( int i = 0; i < nn->n_layers; i++ ){
-            const char *func_name = activation_funcs[i];
-            nn->layer[i].activation_func = get_activation_func( func_name ? func_name : "linear" );
-        }
-
-        return nn;
+    } else {
+        /* Oh you poor thing... what did you pass in? */
+        fprintf(stderr, "Cannot read neural network from file '%s'. Make sure you have a valid file.\n", filename );
+        free (nn );
+        return NULL;
     }
 
-    fprintf(stderr, "Neural network created, but no sizes nor activation functions were set.");
+    assert( (wb_idx % 2) == 0 );  /* There should be one weight and one bias npy arrays for each layer. This should hence be even. */
+
+    nn->n_layers = wb_idx / 2;
+    for( int i = 0; i < nn->n_layers; i++ ){
+        nn->layer[i].n_input = weights_and_biases[i*2]->shape[0];
+        nn->layer[i].n_output = weights_and_biases[i*2]->shape[1];
+    }
+
+    if( !_weights_memory_allocate( nn )){
+        fprintf(stderr, "Cannot allocate memory for neural net weights.\n");
+        free( nn );
+        return NULL;
+    }
+    for( int i = 0; i < nn->n_layers; i++ ){
+        cmatrix_t *weights   = weights_and_biases[i*2];
+        cmatrix_t *bias      = weights_and_biases[i*2+1];
+        memcpy( nn->layer[i].weight, weights->data, weights->shape[0] * weights->shape[1] * sizeof(float));
+        memcpy( nn->layer[i].bias, bias->data, bias->shape[0] * sizeof(float));
+        /* FIXME in far future: If the matrices are fortran order, reorganize them. Hmmm ... maybe
+         * such feature belong in c_npy? */ 
+        assert( weights->fortran_order == false );
+        assert( bias->fortran_order == false );
+    }
+
+    c_npy_matrix_array_free( array ); 
+    free( weights_and_biases );
+
+    /* Set the activation functions */
+    if ( activation_funcs == NULL )
+        for( int i = 0; i < nn->n_layers; i++ )
+            nn->layer[i].activation_func = get_activation_func("linear");
+
+    for( int i = 0; i < nn->n_layers; i++ ){
+        const char *func_name = activation_funcs[i];
+        nn->layer[i].activation_func = get_activation_func( func_name ? func_name : "linear" );
+    }
+
+    /* Clean up activations */
+    if(activation_funcs){
+        free( activation_funcs[0] );
+        free( activation_funcs );
+    }
+
     return nn;
 }
 
@@ -244,7 +313,7 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
     if( len > _MAX_FILENAME_LEN ){
         /* If someone is trying to cook up a special filename that can contain executable code, I think it is wise
            to limit the length of the filename */
-        fprintf( stderr, "Warning: Cannot save neural network. No filename too long."
+        fprintf( stderr, "Warning: Cannot save neural network. Your filename is too long."
                 " Please limit the filename to %d characters.\n", _MAX_FILENAME_LEN );
         return;
     }
@@ -256,7 +325,7 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
 
     /* And then the rest is the same... */
 
-    cmatrix_t *array[nn->n_layers*2 + 1]; /* bias and weight for each layer pluss a terminating NULL; */
+    cmatrix_t *array[nn->n_layers*2 + 2]; /* bias and weight for each layer + activations + pluss a terminating NULL; */
 
     for (int i = 0; i < nn->n_layers ; i++ ){
         /* weight */
@@ -282,13 +351,43 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
         array[2*i + 1]->elem_size    = sizeof(float) ;
         array[2*i + 1]->fortran_order= false ;
     }
-    array[2*nn->n_layers] = NULL;
+    /* an array for the activations */
+    array[2*nn->n_layers] = calloc( 1, sizeof( cmatrix_t ));
+    assert( array[2*nn->n_layers] );
+    int longest_name = 0;
+    for( int i = 0; i < nn->n_layers; i++ ){
+        int act_name_len =  strlen(get_activation_name( nn->layer[i].activation_func ));
+        if( act_name_len > longest_name )
+            longest_name = act_name_len;
+    }
+    char *activationdata = calloc( longest_name * nn->n_layers, sizeof(char) );
+    assert( activationdata );
+    /* Fill the data. */
+    char *ptr = activationdata;
+    for( int i = 0; i < nn->n_layers; i++, ptr += longest_name ){
+        const char * activation_name = get_activation_name( nn->layer[i].activation_func );
+        int len = strlen( activation_name );
+        memcpy( ptr, activation_name, len );
+    }        
+
+    assert( activationdata );
+    array[2*nn->n_layers]->data          = activationdata;
+    array[2*nn->n_layers]->shape[0]      = nn->n_layers;
+    array[2*nn->n_layers]->ndim          = 1;
+    array[2*nn->n_layers]->endianness    = '|';
+    array[2*nn->n_layers]->typechar      = 'S';
+    array[2*nn->n_layers]->elem_size     = (size_t) longest_name;
+    array[2*nn->n_layers]->fortran_order = false;
+
+    /* A terminating NULL */
+    array[2*nn->n_layers + 1] = NULL;
     
     int retval = c_npy_matrix_array_write( real_filename, array );
-    if( retval != nn->n_layers*2 )
-        printf("Warning: Arrays written: %d  !=  2 x n_layers     (n_layers=%d)\n", retval, nn->n_layers );
+    if( retval != (nn->n_layers*2 + 1) )
+        printf("Warning: Arrays written: %d  !=  2 x n_layers + 1     (n_layers=%d)\n", retval, nn->n_layers );
 
-    for (int i = 0; i < 2*nn->n_layers ; i++ )
+    free( activationdata );
+    for (int i = 0; i < 2*nn->n_layers+1; i++ )
         free(array[i]);
 }
 

@@ -25,7 +25,7 @@ struct _neuralnet_t
 #endif
 };
 
-neuralnet_t * neuralnet_new              ( const char *filename, char *activation_funcs[] );
+neuralnet_t * neuralnet_load             ( const char *filename );
 void          neuralnet_free             (       neuralnet_t *nn); 
 void          neuralnet_predict          ( const neuralnet_t *nn, const float *input, float *output);
 #ifndef PREDICTION_ONLY
