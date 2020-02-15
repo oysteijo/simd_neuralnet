@@ -6,11 +6,11 @@ src = $(wildcard *.c)
 obj = $(src:.c=.o)
 
 # dependency library
-C_NPY_LIBPATH = ../c_npy
+NPY_ARRAY_LIBPATH = ../npy_array
 NEURALNET_LIBPATH = ../neuralnet
-CFLAGS += -I$(C_NPY_LIBPATH) -I$(NEURALNET_LIBPATH)
+CFLAGS += -I$(NPY_ARRAY_LIBPATH) -I$(NEURALNET_LIBPATH)
 LDFLAGS += -L$(NEURALNET_LIBPATH) -lneuralnet
-LDFLAGS += -L$(C_NPY_LIBPATH) -lc_npy
+LDFLAGS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
 LDFLAGS += -lm
 
 #DEFINES = -DUSE_CBLAS

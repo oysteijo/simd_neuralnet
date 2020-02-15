@@ -7,9 +7,9 @@ obj = $(src:.c=.o)
 dep = $(obj:.o=.d)  # one dependency file for each source
 
 # dependency library
-C_NPY_LIBPATH = ../c_npy
-CFLAGS += -I$(C_NPY_LIBPATH)
-LDFLAGS += -L$(C_NPY_LIBPATH) -lc_npy
+NPY_ARRAY_LIBPATH = ../npy_array
+CFLAGS += -I$(NPY_ARRAY_LIBPATH)
+LDFLAGS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
 
 # This should obly be turned off when you do not need any training.
 #DEFINES = -DUSE_CBLAS
@@ -41,10 +41,10 @@ install: $(alib)
 	mkdir -p $(DESTDIR)$(PREFIX)/lib
 	mkdir -p $(DESTDIR)$(PREFIX)/include
 	cp $(alib) $(DESTDIR)$(PREFIX)/lib/$(alib)
-	cp c_npy.h $(DESTDIR)$(PREFIX)/include/
+	cp npy_array.h $(DESTDIR)$(PREFIX)/include/
 
 .PHONY: uninstall
 uninstall:
 	$(RM) $(DESTDIR)$(PREFIX)/lib/$(alib)
-	$(RM) $(DESTDIR)$(PREFIX)/include/c_npy.h
+	$(RM) $(DESTDIR)$(PREFIX)/include/npy_array.h
 
