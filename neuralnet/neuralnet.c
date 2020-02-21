@@ -698,18 +698,17 @@ static void fill_data( unsigned int n, float (*dist)(), float scale, float *data
     for( char **iter = (char*[]){__VA_ARGS__, NULL}; *iter; iter++ )
 #define streq(a,b) (strcmp((a),(b)) == 0)
 
-void neuralnet_initialize( neuralnet_t *nn, ... )
+void neuralnet_initialize( neuralnet_t *nn, char *initializers[] )
 {
     assert( nn );
-
-    va_list argp;
-    va_start( argp, nn );
 
     for ( int i = 0; i < nn->n_layers ; i++ ){
         const int n_inp = nn->layer[i].n_input;
         const int n_out = nn->layer[i].n_output;
 
-        char *initializer = va_arg( argp, char* );
+        char *initializer = "";
+        if( initializers )
+            initializer = initializers[i];
 
         if( streq( initializer, "xavier" ))
             fill_data( n_inp * n_out, random_uniform, sqrtf(6.0f / (n_inp+n_out)), nn->layer[i].weight ); /* Xavier */
@@ -744,7 +743,6 @@ void neuralnet_initialize( neuralnet_t *nn, ... )
         /* Fill bias terms with zeros. OK? */
         memset( nn->layer[i].bias, 0, n_out * sizeof(float));
     }
-    va_end( argp );
 }
 
 #endif /* PREDICTION_ONLY */
