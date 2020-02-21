@@ -65,7 +65,7 @@ int main(int argc, char *argv[] )
 
     /* Check Kaiming initializing. */
     fprintf(stderr, KBLU "Testing Kaiming initialisation" KNRM "\n" );
-    neuralnet_initialize( nn, "kaiming", "kaiming");  /* Normal distribution - scale sqrtf(2.0f/n_inp) */
+    neuralnet_initialize( nn, STR_ARRAY("kaiming", "kaiming") );  /* Normal distribution - scale sqrtf(2.0f/n_inp) */
 
     int n_params = neuralnet_total_n_parameters(nn);
 
@@ -102,7 +102,7 @@ int main(int argc, char *argv[] )
 
     /* Xavier initialization us uniform within a and b where a = sqrt(6/(n_inp+n_out)). The tests we simply do
      * is to check the mean, stddev and that the max(x) and min(x) are inside the interval. */
-    neuralnet_initialize( nn, "xavier", "xavier");  /* Uniform distribution - scale sqrtf(6.0f/(n_inp+n_out)) */
+    neuralnet_initialize( nn, STR_ARRAY( "xavier", "xavier" ));  /* Uniform distribution - scale sqrtf(6.0f/(n_inp+n_out)) */
     neuralnet_get_parameters( nn, params );
 
     mean = test_calculate_mean( n_inp*n_out, params+n_out );  /* Adding n_out since the first thousand is bias */
@@ -142,7 +142,14 @@ int main(int argc, char *argv[] )
     fprintf(stderr, "\ttheoretical minimum  : %+g\n", a );
     free( params );
 
+    /* Just for testing... let's try to re-initialize with a null-pointer. That should work now! */
+    neuralnet_initialize( nn, NULL ); /* Should not crash! */
+    CHECK_NOT_NULL_MSG( nn,
+            "Checking that neural network can be re-initialized" );
+    /* Wow! That didn't work the first time! Good we tested! */
+
     /* predict, save, load and predict again */
+    fprintf(stderr, KBLU "Testing prediction, saving, loading and then predicting again." KNRM "\n" );
     float *inp = simd_malloc( n_inp * sizeof(float));
     assert(inp);
     for( int i = 0; i < n_inp; i++ )
