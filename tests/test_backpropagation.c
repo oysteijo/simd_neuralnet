@@ -26,7 +26,7 @@ int main( int argc, char *argv[])
 
     assert( nn );
 
-    neuralnet_initialize( nn, "kaiming", "kaiming", "kaiming", "kaiming" );
+    neuralnet_initialize( nn, NULL );
     neuralnet_set_loss( nn, "binary_crossentropy" );
     metric_func loss = get_metric_func( get_loss_name( nn->loss ) );  /* neuralnet_get_loss() ? */ 
 
