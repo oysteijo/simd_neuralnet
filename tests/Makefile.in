@@ -17,11 +17,13 @@ LDFLAGS += -lm
 DEFINES = 
 CFLAGS += $(DEFINES)
 
-testprogs = test_neuralnet test_activation test_loss test_metrics
+testprogs = test_neuralnet test_backpropagation test_activation test_loss test_metrics
 
 testers: $(testprogs) 
 
 test_neuralnet: test_neuralnet.o 
+	$(CC) -o $@ $? $(LDFLAGS)
+test_backpropagation: test_backpropagation.o 
 	$(CC) -o $@ $? $(LDFLAGS)
 test_activation: test_activation.o 
 	$(CC) -o $@ $? $(LDFLAGS)
