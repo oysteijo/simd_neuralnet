@@ -114,15 +114,15 @@ int main( int argc, char *argv[] )
     const int n_train_samples = train_X->shape[0];
     const int n_test_samples = test_X->shape[0];
 
-
+#if 0
     printf( "train_X shape: (%zu, %zu)\n", train_X->shape[0], train_X->shape[1] );
     printf( "train_Y shape: (%zu, %zu)\n", train_Y->shape[0], train_Y->shape[1] );
     printf( "test_X shape: (%zu, %zu)\n", test_X->shape[0], test_X->shape[1] );
     printf( "test_Y shape: (%zu, %zu)\n", test_Y->shape[0], test_Y->shape[1] );
-
+#endif
     neuralnet_t *nn = neuralnet_create( 3,
             INT_ARRAY( train_X->shape[1], 64, 32, 1 ),
-            STR_ARRAY( "relu", "relu,", "sigmoid" ) );
+            STR_ARRAY( "relu", "relu", "sigmoid" ) );
 
     assert( nn );
     neuralnet_initialize( nn, "kaiming", "kaiming", "kaiming" );

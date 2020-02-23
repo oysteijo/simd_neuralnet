@@ -18,8 +18,8 @@ static void prepare_shuffle_pivot( optimizer_t *opt, const unsigned n_train_samp
         }
         for ( unsigned int i = 0; i < n_train_samples; i++ )
             opt->pivot[i] = i;
-        /* srand( time (NULL ) ); */
-        srand( 69 );
+
+        srand( time (NULL ) );
     }
 }
 
@@ -32,7 +32,6 @@ static void fisher_yates_shuffle( unsigned int *arr, unsigned int n )
         arr[i] = tmp;
     }
 }
-
 
 #define METRIC_LIST(...) ((metric_func[]){ __VA_ARGS__, NULL }) 
 
