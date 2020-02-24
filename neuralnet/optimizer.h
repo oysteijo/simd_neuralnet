@@ -33,7 +33,7 @@
 #define __OPTIMIZER_H__
 #include "neuralnet.h"
 #include "metrics.h"
-#include "vector_operations.h"
+#include "matrix_operations.h"
 #include "progress.h"
 
 #include <stdlib.h>  /* malloc/free in macros */

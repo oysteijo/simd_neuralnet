@@ -27,7 +27,7 @@ for c in list(columns.keys()):
     else:
         features = np.hstack((features, f ))
 
-# features is actually a bit of a misnomer as the fist column is actually the target value
+# features is actually a bit of a misnomer as the first column is actually the target value
 np.random.shuffle( features )
 split_ratio = 0.7
 split_idx = int(features.shape[0] * split_ratio)

@@ -11,7 +11,8 @@ NPY_ARRAY_LIBPATH = ../npy_array
 CFLAGS += -I$(NPY_ARRAY_LIBPATH)
 LDFLAGS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
 
-# This should obly be turned off when you do not need any training.
+CFLAGS += -fopenmp
+
 #DEFINES = -DUSE_CBLAS
 DEFINES = 
 CFLAGS += $(DEFINES)

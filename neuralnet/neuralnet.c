@@ -3,7 +3,7 @@
 #include "neuralnet.h"
 #include "simd.h"
 #include "activation.h"
-#include "matrix_multiply.h"
+#include "matrix_operations.h"
 #include "npy_array.h"
 
 #ifndef PREDICTION_ONLY
@@ -651,6 +651,12 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
     for( int i = 0; i < nn->n_layers; i++ ){
         const char *func_name = activation_funcs[i];
         nn->layer[i].activation_func = get_activation_func( func_name ? func_name : "linear" );
+        /* This is really an important test as it catches typos in the list of activations.
+         * (Which is a common human error) Do not remove this test! */
+        if( !nn->layer[i].activation_func ){
+            fprintf( stderr, "Warning: Activation for layer %d, with name '%s' was not resolved. Setting 'linear' activation.\n", i, func_name );
+            nn->layer[i].activation_func = get_activation_func( "linear" );
+        }
     }
 
     return nn;
