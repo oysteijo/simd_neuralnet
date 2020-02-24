@@ -122,7 +122,9 @@ void optimizer_calc_batch_gradient( optimizer_t *opt,
         const int idx = *i + b;
         float SIMD_ALIGN(grad[n_parameters]);
         neuralnet_backpropagation( nn, train_X + (opt->pivot[idx] * n_input), train_Y + (opt->pivot[idx] * n_output), grad );
-        vector_accumulate( n_parameters, batchgrad, grad );
+        /* When using OpenMP, OpenMP will not align stack allocated arrays -- we therefore
+           have to use `_unaligned` for this accumulation. :-(  */
+        vector_accumulate_unaligned( n_parameters, batchgrad, grad );
     }
     *i += batchsize;
     vector_divide_by_scalar( n_parameters, batchgrad, (float) batchsize );

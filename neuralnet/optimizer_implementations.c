@@ -1,7 +1,7 @@
 #include "optimizer_implementations.h"
 #include "simd.h"
 #include "progress.h"
-#include "vector_operations.h"
+#include "matrix_operations.h"
 
 #include <stdlib.h>   /* malloc/free in macros */
 #include <stdio.h>    /* fprintf in macro */

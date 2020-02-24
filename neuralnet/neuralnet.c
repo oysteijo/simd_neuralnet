@@ -3,7 +3,7 @@
 #include "neuralnet.h"
 #include "simd.h"
 #include "activation.h"
-#include "matrix_multiply.h"
+#include "matrix_operations.h"
 #include "npy_array.h"
 
 #ifndef PREDICTION_ONLY

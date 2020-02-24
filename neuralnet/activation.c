@@ -37,8 +37,6 @@ struct will contain the parameter and the function pointer. Let's wait with this
 
 This leaves us with:
 sigmoid, softmax, softplus, softsign, relu, tanh, hard_sigmoid, exponential, linear
-
-As a starting point we do this plain with no tricks like SIMD or lookup tables.
 */
 
 static void softplus    ( const int n, float *ar );
@@ -123,7 +121,7 @@ activation_derivative get_activation_derivative( activation_func ptr ){
 static void relu( const int n, float *y )
 {
     int i = 0;
-#ifdef __AVX2__
+#ifdef __AVX__
     const __m256 zero = _mm256_set1_ps(0.0f);
 
     __m256 YMM0, YMM1;
@@ -289,7 +287,7 @@ static void softmax( const int n, float *ar )
         sum += ar[j];
     }
     j = 0;
-#ifdef __AVX2__
+#ifdef __AVX__
     __m256 sum4 = _mm256_set1_ps( sum );
     for(; j <= ((n)-8); j+= 8 ) {
         __m256 YMM0 = _mm256_load_ps( ar + j );
@@ -448,7 +446,7 @@ static void softmax_derivative     ( const int n, const float *activation, float
 static void relu_derivative        ( const int n, const float *activation, float *ar )
 {
     int i = 0;
-#ifdef __AVX2__
+#ifdef __AVX__
     const __m256 zero = _mm256_setzero_ps();
     const __m256 ones = _mm256_set1_ps(1.0f);
 
@@ -470,7 +468,7 @@ static void relu_derivative        ( const int n, const float *activation, float
         _mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
         _mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
     }
-#endif /* __AVX2__ */
+#endif /* __AVX__ */
     for(; i < n; i++ )
         ar[i] *= activation[i] <= 0.0f ? 0.0f : 1.0f ;
 }
@@ -479,7 +477,7 @@ static void sigmoid_derivative     ( const int n, const float *activation, float
 {
     /* is the memory aligned? */
     int i = 0;
-#ifdef __AVX2__
+#ifdef __AVX__
     const __m256 ones = _mm256_set1_ps(1.0f);
 
     __m256 YMM0, YMM1, YMM2, YMM3;
@@ -500,7 +498,7 @@ static void sigmoid_derivative     ( const int n, const float *activation, float
         _mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
         _mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
     }
-#endif /* __AVX2__ */
+#endif /* __AVX__ */
     for(; i < n; i++ )
         ar[i] *= activation[i]*(1.0f-activation[i]);
 }
@@ -508,7 +506,7 @@ static void sigmoid_derivative     ( const int n, const float *activation, float
 static void tanh_act_derivative    ( const int n, const float *activation, float *ar )
 {
     int i = 0;
-#ifdef __AVX2__
+#ifdef __AVX__
     const __m256 ones = _mm256_set1_ps(1.0f);
 
     __m256 YMM0, YMM1, YMM2, YMM3;
@@ -529,7 +527,7 @@ static void tanh_act_derivative    ( const int n, const float *activation, float
         _mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
         _mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
     }
-#endif /* __AVX2__ */
+#endif /* __AVX__ */
     for( ; i < n; i++ )
         ar[i] *= 1.0f-activation[i]*activation[i];
 
