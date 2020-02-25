@@ -1,4 +1,7 @@
-
+## ------------------------------------------------------------- ##
+##         The rest of this file comes from Makefile.in          ##
+##     If you need changes below this line, edit Makefile.in     ##
+## ------------------------------------------------------------- ##
 CFLAGS = -std=c99 -Wall -Wextra -O3 $(arch) $(dbg) $(profile)
 LDFLAGS = $(profile) 
 
@@ -11,19 +14,33 @@ NEURALNET_LIBPATH = ../neuralnet
 CFLAGS += -I$(NPY_ARRAY_LIBPATH) -I$(NEURALNET_LIBPATH)
 LDFLAGS += -L$(NEURALNET_LIBPATH) -lneuralnet
 LDFLAGS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
+LDFLAGS += -lgomp
 LDFLAGS += -lm
 
 #DEFINES = -DUSE_CBLAS
 DEFINES = 
+
+ifeq ($(CC),gcc)
+	DEFINES += -Wno-override-init
+endif
+
+ifeq ($(CC),clang)
+	DEFINES += -Wno-initializer-overrides
+endif
+
+
+
 CFLAGS += $(DEFINES)
 
-testprogs = test_neuralnet test_backpropagation test_activation test_loss test_metrics
+testprogs = test_neuralnet test_sgd test_backpropagation test_activation test_loss test_metrics
 
 testers: $(testprogs) 
 
 test_neuralnet: test_neuralnet.o 
 	$(CC) -o $@ $? $(LDFLAGS)
 test_backpropagation: test_backpropagation.o 
+	$(CC) -o $@ $? $(LDFLAGS)
+test_sgd: test_sgd.o
 	$(CC) -o $@ $? $(LDFLAGS)
 test_activation: test_activation.o 
 	$(CC) -o $@ $? $(LDFLAGS)

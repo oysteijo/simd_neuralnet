@@ -1,6 +1,5 @@
-# vim: filetype=bash
-
-#!/bin/sh
+#!/bin/bash
+# vim: filetype=sh
 
 prefix=/usr/local
 debugsym=true
