@@ -330,6 +330,17 @@ Let's first make the manual implementation above use the supplied SGD code.
         printf("Test accuracy : %5.5f\n", results[3] );
     ...
 
+As you see there are some parameters to setup a optimizer,
+but when it's done it basically does both loops for you.
+It does the training loop (a training epoch) and it does the
+evaluation. As you create the optimizer with `optimizer_new()`,
+you also pass in the metrics that will be used in the evaluation
+loop. In the above example, we've passed in the binary_crossentropy
+metric and the binary accuracy. ´n_metrics´ will therfore be 2 in
+this case. We will evaluate for both the train partition and the
+test partition so the result parameter to the optimizer must have
+space for four float values.
+
 (Discuss)
 ## Other examples
 
