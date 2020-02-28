@@ -280,6 +280,55 @@ Your mileage may vary, but I get accuracy of **0.99795**. Really not bad.
 
 ### Using optimizers and callbacks.
 (in progress)
+As you see in the code above, the train loop and the evaluation loop is really cumbersome and
+inflexible. We have therefore developed a set of optimizers. Optimizers are are the routines
+that gets the gradient of the loss wrt. the parameters and applies a rule to update the
+parameters in the neural network. There are several standard optimizers the scientists have
+developed over the years. Currently the following optimisers has been implemented in this
+projects:
+
+ * Stochastic Gradient Descent (SGD)
+ * RMSprop
+ * Adagrad
+ * Adam
+ * AdamW
+
+Let's first make the manual implementation above use the supplied SGD code.
+
+    ...
+        /* Training with plain Stochastic Gradient Decsent (SGD) */
+        const int n_train_samples = train_X->shape[0];
+        const int n_test_samples = test_X->shape[0];
+        const float learning_rate = 0.01f;
+    
+        optimizer_t *sgd = optimizer_new( nn,
+                OPTIMIZER_CONFIG(
+                    .batchsize = 1,
+                    .shuffle   = false,
+                    .run_epoch = SGD_run_epoch,
+                    .settings  = SGD_SETTINGS( .learning_rate = learning_rate ),
+                    .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
+                        get_metric_func( "binary_accuracy" ), NULL }),
+                    .progress  = NULL
+                    )
+                );
+    
+        float *train_feature = (float*) train_X->data;
+        float *train_target  = (float*) train_Y->data;
+        float *test_feature  = (float*) test_X->data;
+        float *test_target   = (float*) test_Y->data;
+    
+        int n_metrics = optimizer_get_n_metrics( sgd );
+        float results[2*n_metrics];
+    
+        optimizer_run_epoch( sgd, n_train_samples, train_feature, train_target,
+                                  n_test_samples,  test_feature,  test_target, results );
+    
+        printf("Train loss    : %5.5f\n", results[0] );
+        printf("Train accuracy: %5.5f\n", results[1] );
+        printf("Test loss     : %5.5f\n", results[2] );
+        printf("Test accuracy : %5.5f\n", results[3] );
+    ...
 
 (Discuss)
 ## Other examples
