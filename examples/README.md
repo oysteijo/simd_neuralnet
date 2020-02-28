@@ -128,14 +128,14 @@ The above code opens a main() function which is the starting point of our little
 The function `npy_array_list_load()` loads a `.npz` file into memory and makes a linked
 list of all the numpy arrays it finds in the archive. The variable `filelist` is set to
 point to the first item in the list. It is then setting up pointers to the npy_arrays
-through the list. As the we expaect the file to have four arrays (as we saved then in
-the code above) we move an iterator one step inbetween each assignment.
+through the list. As the we expect the file to have four arrays (as we saved then in
+the code above) we move an iterator one step in between each assignment.
 
 The hence get assigned:
  * `train_X`  - The train partition features
  * `train_Y`  - The train partition target
  * `test_X`   - The test partition features
- * `test_Y`   - THe test partition target
+ * `test_Y`   - The test partition target
 
 These are all pointers to an numpy array in memory. Read more about the structure in the
 npy_array documentation.
@@ -166,12 +166,12 @@ hence we can pass in `train_X->shape[1]` as the first integer in the list. (For 
 case, I think the number is 111). The next integers indicate the of the next levels. It
 is good advice to keep these multiples of the number of floats you can store in an SIMD
 register. This is 4 for SSE, 8 for AVX and 16 for AVX-512. The last integer in the
-size array is the nuber of outputs of the neural network. We are doing a binary
+size array is the number of outputs of the neural network. We are doing a binary
 classification, so one output (edible or poisonous) should do.
 
 The next inputs to `neuralnet_create()` is an array of strings that sets the activation functions
 at the outputs of each layer. I picked "relu" activations for intermediate layers, and then 
-"sigmoid" activation on the output, such that the out will approch 0 or 1 depending on which
+"sigmoid" activation on the output, such that the out will approach 0 or 1 depending on which
 class it predicts.
 
 That is how to create a `neuralnet_t` datatype. Note that this datatype is already able to perform a
@@ -180,17 +180,17 @@ been allocated. The weights are just random values, and not even initialized to 
 So, yes, it can do a prediction, however it won't be anything meaningful.
 
 So, the next line (`neuralnet_initialize(...)`) will initialize some random weights such that
-the values propageted through the net does neither vanish or explode. The function
+the values propagated through the net does neither vanish or explode. The function
 `neuralnet_initialize()` takes in a pointer the neural network structure, followed by a
 string array describing the initialization method to be used.
-Calling `neuralnet_initalize( nn, NULL );` will pick resonable initialization methods,
+Calling `neuralnet_initalize( nn, NULL );` will pick reasonable initialization methods,
 based on the activation function of each layer.
 
 However, it is not able to do training with this neural network yet. 
 The next line is then setting a loss function. A loss function is the function that will
 be use for the optimization of the parameters of the neural network. This is therefore
-necesarry before we can do any training of the neural network. We have settled for
-"binary_crossentropy" in this case, which is nice for classifications with sigmout output
+necessary before we can do any training of the neural network. We have settled for
+"binary_crossentropy" in this case, which is nice for classifications with sigmoid output
 activations. (There is actually a mathematical reason for this good match. Try to find the
 derivative of the loss function and the derivative of the output activation. If you do
 that mathematical exercise, you will see the beauty.)
@@ -229,9 +229,9 @@ then the above code lines should make somewhat sense.
 ### Evaluating the current neural network
 
 How good is this neural network now? Let's loop through the **test** partition and predict
-every mushrom sample with the neural network and then compare it with the given target.
+every mushroom sample with the neural network and then compare it with the given target.
 If it predicts rights for most sample we are pretty sure it must have learned something.
-Letæs calculate the ratio of correctly classified mushrooms with the total number of
+Let's calculate the ratio of correctly classified mushrooms with the total number of
 test samples. This will be what data scientists will call the "accuracy" or
 "binary accuracy". A wild guess form the neural network will give about an accuracy
 of 0.5 since it is about 50% chance of guessing right. We must hope we get a higher
@@ -276,13 +276,12 @@ The only thing left to do is to free these resources and return to the shell.
 
     ./example_01
 
-Your milage may vary, but I get accuracy of **0.99795**. Really not bad.
+Your mileage may vary, but I get accuracy of **0.99795**. Really not bad.
 
 ### Using optimizers and callbacks.
 (in progress)
 
 (Discuss)
 ## Other examples
-
 
 (Work in progress)
