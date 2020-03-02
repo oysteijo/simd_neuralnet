@@ -56,16 +56,9 @@ int main( int argc, char *argv[] )
                 )
             );
 
-    float *train_feature = (float*) train_X->data;
-    float *train_target  = (float*) train_Y->data;
-    float *test_feature  = (float*) test_X->data;
-    float *test_target   = (float*) test_Y->data;
-
-    int n_metrics = optimizer_get_n_metrics( sgd );
-    float results[2*n_metrics];
-
-    optimizer_run_epoch( sgd, n_train_samples, train_feature, train_target,
-                              n_test_samples,  test_feature,  test_target, results );
+    float results[ 2 * optimizer_get_n_metrics( sgd ) ];
+    optimizer_run_epoch( sgd, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
+                              n_test_samples,  (float*) test_X->data, (float*) test_Y->data, results );
 
     printf("Train loss    : %5.5f\n", results[0] );
     printf("Train accuracy: %5.5f\n", results[1] );

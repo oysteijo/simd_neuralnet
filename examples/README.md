@@ -269,17 +269,19 @@ The only thing left to do is to free these resources and return to the shell.
     }
 
 ### Compile and run
-(Note to self: We need a configure/makefile here such that the -mavx parameter gets included.)
+The code listed above is actually available in `example_01.c`. It can be compiled with the
+`configure` and makefile provided. 
 
-    gcc -std=c99 -Wall -Wextra -O3 -I../neuralnet -I../npy_array -c example_01.c
-    gcc -o example_01 example_01.o -L../neuralnet -lneuralnet -L../npy_array -lnpy_array -lm
+    ./configure
+    make example_01
+
+The above will make an executable of the example above. You can run it with:
 
     ./example_01
 
 Your mileage may vary, but I get accuracy of **0.99795**. Really not bad.
 
-### Using optimizers and callbacks.
-(in progress)
+### Using optimizers
 As you see in the code above, the train loop and the evaluation loop is really cumbersome and
 inflexible. We have therefore developed a set of optimizers. Optimizers are are the routines
 that gets the gradient of the loss wrt. the parameters and applies a rule to update the
