@@ -31,7 +31,7 @@ endif
 
 CFLAGS += $(DEFINES)
 
-examples = example_01 example_02
+examples = example_01 example_02 example_03
 
 all: $(examples) 
 
