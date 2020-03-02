@@ -315,17 +315,10 @@ Let's first make the manual implementation above use the supplied SGD code.
                     )
                 );
     
-        float *train_feature = (float*) train_X->data;
-        float *train_target  = (float*) train_Y->data;
-        float *test_feature  = (float*) test_X->data;
-        float *test_target   = (float*) test_Y->data;
-    
-        int n_metrics = optimizer_get_n_metrics( sgd );
-        float results[2*n_metrics];
-    
-        optimizer_run_epoch( sgd, n_train_samples, train_feature, train_target,
-                                  n_test_samples,  test_feature,  test_target, results );
-    
+        float results[ 2 * optimizer_get_n_metrics( sgd ) ];
+        optimizer_run_epoch( sgd, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
+                                  n_test_samples,  (float*) test_X->data, (float*) test_Y->data, results );
+
         printf("Train loss    : %5.5f\n", results[0] );
         printf("Train accuracy: %5.5f\n", results[1] );
         printf("Test loss     : %5.5f\n", results[2] );
@@ -338,12 +331,22 @@ It does the training loop (a training epoch) and it does the
 evaluation. As you create the optimizer with `optimizer_new()`,
 you also pass in the metrics that will be used in the evaluation
 loop. In the above example, we've passed in the binary_crossentropy
-metric and the binary accuracy. ´n_metrics´ will therfore be 2 in
-this case. We will evaluate for both the train partition and the
-test partition so the result parameter to the optimizer must have
-space for four float values.
+metric and the binary accuracy. `optimizer_get_n_metrics()` will
+therfore return 2 in this case. We will evaluate for both the
+train partition and the test partition so the result array parameter
+to the optimizer must have twice the size, four float values.
 
-(Discuss)
+The four `printf()` lines prints out the result values.
+
+The pre-implemented optimizers adds a lot of features compared to the manual
+implementation seen in `example_03.c`. First of all the pre-implemented
+optimizers can do mini batches. The mini batches are even multithreaded,
+so they will be considerable faster than the manual implementation.
+I addition, most of the pre-implemented optimizers can do momentum updates
+to the parametars. You should much rather use an pre-implemented optimizer
+than running your own loop like `example_01.c`. If you need a need a special
+update rule, you should rather code it to the template in `optimizer.h`.
+
 ## Other examples
 
 (Work in progress)
