@@ -6,6 +6,9 @@
 #include "optimizer_implementations.h"
 #include "loss.h"
 
+#include "callback/callback.h"
+#include "callback/logger.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -54,11 +57,9 @@ float *read_idx_features( const char *filename, uint32_t *n_samples, uint32_t *n
 
     /* if this is features we expect n_dim to be three */
     assert( n_dim == 3 );
-    printf( "n_dim: %d\n", n_dim );
 
     /* Reuse the magic to get the right (little endian) integer */
     *n_samples = read_uint_big_endian( fp );
-    printf( "read n_samples: %d\n", *n_samples );
 
     uint32_t n_rows = read_uint_big_endian( fp );
     uint32_t n_cols = read_uint_big_endian( fp );
@@ -111,12 +112,9 @@ float *read_idx_labels( const char *filename, uint32_t *n_samples, uint32_t *n_t
 
     /* if this is labels we expect n_dim to be one */
     assert( n_dim == 1 );
-    printf( "n_dim: %d\n", n_dim );
 
     /* Reuse the magic to get the right (little endian) integer */
     *n_samples = read_uint_big_endian( fp );
-
-    printf( "read n_samples: %d\n", *n_samples );
 
     unsigned char *raw = malloc( *n_samples * sizeof( unsigned char ));
     fread( raw, *n_samples, sizeof( unsigned char ), fp );
@@ -151,9 +149,9 @@ int main( int argc, char *argv[] )
         return 0;
 
     /* Set up a new Neural Network */
-    neuralnet_t *nn = neuralnet_create( 5,
-            INT_ARRAY( n_input_features, 512, 256, 128, 64, n_output_targets ),
-            STR_ARRAY( "relu", "relu", "relu", "relu", "softmax" ) );
+    neuralnet_t *nn = neuralnet_create( 3,
+            INT_ARRAY( n_input_features, 256, 128, n_output_targets ),
+            STR_ARRAY( "relu", "relu", "softmax" ) );
     assert( nn );
 
     neuralnet_initialize( nn, NULL ); 
@@ -163,21 +161,33 @@ int main( int argc, char *argv[] )
     /* Training with plain Stochastic Gradient Decsent (SGD) */    
     const float learning_rate = 0.01f;
 
-    optimizer_t *sgd = optimizer_new( nn, 
+    optimizer_t *opt = optimizer_new( nn, 
             OPTIMIZER_CONFIG(
                 .batchsize = 16,
                 .shuffle   = true,
-                .run_epoch = SGD_run_epoch,
-                .settings  = SGD_SETTINGS( .learning_rate = learning_rate ),
+                .run_epoch = adamw_run_epoch,
+                .settings  = ADAMW_SETTINGS( .learning_rate = learning_rate ),
                 .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
                     get_metric_func( "categorical_accuracy" ), NULL }),
                 )
             );
 
-    float results[ 2 * optimizer_get_n_metrics( sgd ) ];
-    optimizer_run_epoch( sgd, n_train_samples, train_features, train_labels,
-                              n_test_samples,  test_features, test_labels, results );
+    callback_t *callbacks[] = {
+        CALLBACK( logger_new( LOGGER_NEW() ) ),
+        NULL
+    };
 
+    /* Main training loop */
+    float results[ 2 * optimizer_get_n_metrics( opt ) ];
+    int n_epochs = 2;
+    for( int epoch = 0; epoch < n_epochs; epoch++ ){
+        optimizer_run_epoch( opt, n_train_samples, train_features, train_labels,
+                                  n_test_samples,  test_features,  test_labels, results );
+        for( callback_t **cb = callbacks; *cb; cb++ )
+            callback_run( *cb, opt, results, true );
+    }
+
+    /* Report the final results */
     printf("Train loss    : %5.5f\n", results[0] );
     printf("Train accuracy: %5.5f\n", results[1] );
     printf("Test loss     : %5.5f\n", results[2] );
@@ -185,6 +195,10 @@ int main( int argc, char *argv[] )
 
     /* Clean up the resources */
     neuralnet_free( nn );
+    optimizer_free( opt );
+
+    for( callback_t **cb = callbacks; *cb; cb++ )
+        callback_free( *cb );
 
     free( train_features );
     free( train_labels );
