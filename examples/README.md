@@ -347,6 +347,83 @@ to the parametars. You should much rather use an pre-implemented optimizer
 than running your own loop like `example_01.c`. If you need a need a special
 update rule, you should rather code it to the template in `optimizer.h`.
 
-## Other examples
+## MNIST example with optimizer and callbacks
+
+MNIST hand written digits has become a classic example for neural networks. It
+is of course best solved with convolutional neural networks and that is not
+supported in this software. If you see the web-page of Yann LeCun, you see that
+with a plain feed forward neural network, we can only expect to get an accuracy
+of about 95% on the test data. Let's try. First we get the data using some simple
+command line tools:
+
+    wget http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
+    wget http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
+    wget http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
+    wget http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+    # unzip the files
+    gunzip train-images-idx3-ubyte.gz
+    gunzip train-labels-idx1-ubyte.gz
+    gunzip t10k-images-idx3-ubyte.gz
+    gunzip t10k-labels-idx3-ubyte.gz
+
+The file `example_03.c` contains some code to read the files and convert it to
+training data. The reading function images reads the file and converts the data
+into float data in the range 0.0 to 1.0.
+
+The label reading function, reads the datafile and converts it into float number
+and makes a one-hot encoding of the labels.
+
+The reader functions are not general for all idx filen, nor is it written in
+production system quality. 
+
+You should rather look at the neural network, optimizer and the callback. Neural networks
+usually has to be trained over several epochs and it is often good advice to
+make a main loop where each iteration does one epoch in addition to some other
+commen tasks, like logging and saving. Such common tasks can be done in a standard
+way -- callbacks. Callbacks can then be stored in and array, and your main loop
+can at the end of the loop run through all callbacks. In the callback directory
+in this codebase, there are already implemented a logging callback, an early stopping
+callback and a checkpoint callback.
+
+        /* Training with plain Stochastic Gradient Decsent (SGD) */    
+        const float learning_rate = 0.01f;
+    
+        optimizer_t *opt = optimizer_new( nn, 
+                OPTIMIZER_CONFIG(
+                    .batchsize = 16,
+                    .shuffle   = true,
+                    .run_epoch = adamw_run_epoch,
+                    .settings  = ADAMW_SETTINGS( .learning_rate = learning_rate ),
+                    .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
+                        get_metric_func( "categorical_accuracy" ), NULL }),
+                    )
+                );
+    
+        callback_t *callbacks[] = {
+            CALLBACK( logger_new( LOGGER_NEW() ) ),
+            NULL
+        };
+    
+        /* Main training loop */
+        float results[ 2 * optimizer_get_n_metrics( opt ) ];
+        int n_epochs = 2;
+        for( int epoch = 0; epoch < n_epochs; epoch++ ){
+            optimizer_run_epoch( opt, n_train_samples, train_features, train_labels,
+                                      n_test_samples,  test_features,  test_labels, results );
+            for( callback_t **cb = callbacks; *cb; cb++ )
+                callback_run( *cb, opt, results, true );
+        }
+
+The callbacks are using resources and should be free'ed when you're done with them:
+
+        /* How to free all callbacks in a NULL terminated array */
+        for( callback_t **cb = callbacks; *cb; cb++ )
+            callback_free( *cb );
+
+Compile and run this:
+
+    make mnist (?)
+
+I get about 95% accuracy on this, however the results are not that interesting here.
 
 (Work in progress)
