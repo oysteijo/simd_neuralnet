@@ -297,8 +297,8 @@ void vector_square_elements ( const int n, float *y, const float *x )
 {
     int i = 0;
     float *y_ptr = y;
-    const float *x_ptr = x;
 #ifdef __AVX__
+    const float *x_ptr = x;
     for ( ; i <= ((n)-8); i += 8, y_ptr += 8, x_ptr += 8 ){
         __m256 xvec = _mm256_load_ps( x_ptr );
         _mm256_store_ps(y_ptr, _mm256_mul_ps( xvec, xvec ));

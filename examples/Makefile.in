@@ -1,0 +1,50 @@
+## ------------------------------------------------------------- ##
+##         The rest of this file comes from Makefile.in          ##
+##     If you need changes below this line, edit Makefile.in     ##
+## ------------------------------------------------------------- ##
+CFLAGS = -std=c99 -Wall -Wextra -O3 $(arch) $(dbg) $(profile)
+LDFLAGS = $(profile) 
+
+src = $(wildcard *.c)
+obj = $(src:.c=.o)
+
+# dependency library
+NPY_ARRAY_LIBPATH = ../npy_array
+NEURALNET_LIBPATH = ../neuralnet
+CALLBACK_LIBPATH = ../callback
+CFLAGS += -I$(NPY_ARRAY_LIBPATH) -I$(NEURALNET_LIBPATH) -I..
+LDFLAGS += -L$(NEURALNET_LIBPATH) -lneuralnet
+LDFLAGS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
+LDFLAGS += -L$(CALLBACK_LIBPATH) -lcallback
+LDFLAGS += -lm
+
+#DEFINES = -DUSE_CBLAS
+DEFINES = 
+
+ifeq ($(CC),gcc)
+	LDFLAGS += -lgomp
+	DEFINES += -Wno-override-init
+endif
+
+ifeq ($(CC),clang)
+	LDFLAGS += -lomp
+	DEFINES += -Wno-initializer-overrides
+endif
+
+CFLAGS += $(DEFINES)
+
+examples = example_01 example_02 example_03
+
+all: $(examples) 
+
+$(examples): %: %.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+.PHONY: clean
+clean:
+	$(RM) $(obj) $(examples)
+
+.PHONY: distclean
+distclean:
+	$(RM) $(obj) $(examples) 
+

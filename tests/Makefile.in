@@ -14,7 +14,6 @@ NEURALNET_LIBPATH = ../neuralnet
 CFLAGS += -I$(NPY_ARRAY_LIBPATH) -I$(NEURALNET_LIBPATH)
 LDFLAGS += -L$(NEURALNET_LIBPATH) -lneuralnet
 LDFLAGS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
-LDFLAGS += -lgomp
 LDFLAGS += -lm
 
 #DEFINES = -DUSE_CBLAS
@@ -22,10 +21,12 @@ DEFINES =
 
 ifeq ($(CC),gcc)
 	DEFINES += -Wno-override-init
+	LDFLAGS += -lgomp
 endif
 
 ifeq ($(CC),clang)
 	DEFINES += -Wno-initializer-overrides
+	LDFLAGS += -lomp
 endif
 
 

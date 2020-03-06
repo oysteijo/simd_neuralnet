@@ -7,7 +7,10 @@
 #include <stdio.h>    /* fprintf in macro */
 #include <string.h>   /* memset */
 #include <math.h>
+
+#ifdef __AVX__
 #include <immintrin.h>
+#endif
 
 #include <omp.h>
 
@@ -129,8 +132,8 @@ static void accumulate_squared_gradient( const int n, float *r, const float *g )
 {
     int i = 0;
     float *r_ptr = r;
-    const float *g_ptr = g;
 #ifdef __AVX__
+    const float *g_ptr = g;
     for( ; i <= ((n)-8); i += 8 , r_ptr += 8, g_ptr += 8 ){
         __m256 gv = _mm256_load_ps( g_ptr );
         _mm256_store_ps( r_ptr, _mm256_add_ps( _mm256_load_ps( r_ptr ), _mm256_mul_ps( gv, gv ) ) );
@@ -178,8 +181,8 @@ static void update_biased_first_moment( const int n , float *s, const float *g, 
 {
     int i = 0;
     float *s_ptr = s;
-    const float *g_ptr = g;
 #ifdef __AVX__
+    const float *g_ptr = g;
     __m256 rhov = _mm256_set1_ps( rho );
     __m256 one_minus_rhov = _mm256_set1_ps( 1.0f - rho );
     for( ; i <= ((n)-8); i += 8 , s_ptr += 8, g_ptr += 8 ){
@@ -207,8 +210,8 @@ static void update_biased_second_moment( const int n, float *r, const float *g, 
 {
     int i = 0;
     float *r_ptr = r;
-    const float *g_ptr = g;
 #ifdef __AVX__
+    const float *g_ptr = g;
     __m256 rhov = _mm256_set1_ps( rho );
     __m256 one_minus_rhov = _mm256_set1_ps( 1.0f - rho );
     for( ; i <= ((n)-8); i += 8 , r_ptr += 8, g_ptr += 8 ){

@@ -11,8 +11,8 @@ static float mean_absolute_percentage_error( const int n, const float *y_pred, c
 static float binary_crossentropy           ( const int n, const float *y_pred, const float *y_real );
 static float categorical_crossentropy      ( const int n, const float *y_pred, const float *y_real );
 
-/* Binary classification metrics */
 static float binary_accuracy               ( const int n, const float *y_pred, const float *y_real );
+static float categorical_accuracy          ( const int n, const float *y_pred, const float *y_real );
 
 static float epsilon = 1.0e-7f;
 
@@ -32,6 +32,7 @@ metric_func get_metric_func( const char * name ){
 		!strcmp( name, "categorical_crossentropy")       ? categorical_crossentropy :
 		!strcmp( name, "binary_crossentropy")            ? binary_crossentropy :
 
+		!strcmp( name, "categorical_accuracy")            ? categorical_accuracy :
 		!strcmp( name, "binary_accuracy")            ? binary_accuracy :
 
 		NULL;
@@ -44,6 +45,7 @@ const char * get_metric_name( metric_func ptr ){
 		ptr == mean_absolute_percentage_error ? "mean_absolute_percentage_error" :
 		ptr == binary_crossentropy            ? "binary_crossentropy" :
 		ptr == categorical_crossentropy       ? "categorical_crossentropy" :
+		ptr == categorical_accuracy           ? "categorical_accuracy" :
 		ptr == binary_accuracy                ? "binary_accuracy" :
 		"(unknown)";
 }
@@ -126,5 +128,24 @@ static float binary_accuracy( const int n, const float *y_pred, const float *y_r
         sum += real == pred ? 1.0f : 0.0f;
     }
     return sum / n;
+}
+
+static float categorical_accuracy( const int n, const float *y_pred, const float *y_real )
+{
+    float real_maxval = y_real[0];
+    float pred_maxval = y_pred[0];
+    int real_maxidx = 0;
+    int pred_maxidx = 0;
+    for( int i = 1; i < n; i++ ){
+        if( y_real[i] > real_maxval ){
+            real_maxval = y_real[i];
+            real_maxidx = i;
+        }
+        if( y_pred[i] > pred_maxval ){
+            pred_maxval = y_pred[i];
+            pred_maxidx = i;
+        }
+    }
+    return pred_maxidx == real_maxidx ? 1.0f : 0.0f;
 }
 

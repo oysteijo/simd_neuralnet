@@ -1,5 +1,4 @@
-
-CFLAGS = -std=c99 -Wall -Wextra -O3 -mavx2 -mfma $(dbg) $(profile)
+CFLAGS = -std=c99 -Wall -Wextra -O3 $(arch) $(dbg) $(profile)
 LDFLAGS = $(profile) 
 
 src = $(wildcard *.c)
