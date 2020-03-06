@@ -53,5 +53,15 @@ fi
 
 echo 'CC = '$c_compiler'' >> Makefile
 
+if grep -q avx2 "/proc/cpuinfo"; then
+  cpuinfo+="-mavx2 "
+fi
+
+if grep -q fma "/proc/cpuinfo"; then
+  cpuinfo+="-mfma "
+fi
+
+echo 'arch = '$cpuinfo'' >> Makefile
+
 cat Makefile.in >>Makefile
 echo 'configuration complete, type make to build.'
