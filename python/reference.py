@@ -63,10 +63,11 @@ class Layer(object):
 
 # And this is the neural network itself.
 class NeuralNet(object):
-    def __init__( self, weights, activations, loss=None, **kwargs ):
+    def __init__( self, weights, activations=None, loss=None, **kwargs ):
         if isinstance(weights,str):
             arr = np.load(weights)
-            weights = tuple((arr[m] for m in arr))
+            weights = tuple((arr[m] for m in arr if arr[m].dtype==np.float32))
+            activations = [o.decode("ascii") for o in arr['activations']]
 
         if isinstance(activations,str):
             activations = [a.strip() for a in activations.split(",")]
