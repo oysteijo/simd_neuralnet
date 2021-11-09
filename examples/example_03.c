@@ -146,8 +146,10 @@ int main( int argc, char *argv[] )
     float *test_features  = read_idx_features( "t10k-images-idx3-ubyte", &n_test_samples, &n_input_features );
     float *test_labels    = read_idx_labels  ( "t10k-labels-idx1-ubyte", &n_test_samples, &n_output_targets );
 
-    if( !train_labels   || !train_features || !test_labels    || !test_features )
+    if( !train_labels   || !train_features || !test_labels    || !test_features ){
+        fprintf(stderr, "Cannot read datafiles. See README.\n");
         return 0;
+    }
 
     /* Set up a new Neural Network */
     neuralnet_t *nn = neuralnet_create( 3,
