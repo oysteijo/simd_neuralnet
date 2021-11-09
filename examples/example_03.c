@@ -1,4 +1,5 @@
 #include "npy_array.h"
+#include "npy_array_list.h"
 #include "neuralnet.h"
 #include "simd.h"
 

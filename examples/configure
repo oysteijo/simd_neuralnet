@@ -47,11 +47,11 @@ else
     c_compiler="${CC}"
 fi
 echo "Using C compiler '${CC}' ..."
-echo 'CC = '$c_compiler'' >> Makefile
+echo 'CC = '$c_compiler'' > Makefile
 
 # PREFIX for installation. 
 echo "Using prefix '$prefix' for installation ..."
-echo "PREFIX = $prefix" >Makefile
+echo "PREFIX = $prefix" >>Makefile
 
 if $debugsym; then
     echo 'dbg = -g' >>Makefile

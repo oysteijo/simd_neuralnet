@@ -5,6 +5,7 @@
 #include "activation.h"
 #include "matrix_operations.h"
 #include "npy_array.h"
+#include "npy_array_list.h"
 
 #ifndef PREDICTION_ONLY
 #include "loss.h"
