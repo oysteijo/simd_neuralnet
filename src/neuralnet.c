@@ -338,7 +338,7 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
         w->elem_size    = sizeof(float) ;
         w->fortran_order= false ;
 
-        save = npy_array_list_append( save, w, "weights_%d.npy", i );
+        save = npy_array_list_append( save, w, "weight_%d", i );
 
         /* bias */
         npy_array_t *b = calloc( 1, sizeof( npy_array_t ));
@@ -351,7 +351,7 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
         b->elem_size    = sizeof(float) ;
         b->fortran_order= false ;
 
-        save = npy_array_list_append( save, b, "bias_%d.npy", i );
+        save = npy_array_list_append( save, b, "bias_%d", i );
     }
     /* an array for the activations */
     npy_array_t * activation_array = calloc( 1, sizeof( npy_array_t ));
@@ -383,7 +383,7 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
     activation_array->elem_size     = (size_t) longest_name;
     activation_array->fortran_order = false;
 
-    save = npy_array_list_append( save, activation_array, "activations.npy" );
+    save = npy_array_list_append( save, activation_array, "activations" );
 
     int n_saved = npy_array_list_save( real_filename, save );
     if( n_saved != (nn->n_layers*2 + 1) )
@@ -562,7 +562,7 @@ void neuralnet_update( neuralnet_t *nn, const float *delta_w )
 }
 
 /**
-  @brief: Get all parameters if the neural network.
+  @brief: Get all parameters of the neural network.
 
   @param nn Pointer to `neuralnet_t` structure.
   @param params Pointer the all the parameters of the neural network (theta). Same order as expected in `neuralnet_update()`.
