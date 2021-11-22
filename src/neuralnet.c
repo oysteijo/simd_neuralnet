@@ -1,4 +1,4 @@
-/* Copyright -- Øystein Schønning-Johansen 2007-2014 */
+/* Copyright -- Øystein Schønning-Johansen 2007-2021 */
 
 #include "neuralnet.h"
 #include "simd.h"

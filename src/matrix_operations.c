@@ -201,7 +201,7 @@ void vector_scale( const int n, float *v, const float scalar )
 }
 
 /**
- * @brief Scale a vector by division. v = scalar / v
+ * @brief Scale a vector by division. v = v / scalar
  *
  * @param n Length of vector
  * @param v A vector array to be scaled
