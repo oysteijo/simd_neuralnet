@@ -42,6 +42,7 @@ prefix=/usr/local
 debugsym=true
 profilesym=false
 shared=false
+cpuflags=""
 
 for arg in "$@"; do
     case "$arg" in
@@ -110,7 +111,14 @@ fi
 #### Create the makefile ####
 echo 'generating Makefile ...'
 echo "target_lib   = lib${projectname}"     >Makefile
+if [[ ! -v CC ]] ; then
+    echo 'CC = gcc'                        >>Makefile
+else
+    echo "CC = ${CC}"                      >>Makefile
+fi
+
 echo "PREFIX       = $prefix"              >>Makefile
+echo "INCLUDE      = -I../npy_array"       >>Makefile
 if $debugsym; then
     echo 'dbg          = -g'               >>Makefile
 fi
@@ -118,10 +126,26 @@ if $profilesym; then
     echo 'profile      = -pg'              >>Makefile
 fi
 echo "shared       = $shared"              >>Makefile 
-
 echo 'src          = $(wildcard *.c)'      >>Makefile
-
 echo 'header_files = $(wildcard *.h)'      >>Makefile
+
+if grep -q avx "/proc/cpuinfo"; then
+  cpuinfo="-mavx "
+fi
+
+if grep -q avx2 "/proc/cpuinfo"; then
+  cpuinfo="-mavx2 "
+fi
+
+if grep -q fma "/proc/cpuinfo"; then
+  cpuinfo+="-mfma "
+fi
+
+if grep -q neon "/proc/cpuinfo"; then
+  cpuinfo+="-mfpu=neon "
+fi
+
+echo 'arch = '$cpuinfo''                   >>Makefile
 
 if $have_pkg_config; then
     echo 'pkg_conf_pc   = simd_neuralnet.pc'    >>Makefile 
