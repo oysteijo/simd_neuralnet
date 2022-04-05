@@ -76,5 +76,5 @@ fi
 echo "Architecture options: $arch_opt ..."
 echo 'arch = '$arch_opt'' >> Makefile
 
-cat Makefile.in >>Makefile
+echo 'include Makefile.in' >>Makefile
 echo 'Configuration complete, type make to build.'

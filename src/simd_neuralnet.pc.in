@@ -1,0 +1,12 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+bindir=@bindir@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: simd_neuralnet
+Description: C library neural networks (with SIMD instruction and OpenMP threading)
+Version: @PROJECT_VERSION@
+Libs: @PKG_CONFIG_RPATH@ -L${libdir} -lsimd_neuralnet
+Libs.private: @LIBS@
+Cflags: -I${includedir}

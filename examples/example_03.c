@@ -7,8 +7,8 @@
 #include "optimizer_implementations.h"
 #include "loss.h"
 
-#include "callback/callback.h"
-#include "callback/logger.h"
+#include "callback.h"
+#include "logger.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +16,7 @@
 
 static uint32_t read_uint_big_endian( FILE *fp )
 {
-    union { unsigned char c[4]; uint32_t i } val;
+    union { unsigned char c[4]; uint32_t i; } val;
     fread( &val, 1, sizeof(val), fp );
     unsigned char tmp;
     tmp = val.c[0];
