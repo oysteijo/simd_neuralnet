@@ -10,13 +10,11 @@ obj = $(src:.c=.o)
 
 # dependency library
 NPY_ARRAY_LIBPATH = ../npy_array
-NEURALNET_LIBPATH = ../neuralnet
-CALLBACK_LIBPATH = ../callback
+NEURALNET_LIBPATH = ../src
 CFLAGS += -I$(NPY_ARRAY_LIBPATH) -I$(NEURALNET_LIBPATH) -I..
-LDFLAGS += -L$(NEURALNET_LIBPATH) -lneuralnet
+LDFLAGS += -L$(NEURALNET_LIBPATH) -lsimd_neuralnet
 LDFLAGS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
-LDFLAGS += -L$(CALLBACK_LIBPATH) -lcallback
-LDFLAGS += -lm
+LDFLAGS += -lzip -lm
 
 #DEFINES = -DUSE_CBLAS
 DEFINES = 
@@ -30,6 +28,8 @@ ifeq ($(CC),clang)
 	LDFLAGS += -lomp
 	DEFINES += -Wno-initializer-overrides
 endif
+
+DEFINES += -Wno-unused-parameter
 
 CFLAGS += $(DEFINES)
 

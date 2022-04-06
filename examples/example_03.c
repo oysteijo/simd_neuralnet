@@ -1,4 +1,5 @@
 #include "npy_array.h"
+#include "npy_array_list.h"
 #include "neuralnet.h"
 #include "simd.h"
 
@@ -6,8 +7,8 @@
 #include "optimizer_implementations.h"
 #include "loss.h"
 
-#include "callback/callback.h"
-#include "callback/logger.h"
+#include "callback.h"
+#include "logger.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +16,7 @@
 
 static uint32_t read_uint_big_endian( FILE *fp )
 {
-    union { unsigned char c[4]; uint32_t i } val;
+    union { unsigned char c[4]; uint32_t i; } val;
     fread( &val, 1, sizeof(val), fp );
     unsigned char tmp;
     tmp = val.c[0];
@@ -145,8 +146,10 @@ int main( int argc, char *argv[] )
     float *test_features  = read_idx_features( "t10k-images-idx3-ubyte", &n_test_samples, &n_input_features );
     float *test_labels    = read_idx_labels  ( "t10k-labels-idx1-ubyte", &n_test_samples, &n_output_targets );
 
-    if( !train_labels   || !train_features || !test_labels    || !test_features )
+    if( !train_labels   || !train_features || !test_labels    || !test_features ){
+        fprintf(stderr, "Cannot read datafiles. See README.\n");
         return 0;
+    }
 
     /* Set up a new Neural Network */
     neuralnet_t *nn = neuralnet_create( 3,

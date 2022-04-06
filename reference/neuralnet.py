@@ -2,6 +2,18 @@ import sys
 import numpy as np
 
 # This corresponds to activation.c in the C implementation
+activations_implemented = [
+    "sigmoid",
+    "softmax",
+    "relu",
+    "linear",
+    "tanh",
+    "exponential",
+    "softplus",
+    "softsign",
+    "hard_sigmoid"
+]
+
 def get_activation_func(str):
     return getattr(sys.modules[__name__], str)
 
@@ -9,26 +21,29 @@ sigmoid      = lambda x: 1.0 / (np.exp( -x ) + 1.0)
 softmax      = lambda x: np.exp(x-x.max()) / np.exp(x-x.max()).sum()  # Subtracting x.max() for numerical stability.
 relu         = lambda x: np.maximum( x, 0, x)
 linear       = lambda x: x
-tanh         = np.tanh
-exponential  = np.exp
+tanh         = lambda x: np.tanh
+exponential  = lambda x: np.exp
 softplus     = lambda x: np.log1p( np.exp(x) ) 
 softsign     = lambda x: x / (np.absolute(x) + 1.0 )
 hard_sigmoid = lambda x: np.clip((0.2 * x) + 0.5, 0, 1, out=x) # Check this!
 
+# Argh! The lambdas are anonymous, so we have to set the name specifically to get the lookup.
+for funcname in activations_implemented:
+    get_activation_func(funcname).__name__ = funcname
+
+# Unless we gave them a name, as above, or implemented these as
+# real functions, this function would not have worked obviously.
 def get_activation_derivative(func):
     return getattr(sys.modules[__name__], func.__name__ + "_derivative")
 
-sigmoid_derivative     = lambda x:  x * (1 - x )
-softmax_derivative     = lambda x: 1 
-relu_derivative        = lambda x: np.where( x <= 0.0, 0.0, 1.0 )
-linear_derivative      = lambda x: 1
-tanh_derivative        = lambda x: 1.0 - x*x
-exponential_derivative = lambda x: x
-softplus_derivative    = lambda x: (np.exp(x) - 1) / np.exp(x)
-def softsign_derivative(x):
-    y = x / (1-np.absolute(x))
-    return 1.0 / ((1+np.absolute(y)) * (1+np.absolute(y)))
-
+sigmoid_derivative      = lambda x: x * (1 - x )
+softmax_derivative      = lambda x: 1 
+relu_derivative         = lambda x: np.where( x <= 0.0, 0.0, 1.0 )
+linear_derivative       = lambda x: 1
+tanh_derivative         = lambda x: 1.0 - x*x
+exponential_derivative  = lambda x: x
+softplus_derivative     = lambda x: (np.exp(x) - 1) / np.exp(x)
+softsign_derivative     = lambda x: (x - np.sign(x))**2    # That math was cool!
 hard_sigmoid_derivative = lambda x: np.where( np.logical_and( x <= 1.0 , x >= 0.0 ), 0.2, 0 )
 
 # This corresponds to loss.c in the C implementation
@@ -67,17 +82,20 @@ class NeuralNet(object):
         if isinstance(weights,str):
             arr = np.load(weights)
             weights = tuple((arr[m] for m in arr if arr[m].dtype==np.float32))
-            activations = [o.decode("ascii") for o in arr['activations']]
+            try:
+                activations = [o.decode("ascii") for o in arr['activations']]
+            except:
+                pass
 
         if isinstance(activations,str):
             activations = [a.strip() for a in activations.split(",")]
 
+        assert 2*len(activations) == len(weights)
+        self.layers = [Layer(w,b,get_activation_func(act))
+              for w,b,act in zip( weights[::2], weights[1::2], activations )]
+
         if isinstance(loss,str):
             loss = get_loss_func(loss)
-
-        assert 2*len(activations) == len(weights)
-        self.layers = [Layer(w,b,get_activation_func(act), get_activation_func( act + "_derivative"))
-              for w,b,act in zip( weights[::2], weights[1::2], activations )]
         self.loss = loss
 
         # Here comes the "matching" logic
@@ -133,3 +151,11 @@ class NeuralNet(object):
             retlist.append( layer.bias )
         return tuple(retlist)
 
+    def save( self, filename ):
+        f = dict()
+        for i, layer in enumerate(self.layers):
+            f["weight_{}".format(i)] = layer.weight
+            f["bias_{}".format(i)] = layer.bias
+                    
+        f["activations"] = np.array([ l.activation_func.__name__ for l in self.layers ]).astype('S') 
+        np.savez( filename, **f )

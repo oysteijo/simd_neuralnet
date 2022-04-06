@@ -1,4 +1,5 @@
 #include "npy_array.h"
+#include "npy_array_list.h"
 #include "neuralnet.h"
 #include "simd.h"
 
@@ -53,9 +54,9 @@ int main( int argc, char *argv[] )
         train_feature += n_features;
         train_target  += 1;
     }
-    printf("Done.\n" );
+    printf("Done SGD training of one epoch. \n # features: %6d \n #  samples: %6d \n", n_features, n_train_samples );
 
-    /* Evaluate the training by caclulating the test accuracy */
+    /* Evaluate the training by calculating the test accuracy */
     int correct_count = 0;
     const int n_test_samples = test_X->shape[0];
     
