@@ -6,6 +6,10 @@
 #include <immintrin.h>
 #endif
 
+#ifdef __ARM_NEON__
+#include <arm_neon.h>
+#endif
+
 #ifdef USE_CBLAS
 #include <cblas.h>
 #endif
@@ -18,6 +22,14 @@ static inline float horizontalsum_avx( __m256 x )
 	hsum = _mm256_add_ps(hsum, _mm256_permute2f128_ps(hsum, hsum, 0x1));
 	_mm_store_ss(&sumAVX, _mm_hadd_ps( _mm256_castps256_ps128(hsum), _mm256_castps256_ps128(hsum) ) );
 	return sumAVX;
+}
+#endif
+
+#ifdef __ARM_NEON__
+static inline float horizontalsum_neon( float32x4_t v0 )
+{
+	float32x2_t v = vadd_f32(vget_high_f32(v0), vget_low_f32(v0));
+	return vget_lane_f32(vpadd_f32(v, v), 0);
 }
 #endif
 
@@ -44,6 +56,13 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
    #endif
 		y[i] = horizontalsum_avx( sum );
 #endif
+#ifdef __ARM_NEON__
+		float32x4_t sum = vdupq_n_f32(0);
+		for (; j <= ((n_cols)-4); j += 4, m_ptr += 4, v_ptr += 4) /* Check if faster: unroll w prefetch */
+			sum = vmlaq_f32( sum, vld1q_f32(v_ptr), vld1q_f32(m_ptr));
+		y[i] = horizontalsum_neon( sum );
+#endif
+
         for(; j < n_cols; j++ )
             y[i] += *v_ptr++ * *m_ptr++;
     }
@@ -70,6 +89,12 @@ void vector_vector_outer( int n_rows, int n_cols, const float *x, const float *y
                 _mm256_storeu_ps( matrix_ptr, _mm256_mul_ps( scale, _mm256_loadu_ps( y_ptr )) );
             }
 #endif  /* __AVX__ */
+#ifdef __ARM_NEON__
+	    float32x4_t scale = vdupq_n_f32( a );
+            for( ; j <= ((n_cols)-4); j += 4, y_ptr += 4, matrix_ptr += 4) {
+                vst1q_f32( matrix_ptr, vmulq_f32( scale, vld1q_f32( y_ptr )) );
+            }
+#endif  /* __ARM_NEON__ */
             for( ; j < n_cols; j++ )
                 *matrix_ptr++ = a * *y_ptr++;
         }
@@ -95,6 +120,11 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
 		_mm256_store_ps( y_ptr, _mm256_load_ps( bias_ptr ));
     }
 #endif
+#ifdef __ARM_NEON__
+	for (; i <= ((m)-4) ; i += 4, bias_ptr +=4, y_ptr +=4 ){
+		vst1q_f32( y_ptr, vld1q_f32( bias_ptr ));
+    }
+#endif
     for( ; i < m; i++ ){
         *y_ptr++ = *bias_ptr++;
     }
@@ -110,6 +140,10 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
 				for (; j <= ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8) 
 					_mm256_storeu_ps(y_ptr, _mm256_add_ps (_mm256_loadu_ps(y_ptr), _mm256_loadu_ps( weight_ptr )));
 #endif /*  __AVX__ */
+#ifdef __ARM_NEON__
+				for (; j <= ((m)-4) ; j += 4, y_ptr += 4, weight_ptr += 4) 
+					vst1q_f32(y_ptr, vaddq_f32 (vld1q_f32(y_ptr), vld1q_f32( weight_ptr )));
+#endif /*  __ARM_NEON__ */
                 for( ; j < m; j++ )
                     *y_ptr++ += *weight_ptr++;
             }
@@ -124,6 +158,12 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
    #else
 					_mm256_storeu_ps(y_ptr, _mm256_add_ps(_mm256_loadu_ps(y_ptr), _mm256_mul_ps(_mm256_loadu_ps(weight_ptr), scalevec)));
    #endif  
+                }
+#endif
+#ifdef __ARM_NEON__
+				float32x4_t scalevec = vdupq_n_f32(inp);
+				for (; j < ((m)-4) ; j += 4, y_ptr += 4, weight_ptr += 4){
+					vst1q_f32(y_ptr, vmlaq_f32(vld1q_f32(y_ptr), vld1q_f32(weight_ptr), scalevec));
                 }
 #endif
                 for(; j < m; j++ )
