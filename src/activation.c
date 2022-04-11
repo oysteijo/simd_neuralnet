@@ -6,6 +6,9 @@
 #ifdef __AVX__
 #include <immintrin.h>
 #endif
+#ifdef __ARM_NEON__
+#include <arm_neon.h>
+#endif
 
 /*
 Just thinking out here.... This code needs a cleanup. It started as a implementation
@@ -135,6 +138,20 @@ static void relu( const int n, float *y )
         _mm256_store_ps( y + i + 8, YMM1 );
     }
 #endif
+#ifdef __ARM_NEON__
+    const float32x4_t zero = vdupq_n_f32(0.0f);
+
+    float32x4_t v0, v1;
+
+    for (i = 0; i <= ((n)-8); i += 8) {
+        v0 = vld1q_f32 (y + i);
+        v1 = vld1q_f32 (y + i + 4);
+        v0 = vmaxq_f32( zero, v0);
+        v1 = vmaxq_f32( zero, v1);
+        vst1q_f32( y + i, v0 );
+        vst1q_f32( y + i + 4, v1 );
+    }
+#endif
     for( ; i < n; i++ )
         y[i] = fmaxf(0.0f, y[i]);
 }
@@ -227,6 +244,75 @@ static inline __m256 exp256_ps(__m256 x) {
 }
 #endif 
 
+#ifdef __ARM_NEON__
+
+static const float c_cephes_exp_hi =  88.3762626647949f;
+static const float c_cephes_exp_lo = -88.3762626647949f;
+
+static const float c_cephes_LOG2EF =   1.44269504088896341;
+
+static const float c_cephes_exp_C1 =   0.693359375;
+static const float c_cephes_exp_C2 =  -2.12194440e-4;
+
+static inline float32x4_t exp_neon(float32x4_t x)
+{
+    float32x4_t one   = vdupq_n_f32(1);
+
+    x = vminq_f32(x, vdupq_n_f32(c_cephes_exp_hi));
+    x = vmaxq_f32(x, vdupq_n_f32(c_cephes_exp_lo));
+
+    /* express exp(x) as exp(g + n*log(2)) */
+    float32x4_t fx = vmlaq_f32(vdupq_n_f32(0.5f), x, vdupq_n_f32(c_cephes_LOG2EF));
+
+    /* perform a floorf */
+    float32x4_t tmp = vcvtq_f32_s32(vcvtq_s32_f32(fx));
+    
+    /* if greater, substract 1 */
+    uint32x4_t mask = vcgtq_f32(tmp, fx); 
+    mask = vandq_u32(mask, vreinterpretq_u32_f32(one));
+
+    fx = vsubq_f32(tmp, vreinterpretq_f32_u32(mask));
+
+    tmp = vmulq_f32(fx, vdupq_n_f32(c_cephes_exp_C1));
+    float32x4_t z = vmulq_f32(fx, vdupq_n_f32(c_cephes_exp_C2));
+    x = vsubq_f32(x, tmp);
+    x = vsubq_f32(x, z);
+
+          float32x4_t y  = vdupq_n_f32( 1.9875691500E-4 );
+    const float32x4_t c1 = vdupq_n_f32( 1.3981999507E-3 );
+    const float32x4_t c2 = vdupq_n_f32( 8.3334519073E-3 );
+    const float32x4_t c3 = vdupq_n_f32( 4.1665795894E-2 );
+    const float32x4_t c4 = vdupq_n_f32( 1.6666665459E-1 );
+    const float32x4_t c5 = vdupq_n_f32( 5.0000001201E-1 );
+
+    y = vmulq_f32(y, x);
+    z = vmulq_f32(x,x);
+    y = vaddq_f32(y, c1);
+    y = vmulq_f32(y, x);
+    y = vaddq_f32(y, c2);
+    y = vmulq_f32(y, x);
+    y = vaddq_f32(y, c3);
+    y = vmulq_f32(y, x);
+    y = vaddq_f32(y, c4);
+    y = vmulq_f32(y, x);
+    y = vaddq_f32(y, c5);
+
+    y = vmulq_f32(y, z);
+    y = vaddq_f32(y, x);
+    y = vaddq_f32(y, one);
+
+    /* build 2^n */
+    int32x4_t mm;
+    mm = vcvtq_s32_f32(fx);
+    mm = vaddq_s32(mm, vdupq_n_s32(0x7f));
+    mm = vshlq_n_s32(mm, 23);
+    float32x4_t pow2n = vreinterpretq_f32_s32(mm);
+
+    y = vmulq_f32(y, pow2n);
+    return y;
+}
+#endif 
+
 #ifdef __SSE3__
 static inline float hsum_ps_sse3(__m128 v) {
     __m128 shuf = _mm_movehdup_ps(v);        // broadcast elements 3,1 to 2,0
@@ -282,6 +368,19 @@ static void softmax( const int n, float *ar )
     }
     sum += hsum256_ps_avx( sum_v );
 #endif
+#ifdef __ARM_NEON__
+    float32x4_t max_v = vdupq_n_f32( maxval );
+    float32x4_t sum_v = vdupq_n_f32( 0.0f );
+    for (; j <= ((n)-4); j += 4) {
+        float32x4_t v0 = vld1q_f32(ar + j);
+        v0 = vsubq_f32( v0, max_v );
+        v0 = exp_neon(v0);
+        vst1q_f32( ar + j, v0 );
+        sum_v = vaddq_f32( sum_v, v0 );
+    }
+    float32x2_t v = vadd_f32(vget_high_f32(sum_v), vget_low_f32(sum_v));
+    sum += vget_lane_f32(vpadd_f32(v, v), 0);
+#endif
     for (; j < n; j++ ){
         ar[j] = expf( ar[j] - maxval );
         sum += ar[j];
@@ -292,6 +391,13 @@ static void softmax( const int n, float *ar )
     for(; j <= ((n)-8); j+= 8 ) {
         __m256 YMM0 = _mm256_load_ps( ar + j );
         _mm256_store_ps( ar + j, _mm256_div_ps( YMM0, sum4 ) );
+    }
+#endif
+#ifdef __ARM_NEON__
+    float32x4_t sum4 = vdupq_n_f32( 1.0f / sum ); /* vdivq_f32 is A64 only ??? */
+    for(; j <= ((n)-4); j+= 4 ) {
+        float32x4_t v0 = vld1q_f32( ar + j );
+        vst1q_f32( ar + j, vmulq_f32( v0, sum4 ) );
     }
 #endif
     for (; j < n; j++ ){
@@ -469,6 +575,30 @@ static void relu_derivative        ( const int n, const float *activation, float
         _mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
     }
 #endif /* __AVX__ */
+#ifdef __ARM_NEON__
+    const float32x4_t zeros = vdupq_n_f32(0.0f);
+    const float32x4_t ones = vdupq_n_f32(1.0f);
+
+    float32x4_t v0, v1, v2, v3;
+    uint32x4_t mask0, mask1;
+
+    for (i = 0; i <= ((n)-8); i += 8) {
+        v0 = vld1q_f32(activation + i);
+        v1 = vld1q_f32(activation + i + 4);
+        
+	mask0 = vcgtq_f32( v0, zeros );
+	mask1 = vcgtq_f32( v1, zeros );
+
+     	v0 = vbslq_f32( mask0, ones, zeros );
+     	v1 = vbslq_f32( mask1, ones, zeros );
+
+        v2 = vld1q_f32(ar + i);
+        v3 = vld1q_f32(ar + i + 4);
+
+        vst1q_f32( ar + i,     vmulq_f32( v0, v2) );
+        vst1q_f32( ar + i + 4, vmulq_f32( v1, v3) );
+    }
+#endif /* __ARM_NEON__ */
     for(; i < n; i++ )
         ar[i] *= activation[i] <= 0.0f ? 0.0f : 1.0f ;
 }

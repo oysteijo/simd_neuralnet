@@ -90,9 +90,8 @@ void vector_vector_outer( int n_rows, int n_cols, const float *x, const float *y
             }
 #endif  /* __AVX__ */
 #ifdef __ARM_NEON__
-	    float32x4_t scale = vdupq_n_f32( a );
             for( ; j <= ((n_cols)-4); j += 4, y_ptr += 4, matrix_ptr += 4) {
-                vst1q_f32( matrix_ptr, vmulq_f32( scale, vld1q_f32( y_ptr )) );
+                vst1q_f32( matrix_ptr, vmulq_n_f32( vld1q_f32( y_ptr ), a ) );
             }
 #endif  /* __ARM_NEON__ */
             for( ; j < n_cols; j++ )
