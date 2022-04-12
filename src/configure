@@ -118,7 +118,7 @@ else
 fi
 
 echo "PREFIX       = $prefix"              >>Makefile
-echo "INCLUDE      = -I../npy_array"       >>Makefile
+echo "INCLUDE      = -I../npy_array -I/home/oystein/optimized-routines/math/include"       >>Makefile
 if $debugsym; then
     echo 'dbg          = -g'               >>Makefile
 fi
@@ -145,6 +145,10 @@ if grep -q neon "/proc/cpuinfo"; then
   cpuinfo+="-mfpu=neon "
 fi
 
+if grep -q asimd "/proc/cpuinfo"; then
+  cpuinfo+="-march=native -mtune=cortex-a72 "
+fi
+
 echo 'arch = '$cpuinfo''                   >>Makefile
 
 if $have_pkg_config; then
@@ -153,4 +157,4 @@ if $have_pkg_config; then
 fi
     
 echo "include Makefile.in"                 >>Makefile
-echo "configure done, type 'make' to build."
+echo "configure done, type 'make' to build"

@@ -6,9 +6,13 @@
 #ifdef __AVX__
 #include <immintrin.h>
 #endif
-#ifdef __ARM_NEON__
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
 #include <arm_neon.h>
-#endif
+#ifdef __aarch64__
+#pragma message ("yes, we're at a ARM64 system")
+#include <mathlib.h>
+#endif  /* __aarch64__ */
+#endif  /* __ARM_NEON__ */
 
 /*
 Just thinking out here.... This code needs a cleanup. It started as a implementation
@@ -138,7 +142,7 @@ static void relu( const int n, float *y )
         _mm256_store_ps( y + i + 8, YMM1 );
     }
 #endif
-#ifdef __ARM_NEON__
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
     const float32x4_t zero = vdupq_n_f32(0.0f);
 
     float32x4_t v0, v1;
@@ -299,19 +303,26 @@ static void softmax( const int n, float *ar )
     }
     sum += hsum256_ps_avx( sum_v );
 #endif
-#if defined(__ARM_NEON__) && defined(__aarch64__) 
+
+/* There is no use in vectorizing this loop unless you are on a __aarch64__ system */
+#if __aarch64__ 
     float32x4_t max_v = vdupq_n_f32( maxval );
     float32x4_t sum_v = vdupq_n_f32( 0.0f );
     for (; j <= ((n)-4); j += 4) {
         float32x4_t v0 = vld1q_f32(ar + j);
         v0 = vsubq_f32( v0, max_v );
-        v0 = __v_expf(v0);
+#if __GNUC__ >= 9 || __clang_major__ >= 8
+	v0 = _ZGVnN4v_expf ( v0 );
+#else
+	v0 = __v_expf( v0 );
+#endif /* __GNUC__ > 9 || __clang_major__ >= 8 */
         vst1q_f32( ar + j, v0 );
         sum_v = vaddq_f32( sum_v, v0 );
     }
+    /* horisontal sum */
     float32x2_t v = vadd_f32(vget_high_f32(sum_v), vget_low_f32(sum_v));
     sum += vget_lane_f32(vpadd_f32(v, v), 0);
-#endif
+#endif  /* __aarch64__ */
     for (; j < n; j++ ){
         ar[j] = expf( ar[j] - maxval );
         sum += ar[j];
@@ -324,13 +335,21 @@ static void softmax( const int n, float *ar )
         _mm256_store_ps( ar + j, _mm256_div_ps( YMM0, sum4 ) );
     }
 #endif
-#ifdef __ARM_NEON__
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
+#if __aarch64__
+    float32x4_t sum4 = vdupq_n_f32( sum ); /* vdivq_f32 is A64 only ??? */
+    for(; j <= ((n)-4); j+= 4 ) {
+        float32x4_t v0 = vld1q_f32( ar + j );
+        vst1q_f32( ar + j, vdivq_f32( v0, sum4 ) );
+    }
+#else
     float32x4_t sum4 = vdupq_n_f32( 1.0f / sum ); /* vdivq_f32 is A64 only ??? */
     for(; j <= ((n)-4); j+= 4 ) {
         float32x4_t v0 = vld1q_f32( ar + j );
         vst1q_f32( ar + j, vmulq_f32( v0, sum4 ) );
     }
-#endif
+#endif /* __aarch64__ */
+#endif /* __ARM_NEON__ */
     for (; j < n; j++ ){
         ar[j] /= sum;
     }
@@ -506,7 +525,7 @@ static void relu_derivative        ( const int n, const float *activation, float
         _mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
     }
 #endif /* __AVX__ */
-#ifdef __ARM_NEON__
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
     const float32x4_t zeros = vdupq_n_f32(0.0f);
     const float32x4_t ones = vdupq_n_f32(1.0f);
 
