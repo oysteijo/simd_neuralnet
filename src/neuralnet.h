@@ -14,6 +14,7 @@ struct _layer_t
 #ifndef PREDICTION_ONLY
     void    (*activation_derivative) (const int n, const float *activation, float *ar);
 #endif
+    int    n_padding;
 };
 
 struct _neuralnet_t

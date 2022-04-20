@@ -145,9 +145,14 @@ neuralnet_t *neuralnet_load( const char *filename)
     assert( (wb_idx % 2) == 0 );  /* There should be one weight and one bias npy arrays for each layer. This should hence be even. */
 
     nn->n_layers = wb_idx / 2;
+
+    const int floats_pr_register = ALIGN_SIZE / sizeof(float);
     for( int i = 0; i < nn->n_layers; i++ ){
         nn->layer[i].n_input = weights_and_biases[i*2]->shape[0];
         nn->layer[i].n_output = weights_and_biases[i*2]->shape[1];
+        int reminder = nn->layer[i].n_output % floats_pr_register;
+        nn->layer[i].n_padding = floats_pr_register - reminder;
+        assert( ( (nn->layer[i].n_output + nn->layer[i].n_padding ) % floats_pr_register ) == 0 );
     }
 
     if( !_weights_memory_allocate( nn )){
@@ -246,16 +251,18 @@ void neuralnet_predict( const neuralnet_t *nn, const float *input, float *out )
     /* FIXME: Do this once and once only! */
     /* Update: Maybe not rewrite this, since it might fuck up threading... I've not tried though */
 
-    int n_biases = 0;
+    int n_activations_with_padding = 0;
     for( int i = 0; i < nn->n_layers; i++)
-        n_biases += nn->layer[i].n_output;
+        n_activations_with_padding += nn->layer[i].n_output + nn->layer[i].n_padding;
 
-    float SIMD_ALIGN(workmem[ n_biases ]);
+    float SIMD_ALIGN(workmem[ n_activations_with_padding ]);
     float *activations[nn->n_layers+1];
     activations[0] = (float*) input;
     activations[1] = workmem;
-    for( int i = 1; i < nn->n_layers-1; i++)
-        activations[i+1] = activations[i] + nn->layer[i-1].n_output;
+    for( int i = 1; i < nn->n_layers-1; i++){
+        activations[i+1] = activations[i] + nn->layer[i-1].n_output + nn->layer[i-1].n_padding;
+        assert( is_aligned( activations[i+1] ) );
+    }
     
     activations[nn->n_layers] = out;
 
@@ -637,9 +644,13 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
     }
 
     nn->n_layers = n_layers;
+    const int floats_pr_register = ALIGN_SIZE / sizeof(float);
     for( int i = 0; i < nn->n_layers; i++ ){
         nn->layer[i].n_input  = sizes[i];
         nn->layer[i].n_output = sizes[i+1];
+        int reminder = nn->layer[i].n_output % floats_pr_register;
+        nn->layer[i].n_padding = floats_pr_register - reminder;
+        assert( ( (nn->layer[i].n_output + nn->layer[i].n_padding ) % floats_pr_register ) == 0 );
     }
 
     if( !_weights_memory_allocate( nn )){
