@@ -151,7 +151,7 @@ neuralnet_t *neuralnet_load( const char *filename)
         nn->layer[i].n_input = weights_and_biases[i*2]->shape[0];
         nn->layer[i].n_output = weights_and_biases[i*2]->shape[1];
         int reminder = nn->layer[i].n_output % floats_pr_register;
-        nn->layer[i].n_padding = floats_pr_register - reminder;
+        nn->layer[i].n_padding = reminder ? floats_pr_register - reminder : 0;
         assert( ( (nn->layer[i].n_output + nn->layer[i].n_padding ) % floats_pr_register ) == 0 );
     }
 
@@ -261,7 +261,7 @@ void neuralnet_predict( const neuralnet_t *nn, const float *input, float *out )
     activations[1] = workmem;
     for( int i = 1; i < nn->n_layers-1; i++){
         activations[i+1] = activations[i] + nn->layer[i-1].n_output + nn->layer[i-1].n_padding;
-        assert( is_aligned( activations[i+1] ) );
+        // assert( is_aligned( activations[i+1] ) );
     }
     
     activations[nn->n_layers] = out;
@@ -479,16 +479,18 @@ void neuralnet_set_loss ( neuralnet_t *nn, const char *loss_name )
   
 void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const float *target, float *grad )
 {
-    int n_biases = 0;
+    int n_activations_with_padding = 0;
     for( int i = 0; i < nn->n_layers; i++)
-        n_biases += nn->layer[i].n_output;
+        n_activations_with_padding += nn->layer[i].n_output + nn->layer[i].n_padding;
 
-    float SIMD_ALIGN(workmem[ n_biases + nn->layer[0].n_input ]);
+    float SIMD_ALIGN(workmem[ n_activations_with_padding + nn->layer[0].n_input ]);
     float *activations[nn->n_layers+1];
     activations[0] = (float*) input;
     activations[1] = workmem;
-    for( int i = 1; i < nn->n_layers; i++)
-        activations[i+1] = activations[i] + nn->layer[i-1].n_output;
+    for( int i = 1; i < nn->n_layers; i++){
+        activations[i+1] = activations[i] + nn->layer[i-1].n_output + nn->layer[i-1].n_padding;
+        // assert( is_aligned( activations[i+1] ) );
+    }
     
     /* forward */
     for( int i = 0; i < nn->n_layers; i++){
@@ -505,7 +507,7 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
 
     /* backward */
 
-    /* First we set the grad vector to 0.0. The caller always seems forgets! */
+    /* First we set the grad vector to 0.0. The caller always seems to forget! */
     unsigned int n_param = neuralnet_total_n_parameters( nn );
     memset( grad, 0, n_param * sizeof(float));
 
@@ -645,12 +647,18 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
 
     nn->n_layers = n_layers;
     const int floats_pr_register = ALIGN_SIZE / sizeof(float);
+    printf("Creating neural network of %d layers.\n", n_layers );
+    printf("The SIMD instruction set will handle %d float values each register.\n", floats_pr_register );
     for( int i = 0; i < nn->n_layers; i++ ){
         nn->layer[i].n_input  = sizes[i];
         nn->layer[i].n_output = sizes[i+1];
         int reminder = nn->layer[i].n_output % floats_pr_register;
-        nn->layer[i].n_padding = floats_pr_register - reminder;
+        nn->layer[i].n_padding = reminder ? floats_pr_register - reminder : 0;
         assert( ( (nn->layer[i].n_output + nn->layer[i].n_padding ) % floats_pr_register ) == 0 );
+        printf("Layer: %d\n", i );
+        printf(" Input size  : %d\n", sizes[i] );
+        printf(" Output size : %d\n", sizes[i+1] );
+        printf(" Padding size: %d\n", nn->layer[i].n_padding );
     }
 
     if( !_weights_memory_allocate( nn )){

@@ -67,7 +67,7 @@ void vector_vector_outer( int n_rows, int n_cols, const float *x, const float *y
             __m256 scale = _mm256_set1_ps( a );
             for( ; j <= ((n_cols)-8); j += 8, y_ptr += 8, matrix_ptr += 8) {
                 /* Unforuneately this has to go unaligned. Can that be fixed? */
-                _mm256_storeu_ps( matrix_ptr, _mm256_mul_ps( scale, _mm256_loadu_ps( y_ptr )) );
+                _mm256_storeu_ps( matrix_ptr, _mm256_mul_ps( scale, _mm256_load_ps( y_ptr )) );
             }
 #endif  /* __AVX__ */
             for( ; j < n_cols; j++ )
@@ -82,9 +82,15 @@ void vector_vector_outer( int n_rows, int n_cols, const float *x, const float *y
  * However, I'm not sure how much it will improve the performance.  */
 void vector_matrix_multiply( int n, int m, const float *weight, const float *bias, const float *input, float *y )
 {
+    /*
     assert( is_aligned( weight ));
     assert( is_aligned( bias ));
     assert( is_aligned( y ));
+
+    assert( weight );
+    assert( bias );
+    assert( y );
+    */
 
     const float *bias_ptr = bias;
 	float *y_ptr = y; 
