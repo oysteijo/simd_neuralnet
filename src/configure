@@ -118,7 +118,7 @@ else
 fi
 
 echo "PREFIX       = $prefix"              >>Makefile
-echo "INCLUDE      = -I../npy_array -I/home/oystein/optimized-routines/math/include"       >>Makefile
+echo "INCLUDE      = -I../npy_array"       >>Makefile
 if $debugsym; then
     echo 'dbg          = -g'               >>Makefile
 fi

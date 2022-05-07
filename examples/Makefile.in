@@ -2,7 +2,7 @@
 ##         The rest of this file comes from Makefile.in          ##
 ##     If you need changes below this line, edit Makefile.in     ##
 ## ------------------------------------------------------------- ##
-CFLAGS = -std=c99 -Wall -Wextra -O3 $(arch) $(dbg) $(profile)
+CFLAGS = -std=c11 -Wall -Wextra -O3 $(arch) $(dbg) $(profile)
 LDFLAGS = $(profile) 
 
 src = $(wildcard *.c)
@@ -14,6 +14,7 @@ NEURALNET_LIBPATH = ../src
 CFLAGS += -I$(NPY_ARRAY_LIBPATH) -I$(NEURALNET_LIBPATH) -I..
 LDFLAGS += -L$(NEURALNET_LIBPATH) -lsimd_neuralnet
 LDFLAGS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
+LDFLAGS += -lmathlib
 LDFLAGS += -lzip -lm
 
 #DEFINES = -DUSE_CBLAS

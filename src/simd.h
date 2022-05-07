@@ -7,16 +7,12 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#if defined(__SSE__) /* FIXME or other SIMD technologies */
+#if defined(__SSE__) || defined(__ARM_NEON__) || defined(__ARM_NEON) /* FIXME or other SIMD technologies */
 
-/* FIXME find right header to include based on Compiler (need _mm_malloc()) */
-#if defined(__INTEL_COMPILER)
-#include <malloc.h>
-#elif defined( __GNUC__)
-#include <mm_malloc.h>
-#endif
-
-#if defined(__AVX__)
+/* We should use C11 .... please be kind to yourself. */
+#if defined(__AVX512__)
+#define ALIGN_SIZE 64
+#elif defined(__AVX__)
 #define ALIGN_SIZE 32
 #else
 #define ALIGN_SIZE 16
@@ -41,8 +37,11 @@
 static inline float *
 simd_malloc (size_t size)
 {
-#if defined(__SSE__)
-    return (float *) _mm_malloc (size, ALIGN_SIZE);
+#if defined(__SSE__) || defined(__ARM_NEON__) || defined(__ARM_NEON) /* FIXME or other SIMD technologies */
+    size_t reminder = size % ALIGN_SIZE;
+    if( reminder )
+        size += ALIGN_SIZE - reminder;
+    return (float *) aligned_alloc( ALIGN_SIZE, size );  
 #else
     return (float *) malloc (size);
 #endif
@@ -51,11 +50,7 @@ simd_malloc (size_t size)
 static inline void
 simd_free (float *ptr)
 {
-#if defined(__SSE__)
-    _mm_free (ptr);
-#else
     free (ptr);
-#endif
 }
 
 #endif /* __SIMD_H__ */
