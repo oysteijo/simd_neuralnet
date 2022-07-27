@@ -3,9 +3,13 @@
 #include <string.h>
 #include <math.h>
 
+#include <stdio.h>
+#include <errno.h>
 #ifdef __AVX__
 #include <immintrin.h>
 #endif
+
+#include <dlfcn.h>
 
 /*
 Just thinking out here.... This code needs a cleanup. It started as a implementation
@@ -61,11 +65,165 @@ static void softmax_derivative     ( const int n, const float *activation, float
 static void sigmoid_derivative     ( const int n, const float *activation, float *ar );
 static void tanh_act_derivative    ( const int n, const float *activation, float *ar );
 #endif
+#define __USE_DYNAMIC_LOAD__ 1
+#if __USE_DYNAMIC_LOAD__ == 1
+#include <dlfcn.h>
+void cleanup_dynamic_symbols();
+
+typedef struct _activation_record_t activation_record_t;
+struct _activation_record_t {
+    char *activation_name;
+    void *handle;
+    activation_func func_ptr;
+    activation_derivative deriv_ptr;
+    activation_record_t *next;
+};
+
+static activation_record_t *records = NULL;  /* A linked list of open activation funcs. */
+
+static activation_func get_activation_func_dynamic( const char *name )
+{
+    atexit(cleanup_dynamic_symbols);
+    /* strdup() is not ansi c .... */
+    size_t len = strlen( name ) + 1;
+    char *file_and_symbol_name = malloc( len );
+    if ( !file_and_symbol_name ){
+        perror("malloc");
+        return NULL;
+    }
+    memcpy( file_and_symbol_name, name, len);
+
+    char *at = strchr( file_and_symbol_name, '@' );
+    if( !at ){
+        fprintf(stderr, "Trying to load dynamic function, but name does not contain any '@'\n"
+                "Format should read '<symbol>@<libraryfile>'\n");
+        free( file_and_symbol_name );
+        return NULL;
+    }
+
+    *at = '\0';
+    char *library_file = at + 1;
+    char *symbol = file_and_symbol_name;
+
+    printf("library file: %s\n", library_file);  
+    printf("symbol (function): %s\n", symbol);
+
+    void *handle = dlopen( library_file, RTLD_NOW );
+    if ( !handle ){
+        fprintf( stderr, "Cannot open dynamic library '%s'. \n"
+                "Set LD_LIBRARY_PATH \n"
+                "or install it in a directory where dynamic linker finds it,\n"
+                "or link the library with -Wl,-rpath  linker option\n", library_file);
+        free( file_and_symbol_name );
+        return NULL;
+    }
+    activation_func retfunc = dlsym( handle, symbol );
+    char derivative_symbol[256];
+    sprintf(derivative_symbol, "%s_derivative", symbol );
+    free( file_and_symbol_name );
+    char * error_message = dlerror();
+    if( error_message )
+    {
+        fprintf( stderr, "dlsym(): %s\n", error_message );
+        dlclose( handle );
+        return NULL;
+    }
+
+    activation_record_t *rec = malloc( sizeof(activation_record_t) );
+    if ( !rec ){
+        return retfunc;
+    }
+
+    /* Need to strdup again ... (Or maybe I can reuse if I re-insert the @ ?) */
+    rec->handle = handle;
+    rec->activation_name = malloc( len );
+    if ( !rec->activation_name ){
+        perror("malloc");
+        return retfunc;
+    }
+    memcpy( rec->activation_name, name, len);
+
+    rec->deriv_ptr = dlsym( handle, derivative_symbol);
+    error_message = dlerror();
+    if( error_message )
+    {
+        fprintf( stderr, "dlsym(): %s\n", error_message );
+        fprintf( stderr, "This neural net will not be trainable and expect a segmentation fault if you try.\n");
+        return retfunc;
+    }
+    rec->func_ptr = retfunc;
+    rec->next = NULL;
+
+    /* Find the backmost and append */
+    if( !records )
+        records = rec;
+    else {
+        activation_record_t *endptr = records;
+        while(endptr->next)
+            endptr = endptr->next;
+        endptr->next = rec;
+    }
+
+    return retfunc;
+    /* the dl will be open to the bitter end. there is no explicit call to dlclose() when everything works fine.
+       I really hope that doesn't matter. */
+}
+
+#if 0
+int debug_linked_list()
+{
+    if( !records )
+        return 0;
+    int count = 0;
+    activation_record_t *iter = records;
+    do {
+        printf( "Name                  : %s\n", iter->activation_name ); 
+        printf( "Address               : %p\n", iter->func_ptr ); 
+        printf( "Address of derivative : %p\n", iter->deriv_ptr ); 
+        iter = iter->next;
+        count++;
+    } while ( iter );
+    return count;
+}
+#endif
+
+activation_derivative get_activation_derivative_dynamic( const activation_func ptr )
+{
+    if( !records )
+        return NULL;
+    activation_record_t *iter = records;
+    do {
+        if( iter->func_ptr == ptr ) return iter->deriv_ptr; 
+        iter = iter->next;
+    } while ( iter );
+    return NULL;
+}
+
+void cleanup_dynamic_symbols()
+{
+    /* FIXME: Clean debug output */
+    printf("Cleaning up...");
+    if( !records ){
+        printf("No dynamic symbols found. Have a nice day!\n");
+        return;
+    }
+    activation_record_t *iter = records;
+    do {
+        dlclose( iter->handle );
+        free( iter->activation_name );
+        activation_record_t *to_be_set_free = iter;
+        iter = iter->next;
+        free( to_be_set_free );
+    } while ( iter );
+    printf("All clean now!\n");
+}
+#endif /* __USE_DYNAMIC_LOAD__ */
 
 #define CHECK_ACTIVATION_NAME(func) \
         !strcmp( name, #func) ? func :
 
-activation_func get_activation_func( const char * name ){
+activation_func get_activation_func( const char * name )
+{
     return
         CHECK_ACTIVATION_NAME(softplus)
         CHECK_ACTIVATION_NAME(softsign)
@@ -76,7 +234,7 @@ activation_func get_activation_func( const char * name ){
         CHECK_ACTIVATION_NAME(softmax)
         CHECK_ACTIVATION_NAME(sigmoid)
         !strcmp( name, "tanh") ? tanh_act :
-        NULL;
+        get_activation_func_dynamic( name );
 }
 
 #define CHECK_ACTIVATION_PTR(func) \
@@ -113,7 +271,7 @@ activation_derivative get_activation_derivative( activation_func ptr ){
         CHECK_ACTIVATION_DERIV_PTR(softmax)
         CHECK_ACTIVATION_DERIV_PTR(sigmoid)
         CHECK_ACTIVATION_DERIV_PTR(tanh_act)
-        NULL;
+        get_activation_derivative_dynamic( ptr );
 }
 #undef CHECK_ACTIVATION_DERIV_PTR
 #endif

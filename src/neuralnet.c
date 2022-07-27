@@ -91,18 +91,11 @@ static char ** _activation_names_from_npy( npy_array_t *m )
 */
 neuralnet_t *neuralnet_load( const char *filename)
 {
-    neuralnet_t *nn;
-
-    if ( (nn = malloc( sizeof( neuralnet_t ))) == NULL ){
-        fprintf( stderr, "Cannot allocate memory for 'neuralnet_t' type.\n");
-        return NULL;
-    }
-
-    /* FIXME: This code is still not production quality. */
-    npy_array_list_t *array_list;
-    npy_array_t **weights_and_biases;
-    char      **activation_funcs = NULL;
-    int wb_idx = 0;
+    npy_array_list_t  *array_list          = NULL;
+    npy_array_t      **weights_and_biases  = NULL;
+    char             **activation_funcs    = NULL;
+    int                wb_idx              = 0;
+    neuralnet_t       *nn                  = NULL;
 
     /* Start with copying data from the 'npy' file into an other array for weights and biases,
        and the activation function names into another array */
@@ -110,7 +103,6 @@ neuralnet_t *neuralnet_load( const char *filename)
     {
         /* Oh you poor thing... what did you pass in? */
         fprintf(stderr, "Cannot read neural network from file '%s'. Make sure you have a valid file.\n", filename );
-        free (nn );
         return NULL;
     }
 
@@ -118,9 +110,7 @@ neuralnet_t *neuralnet_load( const char *filename)
 
     if (NULL == (weights_and_biases = malloc( len * sizeof( npy_array_t * )))){
         fprintf(stderr, "Cannot allocate temporary array for weights. (This is really unlikely!)\n" );
-        free( nn );
-        npy_array_list_free( array_list );
-        return NULL;
+        goto load_error;
     }
 
     for( npy_array_list_t *iter = array_list; iter; iter = iter->next ) {
@@ -131,37 +121,30 @@ neuralnet_t *neuralnet_load( const char *filename)
             activation_funcs = _activation_names_from_npy( m );
         else {
             fprintf( stderr, "Element type of numpy array is neither 'float32' or ascii charaters. Cannot open file '%s'.\n", filename );
-            free( nn );
-            if(activation_funcs){
-                free( activation_funcs[0] );
-                free( activation_funcs );
-            }
-            free( weights_and_biases );
-            npy_array_list_free( array_list );
-            return NULL;
+            goto load_error;
         }
     }
 
     assert( (wb_idx % 2) == 0 );  /* There should be one weight and one bias npy arrays for each layer. This should hence be even. */
 
-    nn->n_layers = wb_idx / 2;
-    for( int i = 0; i < nn->n_layers; i++ ){
-        nn->layer[i].n_input = weights_and_biases[i*2]->shape[0];
-        nn->layer[i].n_output = weights_and_biases[i*2]->shape[1];
+    int n_layers = wb_idx / 2;
+    {  /* An added scope to please 'goto' */
+        int sizearray[ n_layers + 1 ];
+        sizearray[0] = weights_and_biases[0]->shape[0];
+        for ( int i = 1; i <= n_layers ; i++ ) /* FIXME: add a sanity check for the sizes */
+            sizearray[i] = weights_and_biases[ (i - 1) * 2 ]->shape[1];
+
+        nn = neuralnet_create( n_layers, sizearray, activation_funcs );
     }
 
-    if( !_weights_memory_allocate( nn )){
-        fprintf(stderr, "Cannot allocate memory for neural net weights.\n");
-        free( nn );
-        if(activation_funcs){
-            free( activation_funcs[0] );
-            free( activation_funcs );
-        }
-        free( weights_and_biases );
-        npy_array_list_free( array_list );
-        return NULL;
+    if( !nn ) { 
+        /* Oh no! FIXME: Check! */
+        fprintf(stderr,"Cannot create neural network.\n");
+        goto load_error;
     }
 
+    /* Copy the array to the layers */
+    /* (This has to be copied since the layers parameters are aligned for SIMD operations.) */
     for( int i = 0; i < nn->n_layers; i++ ){
         npy_array_t *weights   = weights_and_biases[i*2];
         npy_array_t *bias      = weights_and_biases[i*2+1];
@@ -173,20 +156,11 @@ neuralnet_t *neuralnet_load( const char *filename)
         assert( bias->fortran_order == false );
     }
 
-    npy_array_list_free( array_list ); 
-    free( weights_and_biases );
+load_error:
+    /* Clean up */
+    if( array_list )        npy_array_list_free( array_list );
+    if( weights_and_biases) free( weights_and_biases );
 
-    /* Set the activation functions */
-    if ( activation_funcs == NULL )
-        for( int i = 0; i < nn->n_layers; i++ )
-            nn->layer[i].activation_func = get_activation_func("linear");
-
-    for( int i = 0; i < nn->n_layers; i++ ){
-        const char *func_name = activation_funcs[i];
-        nn->layer[i].activation_func = get_activation_func( func_name ? func_name : "linear" );
-    }
-
-    /* Clean up activations */
     if( activation_funcs ){
         free( activation_funcs[0] );
         free( activation_funcs );
@@ -203,6 +177,7 @@ void neuralnet_free( neuralnet_t *nn )
 {
     if( !nn ) return;
     _weights_memory_free( nn );
+    free( nn->layer );
     free( nn );
 }
 
@@ -613,12 +588,6 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
         fprintf( stderr, "You need at least one layer in your neural network. %d layers does not make sense.\n", n_layers );
         return NULL;
     } 
-    /* FIXME: I think we can do better. There should not be a hard limit. */
-    if( n_layers >  NN_MAX_LAYERS ){
-        fprintf( stderr, "Oh... you've hit a limit in the system -- please recompile and set NN_MAX_LAYERS to a higher value.");
-        return NULL;
-    } 
-
     /* Sanity check on sizes */
     for( int i = 0; i < n_layers; i++ )
         if( sizes[i] < 1 ){
@@ -637,6 +606,13 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
     }
 
     nn->n_layers = n_layers;
+    nn->layer = malloc( n_layers * sizeof( layer_t ));
+    if ( !(nn->layer)){
+        fprintf( stderr, "Cannot allocate memory for neural neworks layers.\n");
+        free( nn );
+        return NULL;
+    }
+
     for( int i = 0; i < nn->n_layers; i++ ){
         nn->layer[i].n_input  = sizes[i];
         nn->layer[i].n_output = sizes[i+1];

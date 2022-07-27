@@ -1,8 +1,6 @@
 #ifndef __NN_NEURALNET_H__
 #define __NN_NEURALNET_H__
 
-#define NN_MAX_LAYERS 8
-
 typedef struct _neuralnet_t neuralnet_t;
 typedef struct _layer_t layer_t;
 
@@ -18,10 +16,10 @@ struct _layer_t
 
 struct _neuralnet_t
 {
-    int     n_layers;
-    layer_t layer[NN_MAX_LAYERS];
+    int      n_layers;
+    layer_t *layer;
 #ifndef PREDICTION_ONLY
-    void    (*loss)  (const unsigned int n, const float *y_pred, const float *y_true, float *loss );
+    void     (*loss)  (const unsigned int n, const float *y_pred, const float *y_true, float *loss );
 #endif
 };
 
