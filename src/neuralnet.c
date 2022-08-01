@@ -152,7 +152,7 @@ neuralnet_t *neuralnet_load( const char *filename)
         /* Some basic checks, but just warnings. */
         if( weights->ndim != 2 )
             fprintf(stderr, "WARNING: weight npy array not 2-dimensional in layer %d (It's %dD!)\n", i, weights->ndim);
-        if( weights->ndim != 1 )
+        if( bias->ndim != 1 )
             fprintf(stderr, "WARNING: bias npy array not 1-dimensional in layer %d (It's %dD!)\n", i, bias->ndim);
         if( weights->shape[1] != bias->shape[0] )
             fprintf(stderr, "WARNING: bias size does not match weight size in layer %d. Weight: (%ld,%ld) Bias (%ld)\n",
