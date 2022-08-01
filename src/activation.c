@@ -65,7 +65,9 @@ static void softmax_derivative     ( const int n, const float *activation, float
 static void sigmoid_derivative     ( const int n, const float *activation, float *ar );
 static void tanh_act_derivative    ( const int n, const float *activation, float *ar );
 #endif
-#define __USE_DYNAMIC_LOAD__ 1
+
+/* If this feature should be used, you should flip this. */
+#define __USE_DYNAMIC_LOAD__ 0    
 #if __USE_DYNAMIC_LOAD__ == 1
 #include <dlfcn.h>
 void cleanup_dynamic_symbols();
@@ -165,8 +167,6 @@ static activation_func get_activation_func_dynamic( const char *name )
     }
 
     return retfunc;
-    /* the dl will be open to the bitter end. there is no explicit call to dlclose() when everything works fine.
-       I really hope that doesn't matter. */
 }
 
 #if 0
@@ -234,14 +234,18 @@ activation_func get_activation_func( const char * name )
         CHECK_ACTIVATION_NAME(softmax)
         CHECK_ACTIVATION_NAME(sigmoid)
         !strcmp( name, "tanh") ? tanh_act :
+#if __USE_DYNAMIC_LOAD__ == 1
         get_activation_func_dynamic( name );
+#else
+        NULL;
+#endif
 }
 
 #define CHECK_ACTIVATION_PTR(func) \
         ptr == func ? #func :
 
 const char * get_activation_name( activation_func ptr ){
-    return
+    const char *ret = 
         CHECK_ACTIVATION_PTR(softplus)
         CHECK_ACTIVATION_PTR(softsign)
         CHECK_ACTIVATION_PTR(hard_sigmoid)
@@ -251,7 +255,21 @@ const char * get_activation_name( activation_func ptr ){
         CHECK_ACTIVATION_PTR(softmax)
         CHECK_ACTIVATION_PTR(sigmoid)
         ptr == tanh_act ? "tanh" :
-        "(unknown)";
+        NULL;
+    if (ret)
+        return ret;
+#if __USE_DYNAMIC_LOAD__ == 1
+    if( !records )
+        return "(unknown)";
+    else {
+        activation_record_t *iter = records;
+        do {
+            if( iter->func_ptr == ptr ) return (const char*) iter->activation_name; 
+            iter = iter->next;
+        } while ( iter );
+    }
+#endif
+    return "(unknown)";
 }
 #undef CHECK_ACTIVATION_NAME
 #undef CHECK_ACTIVATION_PTR
@@ -271,7 +289,11 @@ activation_derivative get_activation_derivative( activation_func ptr ){
         CHECK_ACTIVATION_DERIV_PTR(softmax)
         CHECK_ACTIVATION_DERIV_PTR(sigmoid)
         CHECK_ACTIVATION_DERIV_PTR(tanh_act)
+#if __USE_DYNAMIC_LOAD__ == 1
         get_activation_derivative_dynamic( ptr );
+#else
+        NULL;
+#endif
 }
 #undef CHECK_ACTIVATION_DERIV_PTR
 #endif

@@ -10,9 +10,9 @@ obj = $(src:.c=.o)
 
 # dependency library
 NPY_ARRAY_LIBPATH = ../npy_array
-NEURALNET_LIBPATH = ../neuralnet
+NEURALNET_LIBPATH = ../src
 CFLAGS += -I$(NPY_ARRAY_LIBPATH) -I$(NEURALNET_LIBPATH)
-LDFLAGS += -L$(NEURALNET_LIBPATH) -lneuralnet
+LDFLAGS += -L$(NEURALNET_LIBPATH) -lsimd_neuralnet
 LDFLAGS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
 LDFLAGS += -lm
 
@@ -58,9 +58,9 @@ test_metrics.c: generate_tests.py reference.py metrics.py
 	python3 generate_tests.py
 
 reference.py:
-	ln -s ../python/reference.py
+	ln -sf ../reference/neuralnet.py
 metrics.py:
-	ln -s ../python/metrics.py
+	ln -sf ../reference/metrics.py
 
 .PHONY: run
 run: $(testprogs)
