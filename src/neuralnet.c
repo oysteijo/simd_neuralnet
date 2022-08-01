@@ -19,7 +19,7 @@
 #include <assert.h>
 
 #if defined(VERBOSE) 
-static void neuralnet_dump( neuralnet_t *nn )
+static void neuralnet_dump( const neuralnet_t *nn )
 {
     for ( int i = 0; i < nn->n_layers; i++ ) {
         printf("Layer %d %7s %4d %4d ", i,
@@ -131,7 +131,7 @@ neuralnet_t *neuralnet_load( const char *filename)
     {  /* An added scope to please 'goto' */
         int sizearray[ n_layers + 1 ];
         sizearray[0] = weights_and_biases[0]->shape[0];
-        for ( int i = 1; i <= n_layers ; i++ ) /* FIXME: add a sanity check for the sizes */
+        for ( int i = 1; i <= n_layers ; i++ ) 
             sizearray[i] = weights_and_biases[ (i - 1) * 2 ]->shape[1];
 
         nn = neuralnet_create( n_layers, sizearray, activation_funcs );
@@ -148,6 +148,23 @@ neuralnet_t *neuralnet_load( const char *filename)
     for( int i = 0; i < nn->n_layers; i++ ){
         npy_array_t *weights   = weights_and_biases[i*2];
         npy_array_t *bias      = weights_and_biases[i*2+1];
+
+        /* Some basic checks, but just warnings. */
+        if( weights->ndim != 2 )
+            fprintf(stderr, "WARNING: weight npy array not 2-dimensional in layer %d (It's %dD!)\n", i, weights->ndim);
+        if( bias->ndim != 1 )
+            fprintf(stderr, "WARNING: bias npy array not 1-dimensional in layer %d (It's %dD!)\n", i, bias->ndim);
+        if( weights->shape[1] != bias->shape[0] )
+            fprintf(stderr, "WARNING: bias size does not match weight size in layer %d. Weight: (%ld,%ld) Bias (%ld)\n",
+                    i, weights->shape[0], weights->shape[1], bias->shape[0]);
+        if( i > 0 ){
+            if( weights->shape[0] != weights_and_biases[(i-1)*2]->shape[1] ){
+                fprintf( stderr, "WARNING: weight size mismatch between layer %d and %d.", (i-1), i );
+                fprintf( stderr, "* Prev layer output size: %ld\n", weights_and_biases[(i-1)*2]->shape[1] ); 
+                fprintf( stderr, "* This layer  input size: %ld\n", weights->shape[0] ); 
+            }
+        }
+
         memcpy( nn->layer[i].weight, weights->data, weights->shape[0] * weights->shape[1] * sizeof(float));
         memcpy( nn->layer[i].bias, bias->data, bias->shape[0] * sizeof(float));
         /* FIXME in far future: If the matrices are fortran order, reorganize them. Hmmm ... maybe
@@ -220,7 +237,6 @@ void neuralnet_predict( const neuralnet_t *nn, const float *input, float *out )
     /* Stack allocating memory */
     /* FIXME: Do this once and once only! */
     /* Update: Maybe not rewrite this, since it might fuck up threading... I've not tried though */
-
     int n_biases = 0;
     for( int i = 0; i < nn->n_layers; i++)
         n_biases += nn->layer[i].n_output;

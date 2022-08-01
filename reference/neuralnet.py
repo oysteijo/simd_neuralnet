@@ -21,8 +21,8 @@ sigmoid      = lambda x: 1.0 / (np.exp( -x ) + 1.0)
 softmax      = lambda x: np.exp(x-x.max()) / np.exp(x-x.max()).sum()  # Subtracting x.max() for numerical stability.
 relu         = lambda x: np.maximum( x, 0, x)
 linear       = lambda x: x
-tanh         = lambda x: np.tanh
-exponential  = lambda x: np.exp
+tanh         = lambda x: np.tanh(x)
+exponential  = lambda x: np.exp(x)
 softplus     = lambda x: np.log1p( np.exp(x) ) 
 softsign     = lambda x: x / (np.absolute(x) + 1.0 )
 hard_sigmoid = lambda x: np.clip((0.2 * x) + 0.5, 0, 1, out=x) # Check this!
@@ -82,8 +82,9 @@ class NeuralNet(object):
         if isinstance(weights,str):
             arr = np.load(weights)
             weights = tuple((arr[m] for m in arr if arr[m].dtype==np.float32))
+            potential_activations = [arr[m] for m in arr if arr[m].dtype!=np.float32]
             try:
-                activations = [o.decode("ascii") for o in arr['activations']]
+                activations = [o.decode("ascii") for o in potential_activations[-1]]
             except:
                 pass
 

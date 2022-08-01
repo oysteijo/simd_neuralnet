@@ -1,4 +1,4 @@
-import reference as ref
+import neuralnet as nn
 import metrics as refmetrics
 import numpy as np
 
@@ -70,7 +70,7 @@ def generate_activation_test( activation, testvec ):
 
     retstr = test_code.format( activation )
 
-    py_activation = ref.get_activation_func( activation )
+    py_activation = nn.get_activation_func( activation )
     for v in testvec:
         retstr += "    {\n"
         retstr += "        float SIMD_ALIGN(x[{0}]) = {{ {1} }};\n".format(len(v), ", ".join( [str( elem )+"f" for elem in v ] ))
@@ -94,7 +94,7 @@ def generate_loss_test( loss, testvec ):
 
     retstr = test_code.format( loss )
 
-    py_loss = ref.get_loss_func( loss )
+    py_loss = nn.get_loss_func( loss )
     for v in testvec:
         # Absolute percentage error gets problem then the real value is close to 0 as it divides by real. We hence add one.
         if "absolute_percentage" in loss:
