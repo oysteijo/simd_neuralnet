@@ -70,7 +70,7 @@ for arg in "$@"; do
         echo '  --disable-debug:     do not include debug symbols'
         echo '  --enable-profile:    include profile symbols (default off)'
         echo '  --disable-profile:   do not include profile symbols'
-        echo '  --enable-shared:     build dynamic linked library. (default on)'
+        echo '  --enable-shared:     build dynamic linked library. (default off)'
         echo '  --disable-shared:    build static linked library'
         echo 'all invalid options are silently ignored'
         exit 0

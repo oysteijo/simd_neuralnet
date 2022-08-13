@@ -182,7 +182,6 @@ load_error:
         free( activation_funcs[0] );
         free( activation_funcs );
     }
-
     return nn;
 }
 
