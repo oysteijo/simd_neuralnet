@@ -67,10 +67,10 @@ static void tanh_act_derivative    ( const int n, const float *activation, float
 #endif
 
 /* If this feature should be used, you should flip this. */
-#define __USE_DYNAMIC_LOAD__ 0    
+#define __USE_DYNAMIC_LOAD__ 1    
 #if __USE_DYNAMIC_LOAD__ == 1
 #include <dlfcn.h>
-void cleanup_dynamic_symbols();
+static void cleanup_dynamic_symbols();
 
 typedef struct _activation_record_t activation_record_t;
 struct _activation_record_t {
@@ -86,11 +86,12 @@ static activation_record_t *records = NULL;  /* A linked list of open activation
 static activation_func get_activation_func_dynamic( const char *name )
 {
     atexit(cleanup_dynamic_symbols);
+
     /* strdup() is not ansi c .... */
     size_t len = strlen( name ) + 1;
     char *file_and_symbol_name = malloc( len );
     if ( !file_and_symbol_name ){
-        perror("malloc");
+        perror("Cannot allocate memory for function name.\n");
         return NULL;
     }
     memcpy( file_and_symbol_name, name, len);
@@ -106,9 +107,6 @@ static activation_func get_activation_func_dynamic( const char *name )
     *at = '\0';
     char *library_file = at + 1;
     char *symbol = file_and_symbol_name;
-
-    printf("library file: %s\n", library_file);  
-    printf("symbol (function): %s\n", symbol);
 
     void *handle = dlopen( library_file, RTLD_NOW );
     if ( !handle ){
@@ -133,6 +131,8 @@ static activation_func get_activation_func_dynamic( const char *name )
 
     activation_record_t *rec = malloc( sizeof(activation_record_t) );
     if ( !rec ){
+        perror( "Cannot allocate memory for dynamic loaded activation function record.\n" );
+        dlclose( handle );
         return retfunc;
     }
 
@@ -140,7 +140,8 @@ static activation_func get_activation_func_dynamic( const char *name )
     rec->handle = handle;
     rec->activation_name = malloc( len );
     if ( !rec->activation_name ){
-        perror("malloc");
+        perror("Cannot allocate memory for dynamic loaded activation function name.\n" );
+        dlclose( handle );
         return retfunc;
     }
     memcpy( rec->activation_name, name, len);
@@ -150,8 +151,9 @@ static activation_func get_activation_func_dynamic( const char *name )
     if( error_message )
     {
         fprintf( stderr, "dlsym(): %s\n", error_message );
-        fprintf( stderr, "This neural net will not be trainable and expect a segmentation fault if you try.\n");
-        return retfunc;
+        fprintf( stderr, "WARNING: This neural net will not be trainable and expect a segmentation fault if you try.\n");
+        /* DO NOT RETURN - It could be that the user just needs the forward prediction and has omitted
+           the activation derivative intentionally. */
     }
     rec->func_ptr = retfunc;
     rec->next = NULL;
@@ -199,12 +201,9 @@ activation_derivative get_activation_derivative_dynamic( const activation_func p
     return NULL;
 }
 
-void cleanup_dynamic_symbols()
+static void cleanup_dynamic_symbols()
 {
-    /* FIXME: Clean debug output */
-    printf("Cleaning up...");
     if( !records ){
-        printf("No dynamic symbols found. Have a nice day!\n");
         return;
     }
     activation_record_t *iter = records;
@@ -215,7 +214,7 @@ void cleanup_dynamic_symbols()
         iter = iter->next;
         free( to_be_set_free );
     } while ( iter );
-    printf("All clean now!\n");
+    records = NULL;
 }
 #endif /* __USE_DYNAMIC_LOAD__ */
 
