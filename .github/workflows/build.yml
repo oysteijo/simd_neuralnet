@@ -1,0 +1,30 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: Install libzip
+      run:  sudo apt install -y libzip-dev
+    - name: Build and install npy_array
+      run: |
+         cd npy_array
+         ./configure
+         make
+         sudo make install
+    - name: configure and make
+      run: |
+         cd src
+         ./configure
+         make
