@@ -64,5 +64,5 @@ fi
 
 echo 'arch = '$cpuinfo'' >> Makefile
 
-cat Makefile.in >>Makefile
+echo "include Makefile.in"                 >>Makefile
 echo 'configuration complete, type make to build.'

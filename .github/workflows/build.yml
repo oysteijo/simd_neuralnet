@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: Build C with Makefiles
 
 on:
   push:
@@ -61,3 +61,10 @@ jobs:
       run: |
          cd examples
          ./example_03
+    - name: Compile and run tests
+      run: |
+         cd tests
+         ./configure
+         make
+         make run
+
