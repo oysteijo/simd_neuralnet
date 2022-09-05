@@ -338,9 +338,6 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
            when leaving the for-loop */
     }
     /* an array for the activations */
-    // npy_array_t * activation_array = calloc( 1, sizeof( npy_array_t ));
-    // assert( activation_array );
-
     int longest_name = 0;
     for( int i = 0; i < nn->n_layers; i++ ){
         int act_name_len =  strlen(get_activation_name( nn->layer[i].activation_func ));
@@ -348,7 +345,7 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
             longest_name = act_name_len;
     }
 
-    /* Discuss: Allocate on stack? */
+    /* Discuss: Allocate on stack? Yes! */
     char data[longest_name * nn->n_layers];
     memset( data, 0, longest_name * nn->n_layers );
 
