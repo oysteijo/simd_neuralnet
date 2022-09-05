@@ -308,7 +308,6 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
         return;
     }
 
-
     char real_filename[len+1];
     vsprintf( real_filename, filename, ap2 );
     va_end( ap2 );
@@ -319,34 +318,26 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
         /* weight */
         npy_array_t  *w = calloc( 1, sizeof( npy_array_t ));
         assert( w );
-        w->data         = (char*) nn->layer[i].weight;
-        w->shape[0]     = nn->layer[i].n_input;
-        w->shape[1]     = nn->layer[i].n_output;
-        w->ndim         = 2;
-        w->endianness   = '<' ;  /* FIXME */
-        w->typechar     = 'f' ;
-        w->elem_size    = sizeof(float) ;
-        w->fortran_order= false ;
-
+        memcpy( w, NPY_ARRAY_BUILDER(
+                    nn->layer[i].weight,
+                    SHAPE( nn->layer[i].n_input, nn->layer[i].n_output),
+                    NPY_DTYPE_FLOAT32),
+                sizeof(npy_array_t));
         save = npy_array_list_append( save, w, "weight_%d", i );
-
         /* bias */
         npy_array_t *b = calloc( 1, sizeof( npy_array_t ));
         assert( b );
-        b->data         = (char*) nn->layer[i].bias;
-        b->shape[0]     = nn->layer[i].n_output;
-        b->ndim         = 1;
-        b->endianness   = '<' ;  /* FIXME */
-        b->typechar     = 'f' ;
-        b->elem_size    = sizeof(float) ;
-        b->fortran_order= false ;
+        memcpy( b, NPY_ARRAY_BUILDER(
+                nn->layer[i].bias,
+                SHAPE( nn->layer[i].n_output), NPY_DTYPE_FLOAT32),
+                sizeof(npy_array_t));
 
         save = npy_array_list_append( save, b, "bias_%d", i );
+        /* Note: The npy_arrays have to be allocated and copied.
+           They are automatic stack allocated and they go out of scope
+           when leaving the for-loop */
     }
     /* an array for the activations */
-    npy_array_t * activation_array = calloc( 1, sizeof( npy_array_t ));
-    assert( activation_array );
-
     int longest_name = 0;
     for( int i = 0; i < nn->n_layers; i++ ){
         int act_name_len =  strlen(get_activation_name( nn->layer[i].activation_func ));
@@ -354,33 +345,31 @@ void neuralnet_save( const neuralnet_t *nn, const char *filename, ... )
             longest_name = act_name_len;
     }
 
-    /* Discuss: Allocate on stack? */
-    activation_array->data = calloc( longest_name * nn->n_layers, sizeof(char) );
-    assert( activation_array->data );
+    /* Discuss: Allocate on stack? Yes! */
+    char data[longest_name * nn->n_layers];
+    memset( data, 0, longest_name * nn->n_layers );
 
     /* Fill the data. */
-    char *ptr = activation_array->data;
+    char *ptr = data;
     for( int i = 0; i < nn->n_layers; i++, ptr += longest_name ){
         const char * activation_name = get_activation_name( nn->layer[i].activation_func );
         int len = strlen( activation_name );
         memcpy( ptr, activation_name, len );
     }        
 
-    activation_array->shape[0]      = nn->n_layers;
-    activation_array->ndim          = 1;
-    activation_array->endianness    = '|';
-    activation_array->typechar      = 'S';
-    activation_array->elem_size     = (size_t) longest_name;
-    activation_array->fortran_order = false;
-
-    save = npy_array_list_append( save, activation_array, "activations" );
+    npy_array_t *a = malloc( sizeof(npy_array_t));
+    assert( a );
+    memcpy( a, NPY_ARRAY_BUILDER( data, SHAPE( nn->n_layers ), .typechar='S', .elem_size = (size_t) longest_name ), sizeof(npy_array_t));
+    save = npy_array_list_append( save, a, "activations" );
+    /* (The above npy_array doesn't go out of any scope. heap allocating and copying is unnecessary, however ...
+        Then I cannot free this array in the same way as the others. I need to treat it different when freeing!
+        I therefore allocate on heap anyway...)  */
 
     int n_saved = npy_array_list_save( real_filename, save );
     if( n_saved != (nn->n_layers*2 + 1) )
         printf("Warning: Arrays written: %d  !=  2 x n_layers + 1     (n_layers=%d)\n", n_saved, nn->n_layers );
 
     /* Clean up the mess!! */
-    free( activation_array->data );
     /* We cannot call npy_array_list_free() here since it will also free the arr->data pointer
      * for each element. That is data we do not have for weights and biases. */
     while( save ){
