@@ -35,6 +35,7 @@ jobs:
          make
     - name: Run first Mushrom example
       run: |
+         sudo apt install -y python3-numpy
          cd examples
          python3 mushroom_to_numpy.py
          ./example_01
