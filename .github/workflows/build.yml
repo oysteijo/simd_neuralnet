@@ -33,3 +33,8 @@ jobs:
          cd examples
          ./configure
          make
+    - name: Run first Mushrom example
+      run: |
+         cd examples
+         python3 mushroom_to_numpy.py
+         ./example_01
