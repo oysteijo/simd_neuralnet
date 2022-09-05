@@ -33,9 +33,26 @@ jobs:
          cd examples
          ./configure
          make
-    - name: Run first Mushrom example
+    - name: Run first mushroom example
       run: |
          sudo apt install -y python3-numpy
          cd examples
          python3 mushroom_to_numpy.py
          ./example_01
+    - name: Run second mushroom example
+      run: |
+         cd examples
+         ./example_02
+    - name: Run MNIST example.
+      run: |
+         cd examples
+         wget http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
+         wget http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
+         wget http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
+         wget http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+         # unzip the files
+         gunzip train-images-idx3-ubyte.gz
+         gunzip train-labels-idx1-ubyte.gz
+         gunzip t10k-images-idx3-ubyte.gz
+         gunzip t10k-labels-idx3-ubyte.gz
+         ./example_03
