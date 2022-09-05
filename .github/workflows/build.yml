@@ -57,7 +57,7 @@ jobs:
          gunzip train-labels-idx1-ubyte.gz
          gunzip t10k-images-idx3-ubyte.gz
          gunzip t10k-labels-idx1-ubyte.gz         
-    - name: unzip MNIST data.
+    - name: Run MNIST example. (May take some minutes)
       run: |
          cd examples
          ./example_03
