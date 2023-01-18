@@ -1,6 +1,9 @@
 #include "matrix_operations.h"
 #include "simd.h"
 #include <assert.h>
+/* temporary adding */
+#define __AVX__ 1
+#define __AVX512F__ 1
 
 #ifdef __AVX__ 
 #include <immintrin.h>
@@ -34,7 +37,17 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
     for( int i = 0; i < n_rows; i++ ){
         const float *v_ptr = v;
         int j = 0;
-#ifdef __AVX__
+
+#ifdef __AVX512F__
+		__m512 sums = _mm512_setzero_ps ();
+		for (; j <= ((n_cols)-16); j += 16, m_ptr += 16, v_ptr += 16) /* Check if faster: unroll w prefetch */
+   #if defined(__FMA__)
+			sums = _mm512_fmadd_ps( _mm512_load_ps(v_ptr), _mm512_load_ps(m_ptr), sums);
+   #else
+			sums = _mm512_add_ps (sums, _mm512_mul_ps(_mm512_load_ps(v_ptr), _mm512_load_ps(m_ptr)));
+   #endif
+		y[i] = _mm512_reduce_add_ps( sums );
+#elif defined(__AVX__)
 		__m256 sum = _mm256_setzero_ps ();
 		for (; j <= ((n_cols)-8); j += 8, m_ptr += 8, v_ptr += 8) /* Check if faster: unroll w prefetch */
    #if defined(__FMA__)
@@ -63,6 +76,12 @@ void vector_vector_outer( int n_rows, int n_cols, const float *x, const float *y
             int j = 0;
             float *matrix_ptr = matrix + ( i * n_cols );
             const float *y_ptr = y;
+#ifdef __AVX512F__
+            __m512 scales = _mm512_set1_ps( a );
+            for( ; j <= ((n_cols)-16); j += 16, y_ptr += 16, matrix_ptr += 16) {
+                _mm512_storeu_ps( matrix_ptr, _mm512_mul_ps( scales, _mm512_loadu_ps( y_ptr )) );
+            }
+#endif  /* __AVX512F__ */
 #ifdef __AVX__
             __m256 scale = _mm256_set1_ps( a );
             for( ; j <= ((n_cols)-8); j += 8, y_ptr += 8, matrix_ptr += 8) {
@@ -90,6 +109,12 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
     const float *bias_ptr = bias;
 	float *y_ptr = y; 
     int i = 0;
+
+#ifdef __AVX512F__
+	for (; i <= ((m)-16) ; i += 16, bias_ptr +=16, y_ptr +=16 ){
+		_mm512_store_ps( y_ptr, _mm512_load_ps( bias_ptr ));
+    }
+#endif
 #ifdef __AVX__
 	for (; i <= ((m)-8) ; i += 8, bias_ptr +=8, y_ptr +=8 ){
 		_mm256_store_ps( y_ptr, _mm256_load_ps( bias_ptr ));
@@ -106,6 +131,10 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
 			float  *y_ptr = y;  /* same goes for this */
 			if (inp == 1.0f){
                 int j = 0;
+#ifdef __AVX512F__
+				for (; j <= ((m)-16) ; j += 16, y_ptr += 16, weight_ptr += 16) 
+					_mm512_storeu_ps(y_ptr, _mm512_add_ps (_mm512_loadu_ps(y_ptr), _mm512_loadu_ps( weight_ptr )));
+#endif /*  __AVX512F__ */
 #ifdef __AVX__
 				for (; j <= ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8) 
 					_mm256_storeu_ps(y_ptr, _mm256_add_ps (_mm256_loadu_ps(y_ptr), _mm256_loadu_ps( weight_ptr )));
@@ -116,6 +145,15 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
 
 			else {
                 int j = 0;
+#ifdef __AVX512F__
+				for (; j < ((m)-16) ; j += 16, y_ptr += 16, weight_ptr += 16){
+   #if defined(__FMA__)
+					_mm512_storeu_ps(y_ptr, _mm512_fmadd_ps( _mm512_loadu_ps(weight_ptr), _mm512_set1_ps(inp), _mm512_loadu_ps(y_ptr)));
+   #else
+					_mm512_storeu_ps(y_ptr, _mm512_add_ps(_mm512_loadu_ps(y_ptr), _mm512_mul_ps(_mm512_loadu_ps(weight_ptr), _mm512_set1_ps(inp))));
+   #endif  
+                }
+#endif
 #ifdef __AVX__
 				__m256 scalevec = _mm256_set1_ps(inp);
 				for (; j < ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8){
@@ -146,6 +184,10 @@ void vector_accumulate( const int n, float *a, const float *b )
     int i = 0;
     float *a_ptr = a;
     const float *b_ptr = b;
+#ifdef __AVX512F__
+    for ( ; i <= ((n)-16); i += 16, a_ptr += 16, b_ptr += 16 )
+        _mm512_store_ps(a_ptr, _mm512_add_ps(_mm512_load_ps(a_ptr), _mm512_load_ps(b_ptr)));
+#endif
 #ifdef __AVX__
     for ( ; i <= ((n)-8); i += 8, a_ptr += 8, b_ptr += 8 )
         _mm256_store_ps(a_ptr, _mm256_add_ps(_mm256_load_ps(a_ptr), _mm256_load_ps(b_ptr)));
@@ -171,6 +213,10 @@ void vector_accumulate_unaligned( const int n, float *y, const float *b )
     const float *b_ptr = b;
 
     int i = 0;
+#ifdef __AVX512F__
+    for(; i <= ((n)-16); i += 16, y_ptr += 16, b_ptr += 16 )
+        _mm512_storeu_ps(y_ptr, _mm512_add_ps(_mm512_loadu_ps(y_ptr), _mm512_loadu_ps(b_ptr) ));
+#endif
 #ifdef __AVX__
     for(; i <= ((n)-8); i += 8, y_ptr += 8, b_ptr += 8 )
         _mm256_storeu_ps(y_ptr, _mm256_add_ps(_mm256_loadu_ps(y_ptr), _mm256_loadu_ps(b_ptr) ));
@@ -191,10 +237,13 @@ void vector_scale( const int n, float *v, const float scalar )
 {
     int i = 0;
     float *v_ptr = v;
-#ifdef __AVX__
-    __m256 v_scale = _mm256_set1_ps(scalar);
+#ifdef __AVX512F__
+    for ( ; i <= ((n)-16); i += 16, v_ptr += 16)
+        _mm512_store_ps(v_ptr, _mm512_mul_ps(_mm512_load_ps(v_ptr), _mm512_set1_ps(scalar)));
+#endif
+#ifdef __AVX__    
     for ( ; i <= ((n)-8); i += 8, v_ptr += 8)
-        _mm256_store_ps(v_ptr, _mm256_mul_ps(_mm256_load_ps(v_ptr), v_scale));
+        _mm256_store_ps(v_ptr, _mm256_mul_ps(_mm256_load_ps(v_ptr), _mm256_set1_ps(scalar)));
 #endif
     for( ; i < n; i++ )
         *v_ptr++ *= scalar;
@@ -211,10 +260,13 @@ void vector_divide_by_scalar( const int n, float *v, const float scalar )
 {
     int i = 0;
     float *v_ptr = v;
+#ifdef __AVX512F__
+    for ( ; i <= ((n)-16); i += 16, v_ptr += 16)
+        _mm512_store_ps(v_ptr, _mm512_div_ps(_mm512_load_ps(v_ptr), _mm512_set1_ps(scalar)));
+#endif
 #ifdef __AVX__
-    __m256 v_scale = _mm256_set1_ps(scalar);
     for ( ; i <= ((n)-8); i += 8, v_ptr += 8)
-        _mm256_store_ps(v_ptr, _mm256_div_ps(_mm256_load_ps(v_ptr), v_scale));
+        _mm256_store_ps(v_ptr, _mm256_div_ps(_mm256_load_ps(v_ptr), _mm256_set1_ps(scalar)));
 #endif
     for( ; i < n; i++ )
         *v_ptr++ /= scalar;
@@ -239,10 +291,13 @@ void vector_saxpy( const int n, float *a, const float alpha, const float *b )
     int i = 0;
     float *a_ptr = a;
     const float *b_ptr = b;
+#ifdef __AVX512F__    
+    for ( ; i <= ((n)-16); i += 16, a_ptr += 16, b_ptr += 16 )
+        _mm512_store_ps(a_ptr, _mm512_add_ps(_mm512_load_ps(a_ptr), _mm512_mul_ps( _mm512_set1_ps(alpha),  _mm512_load_ps(b_ptr))));
+#endif
 #ifdef __AVX__
-    __m256 v_scale = _mm256_set1_ps(alpha);
     for ( ; i <= ((n)-8); i += 8, a_ptr += 8, b_ptr += 8 )
-        _mm256_store_ps(a_ptr, _mm256_add_ps(_mm256_load_ps(a_ptr), _mm256_mul_ps( v_scale,  _mm256_load_ps(b_ptr))));
+        _mm256_store_ps(a_ptr, _mm256_add_ps(_mm256_load_ps(a_ptr), _mm256_mul_ps( _mm256_set1_ps(alpha),  _mm256_load_ps(b_ptr))));
 #endif
     for (; i < n; i++ )
         *a_ptr++ += alpha * *b_ptr++; 
@@ -271,6 +326,18 @@ void vector_saxpby( const int n, float *a, const float alpha, const float *b, co
     int i = 0;
     float *a_ptr = a;
     const float *b_ptr = b;
+#ifdef __AVX512F__
+    __m512 v_scale_s = _mm512_set1_ps(alpha);
+    __m512 b_scale_s = _mm512_set1_ps(beta);
+    for ( ; i <= ((n)-16); i += 16, a_ptr += 16, b_ptr += 16 )
+        _mm512_store_ps(a_ptr,
+                _mm512_add_ps( 
+                    _mm512_mul_ps(_mm512_load_ps(a_ptr), b_scale_s),
+                    _mm512_mul_ps( v_scale_s,  _mm512_load_ps(b_ptr))
+                )
+            );
+#endif
+
 #ifdef __AVX__
     __m256 v_scale = _mm256_set1_ps(alpha);
     __m256 b_scale = _mm256_set1_ps(beta);
@@ -290,15 +357,25 @@ void vector_saxpby( const int n, float *a, const float alpha, const float *b, co
  * @brief squares each element in a vector: y = x*x (elementwise)
  *
  * @param n Length of the vector
- * @param y The vector containing the qsuared values.
+ * @param y The vector containing the (output) squared values.
  * @param x The input vector.
  */
 void vector_square_elements ( const int n, float *y, const float *x )
 {
     int i = 0;
     float *y_ptr = y;
+
 #ifdef __AVX__
     const float *x_ptr = x;
+#endif
+
+#ifdef __AVX512F__    
+    for ( ; i <= ((n)-16); i += 16, y_ptr += 16, x_ptr += 16 ){
+        __m512 xvec = _mm512_load_ps( x_ptr );
+        _mm512_store_ps(y_ptr, _mm512_mul_ps( xvec, xvec ));
+    }
+#endif
+#ifdef __AVX__
     for ( ; i <= ((n)-8); i += 8, y_ptr += 8, x_ptr += 8 ){
         __m256 xvec = _mm256_load_ps( x_ptr );
         _mm256_store_ps(y_ptr, _mm256_mul_ps( xvec, xvec ));
