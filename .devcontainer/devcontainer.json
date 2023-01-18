@@ -2,8 +2,5 @@
   "image": "mcr.microsoft.com/devcontainers/universal:2",
   "features": {   
   },
-  "postCreateCommand": [
-    "git submodule update --init --recursive",
-    "sudo apt install libzip-dev"
-    ]
+  "postCreateCommand": "sudo apt install libzip-dev && git submodule update --init --recursive" 
 }
