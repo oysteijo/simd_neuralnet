@@ -1,9 +1,6 @@
 #include "matrix_operations.h"
 #include "simd.h"
 #include <assert.h>
-/* temporary adding */
-#define __AVX__ 1
-#define __AVX512F__ 1
 
 #ifdef __AVX__ 
 #include <immintrin.h>
