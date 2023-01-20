@@ -44,7 +44,8 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
 			sums = _mm512_add_ps (sums, _mm512_mul_ps(_mm512_load_ps(v_ptr), _mm512_load_ps(m_ptr)));
    #endif
 		y[i] = _mm512_reduce_add_ps( sums );
-#elif defined(__AVX__)
+#endif
+#ifdef __AVX__
 		__m256 sum = _mm256_setzero_ps ();
 		for (; j <= ((n_cols)-8); j += 8, m_ptr += 8, v_ptr += 8) /* Check if faster: unroll w prefetch */
    #if defined(__FMA__)
@@ -52,7 +53,7 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
    #else
 			sum = _mm256_add_ps (sum, _mm256_mul_ps(_mm256_load_ps(v_ptr), _mm256_load_ps(m_ptr)));
    #endif
-		y[i] = horizontalsum_avx( sum );
+		y[i] += horizontalsum_avx( sum );
 #endif
         for(; j < n_cols; j++ )
             y[i] += *v_ptr++ * *m_ptr++;
