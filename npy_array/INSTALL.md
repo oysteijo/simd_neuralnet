@@ -1,29 +1,39 @@
-## Simple install instruction
+# Install instructions for *npy_array* library
 
-To build the library itself, follow these instructions.
-These configure/make steps whill build the library. 
+The install process consists of the classic step:
 
-First build the npy_array library if you haven't done so earlier. `npy_array` is a separate project, but you will get
-it in a separate folder if you did clone with the `--recursive` option. 
-
-    $ cd npy_array
     $ ./configure
     $ make
+    $ sudo make install
 
-If you do not have libzip installed on your system, it is recommended that you do. Your system probably has a package
-manager that can install the package. On Ubuntu systems it is `sudo apt install libzip-dev`.
+The configure system is a plain script written in _bash_. It is **not** based on _autoconf_ and _automake_.
+There are some configuration options that can be configured when starting the script. Here is a summary:
+ 
+    usage: ./configure [options]
+    options:
+      --prefix=<path>:     installation prefix (default /usr/local)
+      --enable-debug:      include debug symbols (default on)
+      --disable-debug:     do not include debug symbols
+      --enable-profile:    include profile symbols (default off)
+      --disable-profile:   do not include profile symbols
+      --enable-shared:     build dynamic linked library. (default on)
+      --disable-shared:    build static linked library
+      --enable-npz:        build system with .npz features. (default on)
+      --disable-npz:       build system without .npz features.
+    all invalid options are silently ignored
 
-    $ cd src
-    $ ./configure
-    $ make
+The `.npz` file support depend on _libzip_ library, and the configure script will check if _libzip_ can
+be found on the system before enabling the feature. A _pkg-config_ `.pc` file will also be generated
+and installed if an installation of _pkg-config_ is found on the system.
 
-Note that the configure and makefile system is written from skratch and is not based on CMake, or GNU autoconf/automake.
+There is also a 'uninstall' target in the Makefile.
 
-You can now run through the examples in the `examples` directory.
+If you are working on an embedded system, there might not be all tools available for running the
+configure script. It should then be pretty simple to just run a compiler that parses ANSI C99.
+For example:
 
-    $ cd examples
-    $ ./configure
-    $ make
+    gcc -std=c99 -c -I. -Wall -Wextra -O3 npy_array.c
 
-This will give you 3 example executable files that you can study further. Good luck.
+will probably compile an object file that can be linked into your project.
 
+Good luck! 

@@ -1,0 +1,41 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: install libzip
+      run:  sudo apt install -y libzip-dev
+    - uses: actions/checkout@v3
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make
+    - name: make examples
+      run: |
+         cd example
+         make
+    - name: Run examples
+      run: |
+         cd example
+         # Since the library is not installed (maybe test that as well?) We must set LD_LIBRARY_PATH
+         export LD_LIBRARY_PATH=./..
+         ./how_to_save
+         diff my_4_by_3_array_shortcut.npy my_4_by_3_array.npy
+         ./how_to_save_npz
+         ./how_to_load my_4_by_3_array_shortcut.npy
+         ./how_to_load_npz iarray_and_darray.npz
+    - name: Test install 
+      run: |
+         sudo make install
+         unset LD_LIBRARY_PATH
+         cd example
+         ./how_to_save
