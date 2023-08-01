@@ -1,3 +1,0 @@
-[submodule "npy_array"]
-	path = npy_array
-	url = git@github.com:oysteijo/npy_array.git
