@@ -1,0 +1,80 @@
+#!/bin/bash
+# vim: filetype=sh
+
+prefix=/usr/local
+debugsym=true
+profilesym=false
+
+cpuflags=""
+
+for arg in "$@"; do
+    case "$arg" in
+    --prefix=*)
+        prefix=`echo $arg | sed 's/--prefix=//'`
+        ;;
+
+    --enable-debug)
+        debugsym=true;;
+    --disable-debug)
+        debugsym=false;;
+
+    --enable-profile)
+        profilesym=true;;
+    --disable-profile)
+        profilesym=false;;
+
+    --help)
+        echo 'usage: ./configure [options]'
+        echo 'options:'
+        echo '  --prefix=<path>: installation prefix'
+        echo '  --enable-debug: include debug symbols'
+        echo '  --disable-debug: do not include debug symbols'
+        echo '  --enable-profile: include profile symbols'
+        echo '  --disable-profile: do not include profile symbols'
+        echo 'all invalid options are silently ignored'
+        exit 0
+        ;;
+    esac
+done
+
+echo 'generating makefile ...'
+
+# Check the C compiler from environment. Note that some compiles may have special
+# optins that needs to be taken care of in Makefile.in
+if [[ ! -v CC ]] ; then
+    c_compiler=gcc
+else
+    c_compiler="${CC}"
+fi
+echo "Using C compiler '${CC}' ..."
+echo 'CC = '$c_compiler'' > Makefile
+
+# PREFIX for installation. 
+echo "Using prefix '$prefix' for installation ..."
+echo "PREFIX = $prefix" >>Makefile
+
+if $debugsym; then
+    echo 'dbg = -g' >>Makefile
+    echo 'Debug flag on ...'
+fi
+
+if $profilesym; then
+    echo 'profile = -pg' >>Makefile
+    echo 'Profiling on ...'
+fi
+
+
+if   grep -q avx2 "/proc/cpuinfo"; then
+  arch_opt+="-mavx2 "
+elif grep -q avx "/proc/cpuinfo"; then
+  arch_opt+="-mavx "
+fi
+
+if grep -q fma "/proc/cpuinfo"; then
+  arch_opt+="-mfma "
+fi
+echo "Architecture options: $arch_opt ..."
+echo 'arch = '$arch_opt'' >> Makefile
+
+echo 'include Makefile.in' >>Makefile
+echo 'Configuration complete, type make to build.'
