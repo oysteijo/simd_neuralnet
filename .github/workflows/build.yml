@@ -18,6 +18,7 @@ jobs:
     - name: Build and install npy_array
       run: |
          cd npy_array
+         ls -l
          ./configure
          make
          sudo make install
