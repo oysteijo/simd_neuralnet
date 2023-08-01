@@ -19,6 +19,17 @@ int main( int argc, char *argv[])
      * BTW: all testfiles should actually take an option to redirect output.
      */
 
+    int n_input = 214;
+    int n_output = 5;
+
+    neuralnet_t *nn = neuralnet_create( 2,
+            INT_ARRAY( n_input, 128, n_output ),
+            STR_ARRAY( "tanh", "sigmoid" ) );
+    assert( nn );
+
+    neuralnet_initialize( nn, NULL);
+    neuralnet_set_loss( nn, "mean_squared_error" );
+/*
     neuralnet_t *nn = neuralnet_create( 4,
             INT_ARRAY( 64, 32, 16, 8, 4 ),
             STR_ARRAY( "relu", "relu", "relu", "sigmoid" )
@@ -27,7 +38,7 @@ int main( int argc, char *argv[])
     assert( nn );
 
     neuralnet_initialize( nn, NULL );
-    neuralnet_set_loss( nn, "binary_crossentropy" );
+    neuralnet_set_loss( nn, "binary_crossentropy" ); */
     metric_func loss = get_metric_func( get_loss_name( nn->loss ) );  /* neuralnet_get_loss() ? */ 
 
     unsigned int n_params = neuralnet_total_n_parameters( nn );
@@ -36,18 +47,18 @@ int main( int argc, char *argv[])
     float SIMD_ALIGN(delta_param[n_params]);
     memset( delta_param, 0, n_params * sizeof(float ));
 
-    float SIMD_ALIGN(input[64]);
-    float SIMD_ALIGN(target[4]);
-    float SIMD_ALIGN(output[4]);
+    float SIMD_ALIGN(input[n_input]);
+    float SIMD_ALIGN(target[n_output]);
+    float SIMD_ALIGN(output[n_output]);
 
-    for( int i = 0; i < 64; i++)
+    for( int i = 0; i < n_input; i++)
         input[i] = 1.0f;
 
-    for( int i = 0; i < 4; i++)
+    for( int i = 0; i < n_output; i++)
         target[i] = 1.0f;
 
     neuralnet_predict( nn, input, output );
-    float J0 = loss(4, output, target );
+    float J0 = loss(n_output, output, target );
     neuralnet_backpropagation( nn, input, target, grad0 );
 
     int n_fail = 0;
@@ -68,7 +79,7 @@ int main( int argc, char *argv[])
 
         float grad = 0.5f * (grad0[i] + grad1[i]);
 
-        float J1 = loss(4, output, target );
+        float J1 = loss(n_output, output, target );
         float grad_by_numeric = (J1 - J0) / delta;
         if( fabsf( grad - grad_by_numeric ) > epsilon ){
             fprintf( stderr, KRED "\ngrad0 != numeric value   (%5.5f != %5.5f)\n" KNRM, grad, grad_by_numeric );

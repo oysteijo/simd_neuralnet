@@ -81,6 +81,31 @@ static void categorical_crossentropy( unsigned int n, const float *y_pred, const
         loss[i] = (y_pred[i] - y_real[i]);
 }
 
+#if 0
+/* I'm not really satisfied with this code. I'm leaving this dead for now. Here are some issues:
+
+   * if the target class is given as integers, it breaks the "interface" declaration. Of course the
+     loss function declaration can have a void pointer as the target, but then I have to cast inside
+     each and every function. Well...
+   * I need changes in all the optimizers, I need to change the neuralnet code. I need change sevaral places.
+   * I will need special handling every time this is used */
+*/
+static void sparse_categorical_crossentropy_int( unsigned int n, const float *y_pred, const int target_class, float *loss )
+{
+    assert( target_class < n );
+    float arr[n];
+    memset( arr, 0, n * sizeof(float));
+    arr[target_class] = 1.0f;
+    categorical_crossentropy( n, y_pred, arr, loss );
+}
+
+static void sparse_categorical_crossentropy( unsigned int n, const float *y_pred, const float *y_real, float *loss )
+{
+    int target_class = (int) round(*y_real);
+    sparse_categorical_crossentropy_int( n, y_pred, target_class, loss );
+}
+#endif
+
 static void binary_crossentropy( unsigned int n, const float *y_pred, const float *y_real, float *loss )
 {
     for( unsigned int i = 0; i < n; i++ )
