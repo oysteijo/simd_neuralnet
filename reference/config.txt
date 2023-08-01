@@ -1,0 +1,5 @@
+weights = initial_weights.npz
+activations = sigmoid, sigmoid, sigmoid
+loss = mean_squared_error
+test_sample = test_sample.npy
+test_target = test_target.npy

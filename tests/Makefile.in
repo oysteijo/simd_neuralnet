@@ -1,0 +1,66 @@
+## ------------------------------------------------------------- ##
+##         The rest of this file comes from Makefile.in          ##
+##     If you need changes below this line, edit Makefile.in     ##
+## ------------------------------------------------------------- ##
+CFLAGS = -std=c99 -Wall -Wextra -O3 $(arch) $(dbg) $(profile)
+LDLIBS = $(profile) 
+
+src = $(wildcard *.c)
+obj = $(src:.c=.o)
+
+# dependency library
+NPY_ARRAY_LIBPATH = ../npy_array
+NEURALNET_LIBPATH = ../src
+CFLAGS += -I$(NPY_ARRAY_LIBPATH) -I$(NEURALNET_LIBPATH)
+LDLIBS += -L$(NEURALNET_LIBPATH) -lsimd_neuralnet
+LDLIBS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
+LDLIBS += -ldl
+LDLIBS += -lm
+
+#DEFINES = -DUSE_CBLAS
+DEFINES = 
+
+ifeq ($(CC),gcc)
+	DEFINES += -Wno-override-init
+	LDLIBS += -lgomp
+endif
+
+ifeq ($(CC),clang)
+	DEFINES += -Wno-initializer-overrides
+	LDLIBS += -lomp
+endif
+
+
+
+CFLAGS += $(DEFINES)
+
+testprogs = test_neuralnet test_sgd test_backpropagation test_activation test_loss test_metrics
+
+all: $(testprogs) 
+
+test_activation.c: generate_tests.py neuralnet.py metrics.py
+	python3 generate_tests.py
+test_loss.c: generate_tests.py neuralnet.py metrics.py
+	python3 generate_tests.py
+test_metrics.c: generate_tests.py neuralnet.py metrics.py
+	python3 generate_tests.py
+
+neuralnet.py:
+	ln -sf ../reference/neuralnet.py
+metrics.py:
+	ln -sf ../reference/metrics.py
+
+.PHONY: run
+run: $(testprogs)
+	$(foreach test,$(testprogs), $(shell ./$(test) ))
+	# End of tests 
+
+.PHONY: clean
+clean:
+	$(RM) $(obj) $(testprogs)
+
+.PHONY: distclean
+distclean:
+	$(RM) $(obj) $(testprogs) neuralnet.py metrics.py  neuralnet.pyc metrics.pyc  test_activation.c test_loss.c test_metrics.c Makefile tmp_*.npz *~
+	$(RM) -r __pycache__
+

@@ -1,0 +1,70 @@
+name: Build C with Makefiles
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: Install libzip
+      run:  sudo apt install -y libzip-dev
+    - name: Build and install npy_array
+      run: |
+         cd npy_array
+         ./configure
+         make
+         sudo make install
+    - name: configure and make
+      run: |
+         cd src
+         ./configure
+         make
+    - name: Build examples (Mushrooms and MNIST)
+      run: |
+         cd examples
+         ./configure
+         make
+    - name: Run first mushroom example
+      run: |
+         sudo apt install -y python3-numpy
+         cd examples
+         python3 mushroom_to_numpy.py
+         ./example_01
+    - name: Run second mushroom example
+      run: |
+         cd examples
+         ./example_02
+    - name: Download MNIST data.
+      run: |
+         cd examples
+         wget http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
+         wget http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
+         wget http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
+         wget http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz         
+    - name: unzip MNIST data.
+      run: |
+         cd examples
+         gunzip train-images-idx3-ubyte.gz
+         gunzip train-labels-idx1-ubyte.gz
+         gunzip t10k-images-idx3-ubyte.gz
+         gunzip t10k-labels-idx1-ubyte.gz         
+    - name: Run MNIST example. (May take some minutes)
+      run: |
+         cd examples
+         ./example_03
+    - name: Compile and run tests
+      run: |
+         cd tests
+         ./configure
+         make
+         make run
+
