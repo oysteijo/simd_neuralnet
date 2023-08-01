@@ -2,7 +2,7 @@
 #
 # vim: ts=4:ft=sh
 # 
-# Copyright (C) 2020-2021
+# Copyright (C) 2020-2022
 #  
 #    Øystein Schønning-Johansen <oysteijo@gmail.com>
 # 
@@ -34,15 +34,15 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-projectname=simd_neuralnet
+projectname=npy_array
 library=true
 
 # Default values
 prefix=/usr/local
 debugsym=true
 profilesym=false
-shared=false
-cpuflags=""
+shared=true
+use_npz=true
 
 for arg in "$@"; do
     case "$arg" in
@@ -61,6 +61,10 @@ for arg in "$@"; do
         shared=true;;
     --disable-shared)
         shared=false;;
+    --enable-npz)
+        use_npz=true;;
+    --disable-npz)
+        use_npz=false;;
 
     --help)
         echo 'usage: ./configure [options]'
@@ -70,8 +74,10 @@ for arg in "$@"; do
         echo '  --disable-debug:     do not include debug symbols'
         echo '  --enable-profile:    include profile symbols (default off)'
         echo '  --disable-profile:   do not include profile symbols'
-        echo '  --enable-shared:     build dynamic linked library. (default off)'
+        echo '  --enable-shared:     build dynamic linked library. (default on)'
         echo '  --disable-shared:    build static linked library'
+        echo '  --enable-npz:        build system with .npz features. (default on)'
+        echo '  --disable-npz:       build system without .npz features.'
         echo 'all invalid options are silently ignored'
         exit 0
         ;;
@@ -84,9 +90,28 @@ printf "Looking for pkg-config... "
 if command -v pkg-config &> /dev/null
 then
     printf "Yes, we have pkg-config!\n"
+    have_libzip=`pkg-config --exists libzip && echo "true" || echo "false"`
     have_pkg_config=true
+    libzip_libs=`pkg-config --libs libzip`
 else
     printf "No, we do not have pkg-config!\n"
+    # FIXME: There are some issues here: this requires gcc and an unix-like environment. What about icc, clang etc.? :-(
+    have_libzip=`echo "#include <zip.h>" | gcc -c -o /dev/null -Werror -xc - > /dev/null 2>/dev/null && echo "true" || echo "false"`
+    libzip_libs='-lzip'
+fi
+
+printf "Looking for libzip....... "
+if ! $have_libzip; then
+    printf "No\n"
+    echo "WARNING: libzip library not found!"
+    echo "libzip is highly recommended and was not found on this system. Please install the libzip packet(s) for your system." 
+    use_npz=false
+else
+    printf "Yes, found libzip. "
+    if ! $use_npz; then
+        printf "But it will not be used!"
+    fi
+    printf "\n"
 fi
 
 #### Logic for finding pkg-config directory ####
@@ -111,14 +136,7 @@ fi
 #### Create the makefile ####
 echo 'generating Makefile ...'
 echo "target_lib   = lib${projectname}"     >Makefile
-if [[ ! -v CC ]] ; then
-    echo 'CC = gcc'                        >>Makefile
-else
-    echo "CC = ${CC}"                      >>Makefile
-fi
-
 echo "PREFIX       = $prefix"              >>Makefile
-echo "INCLUDE      = -I../npy_array"       >>Makefile
 if $debugsym; then
     echo 'dbg          = -g'               >>Makefile
 fi
@@ -126,33 +144,19 @@ if $profilesym; then
     echo 'profile      = -pg'              >>Makefile
 fi
 echo "shared       = $shared"              >>Makefile 
-echo 'src          = $(wildcard *.c)'      >>Makefile
+
+echo "use_npz      = $use_npz"             >>Makefile
+if $use_npz; then    
+	echo 'src          = $(wildcard *.c)'  >>Makefile
+    echo "LIBS         = $libzip_libs"     >>Makefile
+else
+	echo 'src          = npy_array.c'      >>Makefile
+fi
+
 echo 'header_files = $(wildcard *.h)'      >>Makefile
 
-if grep -q avx "/proc/cpuinfo"; then
-  cpuinfo="-mavx "
-fi
-
-if grep -q avx2 "/proc/cpuinfo"; then
-  cpuinfo="-mavx2 "
-fi
-
-if grep -q avx512f "/proc/cpuinfo"; then
-  cpuinfo="-mavx512f "
-fi
-
-if grep -q fma "/proc/cpuinfo"; then
-  cpuinfo+="-mfma "
-fi
-
-if grep -q neon "/proc/cpuinfo"; then
-  cpuinfo+="-mfpu=neon "
-fi
-
-echo 'arch = '$cpuinfo''                   >>Makefile
-
 if $have_pkg_config; then
-    echo 'pkg_conf_pc   = simd_neuralnet.pc'    >>Makefile 
+    echo 'pkg_conf_pc   = npy_array.pc'    >>Makefile 
     echo "pkg_config_path = ${pc_path}"    >>Makefile
 fi
     

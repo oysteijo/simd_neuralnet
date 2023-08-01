@@ -16,7 +16,9 @@
 #include <mm_malloc.h>
 #endif
 
-#if defined(__AVX__)
+#if defined(__AVX512F__)
+#define ALIGN_SIZE 64
+#elif defined(__AVX__)
 #define ALIGN_SIZE 32
 #else
 #define ALIGN_SIZE 16

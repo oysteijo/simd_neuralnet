@@ -13,13 +13,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-      with:
-        submodules: recursive
     - name: Install libzip
       run:  sudo apt install -y libzip-dev
     - name: Build and install npy_array
       run: |
          cd npy_array
+         ls -l
          ./configure
          make
          sudo make install

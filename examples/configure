@@ -64,10 +64,14 @@ if $profilesym; then
 fi
 
 
-if   grep -q avx2 "/proc/cpuinfo"; then
-  arch_opt+="-mavx2 "
-elif grep -q avx "/proc/cpuinfo"; then
-  arch_opt+="-mavx "
+if grep -q avx "/proc/cpuinfo"; then
+  cpuinfo="-mavx "
+fi
+if grep -q avx2 "/proc/cpuinfo"; then
+  cpuinfo="-mavx2 "
+fi
+if grep -q avx512f "/proc/cpuinfo"; then
+  cpuinfo="-mavx512f "
 fi
 
 if grep -q fma "/proc/cpuinfo"; then
