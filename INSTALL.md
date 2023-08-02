@@ -3,19 +3,26 @@
 To build the library itself, follow these instructions.
 These configure/make steps whill build the library. 
 
-First build the npy_array library if you haven't done so earlier. `npy_array` is a separate project, but you will get
-it in a separate folder if you did clone with the `--recursive` option. 
+**Compiling npy_array**
+First build the `npy_array library if you haven't done so earlier. `npy_array` is a separate project, but added as a
+subtree (not as a submodule). It in a separate folder. 
 
     $ cd npy_array
     $ ./configure
     $ make
+    $ sudo make install
 
 If you do not have libzip installed on your system, it is recommended that you do. Your system probably has a package
-manager that can install the package. On Ubuntu systems it is `sudo apt install libzip-dev`.
+manager that can install the package. On Ubuntu systems it is `sudo apt install libzip-dev`, you may have to
+do a `sudo apt update` + `sudo apt upgreade` first.
+
+**Compiling SIMD NeuralNet**
+
 
     $ cd src
     $ ./configure
     $ make
+    $ sudo make install
 
 Note that the configure and makefile system is written from skratch and is not based on CMake, or GNU autoconf/automake.
 
