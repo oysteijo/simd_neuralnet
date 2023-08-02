@@ -26,6 +26,11 @@ static inline float horizontalsum_avx( __m256 x )
    as I think that might be the best option for this function. */
 void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const float *v, float *y )
 {
+    /*
+    assert( is_aligned( matrix ));  // Seems to be aligned
+    assert( is_aligned( v ));       // Not aligned correctly (add padding to the gradient?)
+    assert( is_aligned( y ));       // Nope! Not properly aligned either - which is not so strange actually. But does it matter for y? 
+    */
 #ifdef USE_CBLAS
     cblas_sgemv( CblasRowMajor, CblasNoTrans,
             n_rows, n_cols, 1.0f, matrix, n_cols, v, 1, 0.0f, y, 1 );
@@ -39,9 +44,9 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
 		__m512 sums = _mm512_setzero_ps ();
 		for (; j <= ((n_cols)-16); j += 16, m_ptr += 16, v_ptr += 16) /* Check if faster: unroll w prefetch */
    #if defined(__FMA__)
-			sums = _mm512_fmadd_ps( _mm512_load_ps(v_ptr), _mm512_load_ps(m_ptr), sums);
+			sums = _mm512_fmadd_ps( _mm512_loadu_ps(v_ptr), _mm512_load_ps(m_ptr), sums);
    #else
-			sums = _mm512_add_ps (sums, _mm512_mul_ps(_mm512_load_ps(v_ptr), _mm512_load_ps(m_ptr)));
+			sums = _mm512_add_ps (sums, _mm512_mul_ps(_mm512_loadu_ps(v_ptr), _mm512_load_ps(m_ptr)));
    #endif
 		y[i] = _mm512_reduce_add_ps( sums );
 #endif
