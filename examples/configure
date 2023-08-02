@@ -75,10 +75,10 @@ if grep -q avx512f "/proc/cpuinfo"; then
 fi
 
 if grep -q fma "/proc/cpuinfo"; then
-  arch_opt+="-mfma "
+  cpuinfo+="-mfma "
 fi
-echo "Architecture options: $arch_opt ..."
-echo 'arch = '$arch_opt'' >> Makefile
+echo "Architecture options: $cpuinfo ..."
+echo 'arch = '$cpuinfo'' >> Makefile
 
 echo 'include Makefile.in' >>Makefile
 echo 'Configuration complete, type make to build.'
