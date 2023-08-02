@@ -4,7 +4,8 @@ To build the library itself, follow these instructions.
 These configure/make steps whill build the library. 
 
 **Compiling npy_array**
-First build the `npy_array library if you haven't done so earlier. `npy_array` is a separate project, but added as a
+
+First build the `npy_array` library if you haven't done so earlier. `npy_array` is a separate project, but added as a
 subtree (not as a submodule). It in a separate folder. 
 
     $ cd npy_array
