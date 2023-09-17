@@ -60,10 +60,10 @@ jobs:
       run: |
          cd examples
          ./example_03 
-      name: Run test_sgd example with odd sizes
-         run: |
-            cd examples
-            ./test_sgd
+    - name: Run test_sgd example with odd sizes
+      run: |
+         cd examples
+         ./test_sgd
     - name: Compile and run tests
       run: |
          cd tests
