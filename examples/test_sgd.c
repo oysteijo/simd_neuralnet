@@ -1,5 +1,6 @@
 #include "optimizer_implementations.h"
 #include "npy_array.h"
+#include "npy_array_list.h"
 #include "neuralnet.h"
 #include "activation.h"
 #include "loss.h"
@@ -121,11 +122,11 @@ int main( int argc, char *argv[] )
     printf( "test_Y shape: (%zu, %zu)\n", test_Y->shape[0], test_Y->shape[1] );
 #endif
     neuralnet_t *nn = neuralnet_create( 3,
-            INT_ARRAY( train_X->shape[1], 64, 32, 1 ),
+            INT_ARRAY( train_X->shape[1], 61, 28, 1 ), /* This will fail */
             STR_ARRAY( "relu", "relu", "sigmoid" ) );
 
     assert( nn );
-    neuralnet_initialize( nn, "kaiming", "kaiming", "kaiming" );
+    neuralnet_initialize( nn, STR_ARRAY("kaiming", "kaiming", "kaiming") );
     neuralnet_set_loss( nn, "binary_crossentropy" );
 
     optimizer_t *sgd = optimizer_new( nn, 
