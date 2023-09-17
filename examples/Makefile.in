@@ -33,7 +33,7 @@ DEFINES += -Wno-unused-parameter
 
 CFLAGS += $(DEFINES)
 
-examples = example_01 example_02 example_03
+examples = example_01 example_02 example_03 test_sgd
 
 all: $(examples) 
 
