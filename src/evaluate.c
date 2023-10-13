@@ -1,4 +1,5 @@
 #include "evaluate.h"
+#include "simd.h"
 #include <string.h>
 
 #include <omp.h>
@@ -19,7 +20,7 @@ void evaluate( neuralnet_t *nn, const int n_valid_samples, const float *valid_X,
     memset( local_results, 0, n_metrics * sizeof(float));
     #pragma omp parallel for reduction(+:local_results[:])
     for ( int i = 0; i < n_valid_samples; i++ ){
-        float y_pred[n_output];
+        SIMD_ALIGN(float y_pred[n_output]);
         neuralnet_predict( nn, valid_X + (i*n_input), y_pred );
 
         float *res = local_results;
