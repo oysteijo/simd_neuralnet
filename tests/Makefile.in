@@ -52,8 +52,7 @@ metrics.py:
 
 .PHONY: run
 run: $(testprogs)
-	$(foreach test,$(testprogs), $(shell ./$(test) ))
-	# End of tests 
+	for t in $(testprogs); do ./$$t; done
 
 .PHONY: clean
 clean:
