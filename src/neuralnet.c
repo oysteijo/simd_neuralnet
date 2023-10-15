@@ -32,6 +32,28 @@ static void neuralnet_dump( const neuralnet_t *nn )
 }
 #endif
 
+#if defined(VERBOSE) 
+/* This is used for debug */
+static void print_vector( int n, const float *v )
+{
+    printf("[ ");
+    for (int i = 0; i < n; i++ )
+        printf("% .7f ", v[i] );
+    printf("]\n");
+}
+static void print_matrix( int m, int n, const float *v )
+{
+    const float *ptr = v;
+    printf("[\n");
+    for ( int i = 0; i < m; i++ ){
+        printf(" ");
+        print_vector( n, ptr );
+        ptr += n;
+    }
+    printf("]\n");
+}
+#endif 
+
 static void _weights_memory_free( neuralnet_t *nn )
 {
     for ( int i = 0; i < nn->n_layers ; i++ ){
@@ -50,7 +72,6 @@ static bool _weights_memory_allocate( neuralnet_t *nn )
     }
 
     for ( int i = 0; i < nn->n_layers; i++ ){
-        // nn->layer[i].n_float_padding = (floats_per_simd_register - (nn->layer[i].n_output % floats_per_simd_register)) % floats_per_simd_register;
         if (NULL == (nn->layer[i].weight = simd_malloc( nn->layer[i].n_input * nn->layer[i].n_output * sizeof( float ))))
             goto weight_alloc_error;
     }
@@ -166,17 +187,29 @@ neuralnet_t *neuralnet_load( const char *filename)
             }
         }
 
-       // if ( nn->layer[i].n_float_padding == 0 )
+        /*
+        printf( "copy data from (%dx%d) matrix into a (%dx%d) matrix.\n",
+             weights->shape[0], weights->shape[1],
+             nn->layer[i].n_input, nn->layer[i].n_output );
+        */
+        if( ((int)weights->shape[0] == nn->layer[i].n_input) && ((int)weights->shape[1] == nn->layer[i].n_output)) { 
+            /* No resize */
             memcpy( nn->layer[i].weight, weights->data, weights->shape[0] * weights->shape[1] * sizeof(float));
-      //  else {
-      //      float *from_file = (float*) weights->data;
-      //      float *weight    = nn->layer[i].weight;
-      //      for ( int j = 0; j < nn->layer[i].n_input; j++ ){
-      //          memcpy( weight, from_file, nn->layer[i].n_output * sizeof(float));
-      //          weight    += nn->layer[i].n_output + nn->layer[i].n_float_padding ;
-      //          from_file += nn->layer[i].n_output;
-      //      }
-      //  }
+        } else {
+            /* The neural network layer has been resized to match the SIMD register size. */
+            /* Step one: Set all weights to 0 */
+            memset( nn->layer[i].weight, 0, nn->layer[i].n_input * nn->layer[i].n_output * sizeof(float));
+            /* Step two: copy row by row */
+            for( int j = 0; j < (int) weights->shape[0]; j++ )
+                memcpy( nn->layer[i].weight + (j * nn->layer[i].n_output), /* dest */
+                        (float*) weights->data + (j * weights->shape[1]),  /* src  */
+                        weights->shape[1] * sizeof(float));                /* size */
+        }
+        /* Debug 
+        print_matrix( weights->shape[0], weights->shape[1], (float*) weights->data );
+        print_matrix( nn->layer[i].n_input, nn->layer[i].n_output, nn->layer[i].weight );
+        */
+        memset( nn->layer[i].bias, 0,   nn->layer[i].n_output * sizeof(float));
         memcpy( nn->layer[i].bias, bias->data, bias->shape[0] * sizeof(float));
         /* FIXME in far future: If the matrices are fortran order, reorganize them. Hmmm ... maybe
          * such feature belong in npy_array? */ 
@@ -208,27 +241,6 @@ void neuralnet_free( neuralnet_t *nn )
     free( nn );
 }
 
-#if defined(VERBOSE) 
-/* This is used for debug */
-static void print_vector( int n, const float *v )
-{
-    printf("[ ");
-    for (int i = 0; i < n; i++ )
-        printf("% .7f ", v[i] );
-    printf("]\n");
-}
-static void print_matrix( int m, int n, const float *v )
-{
-    const float *ptr = v;
-    printf("[\n");
-    for ( int i = 0; i < m; i++ ){
-        printf(" ");
-        print_vector( n, ptr );
-        ptr += n;
-    }
-    printf("]\n");
-}
-#endif 
 
 /**
   @brief Forward calculate the neural network 

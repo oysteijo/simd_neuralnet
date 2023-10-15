@@ -104,10 +104,11 @@ void vector_vector_outer( int n_rows, int n_cols, const float *x, const float *y
  * However, I'm not sure how much it will improve the performance.  */
 void vector_matrix_multiply( int n, int m, const float *weight, const float *bias, const float *input, float *y )
 {
+    /*
     assert( is_aligned( weight ));
     assert( is_aligned( bias ));
     assert( is_aligned( y ));
-
+    */
     const float *bias_ptr = bias;
 	float *y_ptr = y; 
     int i = 0;
