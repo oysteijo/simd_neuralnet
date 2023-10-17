@@ -63,7 +63,7 @@ int main( int argc, char *argv[] )
     float *test_feature = (float*) test_X->data;
     float *test_target  = (float*) test_Y->data;
     for( int i = 0; i < n_test_samples; i++ ){
-        float output[1];
+        SIMD_ALIGN(float output[1]);
         neuralnet_predict( nn, test_feature, output );
         int y_pred = output[0] > 0.5f ? 1 : 0;
         int y_true = *test_target > 0.5f ? 1 : 0;

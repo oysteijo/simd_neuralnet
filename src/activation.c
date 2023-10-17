@@ -632,8 +632,8 @@ static void relu_derivative        ( const int n, const float *activation, float
     __m256 YMM0, YMM1, YMM2, YMM3;
 
     for (i = 0; i <= ((n)-16); i += 16) {
-        YMM0 = _mm256_loadu_ps(activation + i);
-        YMM1 = _mm256_loadu_ps(activation + i + 8);
+        YMM0 = _mm256_load_ps(activation + i);
+        YMM1 = _mm256_load_ps(activation + i + 8);
         
         YMM0 = _mm256_cmp_ps(YMM0, zero, _CMP_LE_OS);
         YMM1 = _mm256_cmp_ps(YMM1, zero, _CMP_LE_OS);
@@ -641,11 +641,11 @@ static void relu_derivative        ( const int n, const float *activation, float
         YMM0 = _mm256_blendv_ps( ones, zero, YMM0);
         YMM1 = _mm256_blendv_ps( ones, zero, YMM1);
 
-        YMM2 = _mm256_loadu_ps(ar + i);
-        YMM3 = _mm256_loadu_ps(ar + i + 8);
+        YMM2 = _mm256_load_ps(ar + i);
+        YMM3 = _mm256_load_ps(ar + i + 8);
 
-        _mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
-        _mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
+        _mm256_store_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
+        _mm256_store_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
     }
 #endif /* __AVX__ */
     for(; i < n; i++ )
@@ -662,8 +662,8 @@ static void sigmoid_derivative     ( const int n, const float *activation, float
     __m256 YMM0, YMM1, YMM2, YMM3;
 
     for (i = 0; i <= ((n)-16); i += 16) {
-        YMM0 = _mm256_loadu_ps(activation + i);
-        YMM1 = _mm256_loadu_ps(activation + i + 8);
+        YMM0 = _mm256_load_ps(activation + i);
+        YMM1 = _mm256_load_ps(activation + i + 8);
 
         YMM2 = _mm256_sub_ps( ones, YMM0 );
         YMM3 = _mm256_sub_ps( ones, YMM1 );
@@ -671,11 +671,11 @@ static void sigmoid_derivative     ( const int n, const float *activation, float
         YMM0 = _mm256_mul_ps(YMM0, YMM2);
         YMM1 = _mm256_mul_ps(YMM1, YMM3);
 
-        YMM2 = _mm256_loadu_ps(ar + i);
-        YMM3 = _mm256_loadu_ps(ar + i + 8);
+        YMM2 = _mm256_load_ps(ar + i);
+        YMM3 = _mm256_load_ps(ar + i + 8);
 
-        _mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
-        _mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
+        _mm256_store_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
+        _mm256_store_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
     }
 #endif /* __AVX__ */
     for(; i < n; i++ )
@@ -691,8 +691,8 @@ static void tanh_act_derivative    ( const int n, const float *activation, float
     __m256 YMM0, YMM1, YMM2, YMM3;
 
     for (i = 0; i <= ((n)-16); i += 16) {
-        YMM0 = _mm256_loadu_ps(activation + i);
-        YMM1 = _mm256_loadu_ps(activation + i + 8);
+        YMM0 = _mm256_load_ps(activation + i);
+        YMM1 = _mm256_load_ps(activation + i + 8);
 
         YMM0 = _mm256_mul_ps(YMM0, YMM0);
         YMM1 = _mm256_mul_ps(YMM1, YMM1);
@@ -700,11 +700,11 @@ static void tanh_act_derivative    ( const int n, const float *activation, float
         YMM0 = _mm256_sub_ps(ones, YMM0);
         YMM1 = _mm256_sub_ps(ones, YMM1);
 
-        YMM2 = _mm256_loadu_ps(ar + i);
-        YMM3 = _mm256_loadu_ps(ar + i + 8);
+        YMM2 = _mm256_load_ps(ar + i);
+        YMM3 = _mm256_load_ps(ar + i + 8);
 
-        _mm256_storeu_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
-        _mm256_storeu_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
+        _mm256_store_ps( ar + i,     _mm256_mul_ps( YMM0, YMM2) );
+        _mm256_store_ps( ar + i + 8, _mm256_mul_ps( YMM1, YMM3) );
     }
 #endif /* __AVX__ */
     for( ; i < n; i++ )

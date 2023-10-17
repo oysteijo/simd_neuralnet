@@ -22,7 +22,7 @@ int main( int argc, char *argv[])
      */
 
     neuralnet_t *nn = neuralnet_create( 4,
-            INT_ARRAY( 64, 32, 16, 8, 4 ),
+            INT_ARRAY( 64, 32, 16, 8, 4 ),   /* The 8 will be resized on avx512 */
             STR_ARRAY( "relu", "relu", "relu", "sigmoid" )
     );
 

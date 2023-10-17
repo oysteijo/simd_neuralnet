@@ -24,6 +24,8 @@
 #define ALIGN_SIZE 16
 #endif
 
+#define floats_per_simd_register (ALIGN_SIZE >> 2)
+
 #if defined(_MSC_VER)
 #define SIMD_ALIGN(D) __declspec(align(ALIGN_SIZE)) D
 #else
@@ -36,6 +38,7 @@
     (((uintptr_t)(const void *)(POINTER)) % (ALIGN_SIZE) == 0)
 
 #else
+#define floats_per_simd_register 1
 #define SIMD_ALIGN(D) D
 #define simd_aligned(ar) ar
 #endif /* USE_SSE_VECTORIZE */

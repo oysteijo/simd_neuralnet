@@ -32,6 +32,28 @@ static void neuralnet_dump( const neuralnet_t *nn )
 }
 #endif
 
+#if defined(VERBOSE) 
+/* This is used for debug */
+static void print_vector( int n, const float *v )
+{
+    printf("[ ");
+    for (int i = 0; i < n; i++ )
+        printf("% .7f ", v[i] );
+    printf("]\n");
+}
+static void print_matrix( int m, int n, const float *v )
+{
+    const float *ptr = v;
+    printf("[\n");
+    for ( int i = 0; i < m; i++ ){
+        printf(" ");
+        print_vector( n, ptr );
+        ptr += n;
+    }
+    printf("]\n");
+}
+#endif 
+
 static void _weights_memory_free( neuralnet_t *nn )
 {
     for ( int i = 0; i < nn->n_layers ; i++ ){
@@ -165,7 +187,29 @@ neuralnet_t *neuralnet_load( const char *filename)
             }
         }
 
-        memcpy( nn->layer[i].weight, weights->data, weights->shape[0] * weights->shape[1] * sizeof(float));
+        /*
+        printf( "copy data from (%dx%d) matrix into a (%dx%d) matrix.\n",
+             weights->shape[0], weights->shape[1],
+             nn->layer[i].n_input, nn->layer[i].n_output );
+        */
+        if( ((int)weights->shape[0] == nn->layer[i].n_input) && ((int)weights->shape[1] == nn->layer[i].n_output)) { 
+            /* No resize */
+            memcpy( nn->layer[i].weight, weights->data, weights->shape[0] * weights->shape[1] * sizeof(float));
+        } else {
+            /* The neural network layer has been resized to match the SIMD register size. */
+            /* Step one: Set all weights to 0 */
+            memset( nn->layer[i].weight, 0, nn->layer[i].n_input * nn->layer[i].n_output * sizeof(float));
+            /* Step two: copy row by row */
+            for( int j = 0; j < (int) weights->shape[0]; j++ )
+                memcpy( nn->layer[i].weight + (j * nn->layer[i].n_output), /* dest */
+                        (float*) weights->data + (j * weights->shape[1]),  /* src  */
+                        weights->shape[1] * sizeof(float));                /* size */
+        }
+        /* Debug 
+        print_matrix( weights->shape[0], weights->shape[1], (float*) weights->data );
+        print_matrix( nn->layer[i].n_input, nn->layer[i].n_output, nn->layer[i].weight );
+        */
+        memset( nn->layer[i].bias, 0,   nn->layer[i].n_output * sizeof(float));
         memcpy( nn->layer[i].bias, bias->data, bias->shape[0] * sizeof(float));
         /* FIXME in far future: If the matrices are fortran order, reorganize them. Hmmm ... maybe
          * such feature belong in npy_array? */ 
@@ -197,27 +241,6 @@ void neuralnet_free( neuralnet_t *nn )
     free( nn );
 }
 
-#if defined(VERBOSE) 
-/* This is used for debug */
-static void print_vector( int n, const float *v )
-{
-    printf("[ ");
-    for (int i = 0; i < n; i++ )
-        printf("% .7f ", v[i] );
-    printf("]\n");
-}
-static void print_matrix( int m, int n, const float *v )
-{
-    const float *ptr = v;
-    printf("[\n");
-    for ( int i = 0; i < m; i++ ){
-        printf(" ");
-        print_vector( n, ptr );
-        ptr += n;
-    }
-    printf("]\n");
-}
-#endif 
 
 /**
   @brief Forward calculate the neural network 
@@ -233,28 +256,45 @@ static void print_matrix( int m, int n, const float *v )
 */
 void neuralnet_predict( const neuralnet_t *nn, const float *input, float *out )
 {
+    /* These asserts are important - end user may forget to SIMD_ALIGN memory 
+       and then there is a extremly hard bug to find - Think before you remove these assert() */
+    assert( is_aligned( out ));
+
     /* Stack allocating memory */
     /* FIXME: Do this once and once only! */
     /* Update: Maybe not rewrite this, since it might fuck up threading... I've not tried though */
-    int n_biases = 0;
+    int workmem_sz = 0;
     for( int i = 0; i < nn->n_layers; i++)
-        n_biases += nn->layer[i].n_output;
+        workmem_sz += nn->layer[i].n_output; // + nn->layer[i].n_float_padding;
 
-    float SIMD_ALIGN(workmem[ n_biases ]);
+    float SIMD_ALIGN(workmem[ workmem_sz ]);
     float *activations[nn->n_layers+1];
     activations[0] = (float*) input;
     activations[1] = workmem;
     for( int i = 1; i < nn->n_layers-1; i++)
-        activations[i+1] = activations[i] + nn->layer[i-1].n_output;
+        activations[i+1] = activations[i] + nn->layer[i-1].n_output; // + nn->layer[i-1].n_float_padding;
     
     activations[nn->n_layers] = out;
 
+    /* Debug */
+#if 0
+    printf("Debug info:  ALIGN_SIZE=%d  floats_per_simd_register=%d\n", ALIGN_SIZE, floats_per_simd_register);
+    printf("addr of inp: %p  (aligned: %s)\n", input, is_aligned( input ) ? "True" : "False");
+    for ( int i = 0; i < nn->n_layers+1; i++ )
+        printf("addr of activations[%d] = %p  (aligned: %s)\n", i, activations[i], is_aligned( activations[i] ) ? "True" : "False"); 
+    for ( int i = 0; i < nn->n_layers; i++ )
+        printf("layer %d inp: %d out: %d padding: %d\n",
+                i,
+                nn->layer[i].n_input,
+                nn->layer[i].n_output,
+                nn->layer[i].n_float_padding);
+#endif
     /* forward */
     for( int i = 0; i < nn->n_layers; i++){
         const layer_t *layer_ptr = nn->layer + i;
         vector_matrix_multiply( 
                 layer_ptr->n_input,
-                layer_ptr->n_output,
+                layer_ptr->n_output, // + layer_ptr->n_float_padding,
                 layer_ptr->weight,
                 layer_ptr->bias,
                 activations[i],
@@ -451,11 +491,14 @@ void neuralnet_set_loss ( neuralnet_t *nn, const char *loss_name )
   
 void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const float *target, float *grad )
 {
-    int n_biases = 0;
-    for( int i = 0; i < nn->n_layers; i++)
-        n_biases += nn->layer[i].n_output;
+    /* These sould do */
+    assert( is_aligned( grad ));
 
-    float SIMD_ALIGN(workmem[ n_biases + nn->layer[0].n_input ]);
+    int workmem_sz = 0;
+    for( int i = 0; i < nn->n_layers; i++)
+        workmem_sz += nn->layer[i].n_output;
+
+    float SIMD_ALIGN(workmem[ workmem_sz + nn->layer[0].n_input ]);
     float *activations[nn->n_layers+1];
     activations[0] = (float*) input;
     activations[1] = workmem;
@@ -467,7 +510,7 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
         const layer_t *layer_ptr = nn->layer + i;
         vector_matrix_multiply( 
                 layer_ptr->n_input,
-                layer_ptr->n_output,
+                layer_ptr->n_output, // + layer_ptr->n_float_padding,
                 layer_ptr->weight,
                 layer_ptr->bias,
                 activations[i],
@@ -603,13 +646,27 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
         return NULL;
     }
 
+    /* OK - resize "bad" sized */
+    int resizes[n_layers + 1];
+    memcpy( resizes, sizes, (n_layers + 1) * sizeof(int));
+    for( int i = 1; i < n_layers; i++ ){
+        int num_of_simd_reg = ( sizes[i] +  floats_per_simd_register - 1 ) / floats_per_simd_register;
+        resizes[i] = num_of_simd_reg * floats_per_simd_register;
+
+        if (sizes[i] != resizes[i] ) /* We did a resize */
+            fprintf( stderr, "INFO - Neural network size is resized to match CPUs SIMD registers.\nINFO - Hidden size %d is resized to %d.\n",
+                    sizes[i], resizes[i] );
+    }
+
     neuralnet_t *nn;
-    if ( (nn = malloc( sizeof( neuralnet_t ))) == NULL ){
+    /* The neural network itself doesn't need to be aligned */
+    if ( (nn = malloc( sizeof( neuralnet_t ))) == NULL ){  
         fprintf( stderr, "Cannot allocate memory for 'neuralnet_t' type.\n");
         return NULL;
     }
 
     nn->n_layers = n_layers;
+    /* The layers vector is also nice to do unaligned */
     nn->layer = malloc( n_layers * sizeof( layer_t ));
     if ( !(nn->layer)){
         fprintf( stderr, "Cannot allocate memory for neural neworks layers.\n");
@@ -618,12 +675,13 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
     }
 
     for( int i = 0; i < nn->n_layers; i++ ){
-        nn->layer[i].n_input  = sizes[i];
-        nn->layer[i].n_output = sizes[i+1];
+        nn->layer[i].n_input  = resizes[i];
+        nn->layer[i].n_output = resizes[i+1];
     }
 
     if( !_weights_memory_allocate( nn )){
         fprintf(stderr, "Cannot allocate memory for neural net weights.\n");
+        free( nn->layer );
         free( nn );
         return NULL;
     }

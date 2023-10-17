@@ -55,7 +55,11 @@ fi
 echo 'CC = '$c_compiler'' >> Makefile
 
 if grep -q avx2 "/proc/cpuinfo"; then
-  cpuinfo+="-mavx2 "
+  cpuinfo="-mavx2 "
+fi
+
+if grep -q avx512f "/proc/cpuinfo"; then
+  cpuinfo="-mavx512f "
 fi
 
 if grep -q fma "/proc/cpuinfo"; then
