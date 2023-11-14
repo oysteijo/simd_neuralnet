@@ -1,4 +1,4 @@
-/* Copyright -- Øystein Schønning-Johansen 2007-2021 */
+/* Copyright -- Øystein Schønning-Johansen 2007-2023 */
 
 #include "neuralnet.h"
 #include "simd.h"
@@ -646,6 +646,7 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
         return NULL;
     }
 
+#ifndef USE_CBLAS
     /* OK - resize "bad" sized */
     int resizes[n_layers + 1];
     memcpy( resizes, sizes, (n_layers + 1) * sizeof(int));
@@ -657,7 +658,7 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
             fprintf( stderr, "INFO - Neural network size is resized to match CPUs SIMD registers.\nINFO - Hidden size %d is resized to %d.\n",
                     sizes[i], resizes[i] );
     }
-
+#endif
     neuralnet_t *nn;
     /* The neural network itself doesn't need to be aligned */
     if ( (nn = malloc( sizeof( neuralnet_t ))) == NULL ){  
@@ -675,8 +676,13 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
     }
 
     for( int i = 0; i < nn->n_layers; i++ ){
+#ifdef USE_CBLAS
+        nn->layer[i].n_input  = sizes[i];
+        nn->layer[i].n_output = sizes[i+1];
+#else
         nn->layer[i].n_input  = resizes[i];
         nn->layer[i].n_output = resizes[i+1];
+#endif
     }
 
     if( !_weights_memory_allocate( nn )){

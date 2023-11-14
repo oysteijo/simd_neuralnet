@@ -16,6 +16,7 @@ LDLIBS += -L$(NEURALNET_LIBPATH) -lsimd_neuralnet
 LDLIBS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
 LDLIBS += -ldl
 LDLIBS += -lm
+LDLIBS += `pkg-config --libs openblas` 
 
 #DEFINES = -DUSE_CBLAS
 DEFINES = 

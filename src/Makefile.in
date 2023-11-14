@@ -4,10 +4,11 @@ SHELL := /bin/bash
 
 CC      = gcc
 INCLUDE += -I.
-CFLAGS  += -std=c99 $(INCLUDE) -Wall -Wextra -O3 -fopenmp $(arch) $(dbg) $(profile)
+CFLAGS  += -std=c99 $(DEFINE) $(INCLUDE) -Wall -Wextra -O3 -fopenmp $(arch) $(dbg) $(profile) `pkg-config --cflags openblas`
 SED     = sed
 RANLIB  = ranlib
-
+DEFINE  = -DUSE_CBLAS
+LDFLAGS += `pkg-config --libs openblas`
 obj = $(src:.c=.o)
 dep = $(obj:.o=.d)  # one dependency file for each source
 

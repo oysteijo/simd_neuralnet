@@ -8,6 +8,7 @@
 
 #ifdef USE_CBLAS
 #include <cblas.h>
+#include <string.h>
 #endif
 
 #ifdef __AVX__  
@@ -104,6 +105,11 @@ void vector_vector_outer( int n_rows, int n_cols, const float *x, const float *y
  * However, I'm not sure how much it will improve the performance.  */
 void vector_matrix_multiply( int n, int m, const float *weight, const float *bias, const float *input, float *y )
 {
+#ifdef USE_CBLAS
+    memcpy( y, bias, m * sizeof(float));
+    cblas_sgemv( CblasRowMajor, CblasTrans,
+            n, m, 1.0f, weight, m, input, 1, 1.0f, y, 1 );
+#else
     /*
     assert( is_aligned( weight ));
     assert( is_aligned( bias ));
@@ -172,6 +178,7 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
 			}
 		}
 	}
+#endif /* USE_CBLAS */
 }
 
 /**
