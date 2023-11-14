@@ -1,0 +1,13 @@
+#DEFINE  = -DUSE_CBLAS
+# Netlib BLAS
+#BLAS_CFLAGS = `pkg-config --cflags blas`
+#BLAS_LDFLAGS = `pkg-config --libs blas`
+
+# OpenBLAS
+#BLAS_CFLAGS = `pkg-config --cflags openblas`
+#BLAS_LDFLAGS = `pkg-config --libs openblas`
+
+# clBLAS (Needs tweeking)
+#BLAS_CFLAGS = `pkg-config --cflags clBLAS`
+#BLAS_LDFLAGS = `pkg-config --libs clBLAS`
+

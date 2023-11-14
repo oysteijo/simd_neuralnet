@@ -68,5 +68,6 @@ fi
 
 echo 'arch = '$cpuinfo'' >> Makefile
 
+echo "include ../src/Makefile.blas"        >>Makefile
 echo "include Makefile.in"                 >>Makefile
 echo 'configuration complete, type make to build.'

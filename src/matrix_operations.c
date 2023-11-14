@@ -191,6 +191,9 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
 /* This is actually the same as saxpy -- y = ax + y, but with a = 1.0 */
 void vector_accumulate( const int n, float *a, const float *b )
 {
+#ifdef USE_CBLAS
+    cblas_saxpy( n, 1.0f, b, 1, a, 1 );
+#else
     int i = 0;
     float *a_ptr = a;
     const float *b_ptr = b;
@@ -204,6 +207,7 @@ void vector_accumulate( const int n, float *a, const float *b )
 #endif
     for (; i < n; i++ )
         *a_ptr++ += *b_ptr++; 
+#endif /* USE_CBLAS */
 }
 
 /**
@@ -298,6 +302,9 @@ void vector_divide_by_scalar( const int n, float *v, const float scalar )
  */ 
 void vector_saxpy( const int n, float *a, const float alpha, const float *b )
 {
+#ifdef USE_CBLAS
+    cblas_saxpy( n, alpha, b, 1, a, 1 );
+#else
     int i = 0;
     float *a_ptr = a;
     const float *b_ptr = b;
@@ -311,6 +318,7 @@ void vector_saxpy( const int n, float *a, const float alpha, const float *b )
 #endif
     for (; i < n; i++ )
         *a_ptr++ += alpha * *b_ptr++; 
+#endif /* USE_CBLAS */
 }
 
 /**
@@ -333,6 +341,10 @@ void vector_saxpy( const int n, float *a, const float alpha, const float *b )
  */ 
 void vector_saxpby( const int n, float *a, const float alpha, const float *b, const float beta )
 {
+
+#if 0 // USE_CBLAS # Eh? is it not the blas standard?  
+    cblas_saxpby( n, alpha, b, 1, beta, a, 1 );
+#else
     int i = 0;
     float *a_ptr = a;
     const float *b_ptr = b;
@@ -361,6 +373,7 @@ void vector_saxpby( const int n, float *a, const float alpha, const float *b, co
 #endif
     for (; i < n; i++, a_ptr++ )
         *a_ptr = beta * *a_ptr + alpha * *b_ptr++; 
+#endif /* USE_CBLAS */
 }
 
 /**
