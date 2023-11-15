@@ -1,4 +1,5 @@
 #include "activation.h"
+#include "simd.h"
 
 #include <string.h>
 #include <math.h>
@@ -302,10 +303,11 @@ static void relu( const int n, float *y )
     int i = 0;
 #ifdef __AVX__
     const __m256 zero = _mm256_set1_ps(0.0f);
-
     __m256 YMM0, YMM1;
+    for ( ; !is_aligned( y + i ); i++)
+        y[i] = fmaxf(0.0f, y[i]);
 
-    for (i = 0; i <= ((n)-16); i += 16) {
+    for ( ; i <= ((n)-16); i += 16) {
         YMM0 = _mm256_load_ps(y + i);
         YMM1 = _mm256_load_ps(y + i + 8);
         YMM0 = _mm256_max_ps(zero, YMM0);

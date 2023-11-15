@@ -33,8 +33,13 @@ int main(int argc, char *argv[] )
             floats_per_simd_register==16 ? "AVX512" : 
             floats_per_simd_register==8 ? "AVX/AVX2" : 
             floats_per_simd_register==4 ? "SSE" : "No SIMD");
+#ifdef USE_CBLAS
+    const int n_param_342 = 26;
+#else
     const int n_param_342 = floats_per_simd_register == 16 ? 98 :
                         floats_per_simd_register == 8  ? 50 : 26;
+#endif
+    printf( "I believe the number of parameters should be: %d\n", n_param_342 );
 
     CHECK_INT_EQUALS_MSG( n_param_342, neuralnet_total_n_parameters(nn),
             "Checking that total number of parametes is correct" );
@@ -72,7 +77,7 @@ int main(int argc, char *argv[] )
 
     CHECK_NOT_NULL_MSG( nn,
             "Checking that neural network was created" );
-#if floats_per_simd_register == 16 
+#if !(defined USE_CBLAS) && floats_per_simd_register == 16 
     n_out += 8;
 #endif
 

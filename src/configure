@@ -156,5 +156,6 @@ if $have_pkg_config; then
     echo "pkg_config_path = ${pc_path}"    >>Makefile
 fi
     
+echo "include Makefile.blas"               >>Makefile
 echo "include Makefile.in"                 >>Makefile
 echo "configure done, type 'make' to build."

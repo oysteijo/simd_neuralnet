@@ -16,23 +16,21 @@ LDLIBS += -L$(NEURALNET_LIBPATH) -lsimd_neuralnet
 LDLIBS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
 LDLIBS += -ldl
 LDLIBS += -lm
-
-#DEFINES = -DUSE_CBLAS
-DEFINES = 
+LDLIBS += $(BLAS_LDFLAGS) 
 
 ifeq ($(CC),gcc)
-	DEFINES += -Wno-override-init
+	DEFINE += -Wno-override-init
 	LDLIBS += -lgomp
 endif
 
 ifeq ($(CC),clang)
-	DEFINES += -Wno-initializer-overrides
+	DEFINE += -Wno-initializer-overrides
 	LDLIBS += -lomp
 endif
 
 
 
-CFLAGS += $(DEFINES)
+CFLAGS += $(DEFINE)
 
 testprogs = test_neuralnet test_sgd test_backpropagation test_activation test_loss test_metrics
 
