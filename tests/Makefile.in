@@ -18,22 +18,19 @@ LDLIBS += -ldl
 LDLIBS += -lm
 LDLIBS += $(BLAS_LDFLAGS) 
 
-#DEFINES = -DUSE_CBLAS
-DEFINES = 
-
 ifeq ($(CC),gcc)
-	DEFINES += -Wno-override-init
+	DEFINE += -Wno-override-init
 	LDLIBS += -lgomp
 endif
 
 ifeq ($(CC),clang)
-	DEFINES += -Wno-initializer-overrides
+	DEFINE += -Wno-initializer-overrides
 	LDLIBS += -lomp
 endif
 
 
 
-CFLAGS += $(DEFINES)
+CFLAGS += $(DEFINE)
 
 testprogs = test_neuralnet test_sgd test_backpropagation test_activation test_loss test_metrics
 

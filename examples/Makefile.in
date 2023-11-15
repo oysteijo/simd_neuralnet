@@ -17,22 +17,19 @@ LDFLAGS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
 LDFLAGS += `pkg-config --libs openblas`
 LDFLAGS += -lzip -ldl -lm
 
-#DEFINES = -DUSE_CBLAS
-DEFINES = 
-
 ifeq ($(CC),gcc)
 	LDFLAGS += -lgomp
-	DEFINES += -Wno-override-init
+	DEFINE += -Wno-override-init
 endif
 
 ifeq ($(CC),clang)
 	LDFLAGS += -lomp
-	DEFINES += -Wno-initializer-overrides
+	DEFINE += -Wno-initializer-overrides
 endif
 
-DEFINES += -Wno-unused-parameter
+DEFINE += -Wno-unused-parameter
 
-CFLAGS += $(DEFINES)
+CFLAGS += $(DEFINE)
 
 examples = example_01 example_02 example_03 test_sgd
 
