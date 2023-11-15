@@ -342,7 +342,7 @@ void vector_saxpy( const int n, float *a, const float alpha, const float *b )
 void vector_saxpby( const int n, float *a, const float alpha, const float *b, const float beta )
 {
 
-#if 0 // USE_CBLAS # Eh? is it not the blas standard?  
+#if USE_CBLAS // # Eh? is it not the blas standard?  
     cblas_saxpby( n, alpha, b, 1, beta, a, 1 );
 #else
     int i = 0;
