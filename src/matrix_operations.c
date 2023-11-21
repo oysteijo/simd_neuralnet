@@ -87,16 +87,16 @@ void vector_vector_outer( int n_rows, int n_cols, const float *x, const float *y
             float *matrix_ptr = matrix + ( i * n_cols );
             const float *y_ptr = y;
 #ifdef __AVX512F__
-            __m512 scales = _mm512_set1_ps( a );
+            __m512 scale512 = _mm512_set1_ps( a );
             for( ; j <= ((n_cols)-16); j += 16, y_ptr += 16, matrix_ptr += 16) {
-                _mm512_storeu_ps( matrix_ptr, _mm512_mul_ps( scales, _mm512_loadu_ps( y_ptr )) );
+                _mm512_storeu_ps( matrix_ptr, _mm512_mul_ps( scale512, _mm512_loadu_ps( y_ptr )) );
             }
 #endif  /* __AVX512F__ */
 #ifdef __AVX__
-            __m256 scale = _mm256_set1_ps( a );
+            __m256 scale256 = _mm256_set1_ps( a );
             for( ; j <= ((n_cols)-8); j += 8, y_ptr += 8, matrix_ptr += 8) {
                 /* Unforuneately this has to go unaligned. Can that be fixed? */
-                _mm256_storeu_ps( matrix_ptr, _mm256_mul_ps( scale, _mm256_loadu_ps( y_ptr )) );
+                _mm256_storeu_ps( matrix_ptr, _mm256_mul_ps( scale256, _mm256_loadu_ps( y_ptr )) );
             }
 #endif  /* __AVX__ */
             for( ; j < n_cols; j++ )
