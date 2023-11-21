@@ -1,4 +1,6 @@
-/* callback.h - oysteijo@gmail.com  
+/* callback.h - Øystein Schønning-Johansen 2020 - 2023 */
+/*
+  vim: ts=4 sw=4 softtabstop=4 expandtab 
  */
 
 /** \struct _callback_t
@@ -37,18 +39,18 @@
 
 typedef struct _callback_t callback_t;
 struct _callback_t {
-	void (*callback_run) ( callback_t *self, optimizer_t *opt, const float *result, bool has_valid );
-	void (*free) (callback_t *self);
+    void (*callback_run) ( callback_t *self, optimizer_t *opt, const float *result, bool has_valid );
+    void (*free) (callback_t *self);
 };
 
 static inline void callback_run( callback_t *self, optimizer_t *opt, const float *result, bool has_valid )
 {
-	self->callback_run( self, opt, result, has_valid );
+    self->callback_run( self, opt, result, has_valid );
 }
 
 static inline void callback_free( callback_t *self)
 {
-	self->free( self );
+    self->free( self );
 }
 
 #if defined(__GNUC__)
@@ -66,16 +68,16 @@ static inline void callback_free( callback_t *self)
 #define CALLBACK_DEFINE(name,...) \
 static void name ## _callback_run( callback_t *cb, optimizer_t *opt, const float *result, bool has_valid ); \
 DLLEXPORT name ## _t * name ## _new( void * UNUSED(config)) \
-{	\
-	name ## _t *newcb = malloc( sizeof( name ## _t ) ); \
-	if ( !newcb ) {\
-		fprintf( stderr ,"Can't allocate memory for '" #name "_t' callback type.\n"); \
-		return NULL; \
-	} \
-	newcb->cb.callback_run = name ## _callback_run; \
-	newcb->cb.free = (void(*)(callback_t*)) free; \
-	__VA_ARGS__ ; \
-	return newcb; \
+{   \
+    name ## _t *newcb = malloc( sizeof( name ## _t ) ); \
+    if ( !newcb ) {\
+        fprintf( stderr ,"Can't allocate memory for '" #name "_t' callback type.\n"); \
+        return NULL; \
+    } \
+    newcb->cb.callback_run = name ## _callback_run; \
+    newcb->cb.free = (void(*)(callback_t*)) free; \
+    __VA_ARGS__ ; \
+    return newcb; \
 }
 
 #define CALLBACK_DECLARE(name) \

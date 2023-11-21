@@ -1,3 +1,7 @@
+/* logger.h - Øystein Schønning-Johansen 2020 - 2023 */
+/*
+  vim: ts=4 sw=4 softtabstop=4 expandtab 
+ */
 #ifndef __LOGGER_H__
 #define __LOGGER_H__
 #include "callback.h"

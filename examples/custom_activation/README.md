@@ -1,6 +1,6 @@
 # Implementing custom activation functions.
 
-Here is an example og how too implement and use a custom implemented activation function.
+Here is an example of how to implement and use a custom implemented activation function.
 This example will implement a simple sigmoid function with a pre scale of the input.
 
 $$ f(x) = \frac{1}{1+e^{-\alpha x}} $$
@@ -47,6 +47,4 @@ You should now be able to specify the custom activation in a neural network like
 
 When setting a loss function with `neuralnet_set_loss()` the derivative will be set correctly if it
 is implemented and present in the same shared object file as the forward activation.
-
-
 

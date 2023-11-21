@@ -1,3 +1,7 @@
+/* evaluate.h - Øystein Schønning-Johansen 2019 - 2023 */
+/*
+  vim: ts=4 sw=4 softtabstop=4 expandtab 
+ */
 #ifndef __EVALUATE_H__
 #define __EVALUATE_H__
 #include "neuralnet.h"

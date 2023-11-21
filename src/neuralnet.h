@@ -1,3 +1,7 @@
+/* neuralnet.h - Øystein Schønning-Johansen 2007 - 2023 */
+/* 
+ vim: ts=4 sw=4 softtabstop=4 expandtab 
+*/
 #ifndef __NN_NEURALNET_H__
 #define __NN_NEURALNET_H__
 

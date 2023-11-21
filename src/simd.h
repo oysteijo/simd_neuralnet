@@ -1,6 +1,7 @@
-/* Copyright -- Øystein Johansen 2007 */
-/* $Id: $ */
-/* FIXME - This files needs a cleanup */
+/* simd.h - Øystein Schønning-Johansen 2007 - 2023 */
+/*
+  vim: ts=4 sw=4 softtabstop=4 expandtab 
+ */
 #ifndef __SIMD_H__
 #define __SIMD_H__
 

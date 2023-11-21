@@ -1,3 +1,7 @@
+/* matrix_operations.c - Øystein Schønning-Johansen 2013 - 2023 */
+/* 
+ vim: ts=4 sw=4 softtabstop=4 expandtab 
+*/
 #include "matrix_operations.h"
 #include "simd.h"
 #include <assert.h>
@@ -14,11 +18,11 @@
 #ifdef __AVX__  
 static inline float horizontalsum_avx( __m256 x )
 {
-	float sumAVX = 0.0f;
-	__m256 hsum = _mm256_hadd_ps(x, x);
-	hsum = _mm256_add_ps(hsum, _mm256_permute2f128_ps(hsum, hsum, 0x1));
-	_mm_store_ss(&sumAVX, _mm_hadd_ps( _mm256_castps256_ps128(hsum), _mm256_castps256_ps128(hsum) ) );
-	return sumAVX;
+    float sumAVX = 0.0f;
+    __m256 hsum = _mm256_hadd_ps(x, x);
+    hsum = _mm256_add_ps(hsum, _mm256_permute2f128_ps(hsum, hsum, 0x1));
+    _mm_store_ss(&sumAVX, _mm_hadd_ps( _mm256_castps256_ps128(hsum), _mm256_castps256_ps128(hsum) ) );
+    return sumAVX;
 }
 #endif
 
@@ -42,24 +46,26 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
         int j = 0;
 
 #ifdef __AVX512F__
-		__m512 sums = _mm512_setzero_ps ();
-		for (; j <= ((n_cols)-16); j += 16, m_ptr += 16, v_ptr += 16) /* Check if faster: unroll w prefetch */
-   #if defined(__FMA__)
-			sums = _mm512_fmadd_ps( _mm512_loadu_ps(v_ptr), _mm512_load_ps(m_ptr), sums);
-   #else
-			sums = _mm512_add_ps (sums, _mm512_mul_ps(_mm512_loadu_ps(v_ptr), _mm512_load_ps(m_ptr)));
-   #endif
-		y[i] = _mm512_reduce_add_ps( sums );
+        __m512 sums = _mm512_setzero_ps ();
+        for (; j <= ((n_cols)-16); j += 16, m_ptr += 16, v_ptr += 16){ /* Check if faster: unroll w prefetch */
+#if defined(__FMA__)
+            sums = _mm512_fmadd_ps( _mm512_loadu_ps(v_ptr), _mm512_load_ps(m_ptr), sums);
+#else
+            sums = _mm512_add_ps (sums, _mm512_mul_ps(_mm512_loadu_ps(v_ptr), _mm512_load_ps(m_ptr)));
+#endif
+        }
+        y[i] = _mm512_reduce_add_ps( sums );
 #endif
 #ifdef __AVX__
-		__m256 sum = _mm256_setzero_ps ();
-		for (; j <= ((n_cols)-8); j += 8, m_ptr += 8, v_ptr += 8) /* Check if faster: unroll w prefetch */
-   #if defined(__FMA__)
-			sum = _mm256_fmadd_ps( _mm256_load_ps(v_ptr), _mm256_load_ps(m_ptr), sum);
-   #else
-			sum = _mm256_add_ps (sum, _mm256_mul_ps(_mm256_load_ps(v_ptr), _mm256_load_ps(m_ptr)));
-   #endif
-		y[i] += horizontalsum_avx( sum );
+        __m256 sum = _mm256_setzero_ps ();
+        for (; j <= ((n_cols)-8); j += 8, m_ptr += 8, v_ptr += 8){ /* Check if faster: unroll w prefetch */
+#if defined(__FMA__)
+            sum = _mm256_fmadd_ps( _mm256_load_ps(v_ptr), _mm256_load_ps(m_ptr), sum);
+#else
+            sum = _mm256_add_ps (sum, _mm256_mul_ps(_mm256_load_ps(v_ptr), _mm256_load_ps(m_ptr)));
+#endif
+        }
+        y[i] += horizontalsum_avx( sum );
 #endif
         for(; j < n_cols; j++ )
             y[i] += *v_ptr++ * *m_ptr++;
@@ -116,68 +122,66 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
     assert( is_aligned( y ));
     */
     const float *bias_ptr = bias;
-	float *y_ptr = y; 
+    float *y_ptr = y; 
     int i = 0;
 
 #ifdef __AVX512F__
-	for (; i <= ((m)-16) ; i += 16, bias_ptr +=16, y_ptr +=16 ){
-		_mm512_store_ps( y_ptr, _mm512_load_ps( bias_ptr ));
+    for (; i <= ((m)-16) ; i += 16, bias_ptr +=16, y_ptr +=16 ){
+        _mm512_store_ps( y_ptr, _mm512_load_ps( bias_ptr ));
     }
 #endif
 #ifdef __AVX__
-	for (; i <= ((m)-8) ; i += 8, bias_ptr +=8, y_ptr +=8 ){
-		_mm256_store_ps( y_ptr, _mm256_load_ps( bias_ptr ));
+    for (; i <= ((m)-8) ; i += 8, bias_ptr +=8, y_ptr +=8 ){
+        _mm256_store_ps( y_ptr, _mm256_load_ps( bias_ptr ));
     }
 #endif
     for( ; i < m; i++ ){
         *y_ptr++ = *bias_ptr++;
     }
 
-	for (int i = 0; i < n; i++) {
-		float const inp = input[i];
-		const float *weight_ptr = weight + ( i * m );  /* Argh! if m is not a multiple of ALIGN_SIZE, the pointer wil be unaligned! :-( */
-		if (inp) {
-			float  *y_ptr = y;  /* same goes for this */
-			if (inp == 1.0f){
+    for (int i = 0; i < n; i++) {
+        float const inp = input[i];
+        const float *weight_ptr = weight + ( i * m );  /* Argh! if m is not a multiple of ALIGN_SIZE, the pointer wil be unaligned! :-( */
+        if (inp) {
+            float  *y_ptr = y;  /* same goes for this */
+            if (inp == 1.0f){
                 int j = 0;
 #ifdef __AVX512F__
-				for (; j <= ((m)-16) ; j += 16, y_ptr += 16, weight_ptr += 16) 
-					_mm512_storeu_ps(y_ptr, _mm512_add_ps (_mm512_loadu_ps(y_ptr), _mm512_loadu_ps( weight_ptr )));
+                for (; j <= ((m)-16) ; j += 16, y_ptr += 16, weight_ptr += 16) 
+                    _mm512_storeu_ps(y_ptr, _mm512_add_ps (_mm512_loadu_ps(y_ptr), _mm512_loadu_ps( weight_ptr )));
 #endif /*  __AVX512F__ */
 #ifdef __AVX__
-				for (; j <= ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8) 
-					_mm256_storeu_ps(y_ptr, _mm256_add_ps (_mm256_loadu_ps(y_ptr), _mm256_loadu_ps( weight_ptr )));
+                for (; j <= ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8) 
+                    _mm256_storeu_ps(y_ptr, _mm256_add_ps (_mm256_loadu_ps(y_ptr), _mm256_loadu_ps( weight_ptr )));
 #endif /*  __AVX__ */
                 for( ; j < m; j++ )
                     *y_ptr++ += *weight_ptr++;
-            }
-
-			else {
+            } else {
                 int j = 0;
 #ifdef __AVX512F__
-				for (; j < ((m)-16) ; j += 16, y_ptr += 16, weight_ptr += 16){
-   #if defined(__FMA__)
-					_mm512_storeu_ps(y_ptr, _mm512_fmadd_ps( _mm512_loadu_ps(weight_ptr), _mm512_set1_ps(inp), _mm512_loadu_ps(y_ptr)));
-   #else
-					_mm512_storeu_ps(y_ptr, _mm512_add_ps(_mm512_loadu_ps(y_ptr), _mm512_mul_ps(_mm512_loadu_ps(weight_ptr), _mm512_set1_ps(inp))));
-   #endif  
+                for (; j < ((m)-16) ; j += 16, y_ptr += 16, weight_ptr += 16){
+#if defined(__FMA__)
+                    _mm512_storeu_ps(y_ptr, _mm512_fmadd_ps( _mm512_loadu_ps(weight_ptr), _mm512_set1_ps(inp), _mm512_loadu_ps(y_ptr)));
+#else
+                    _mm512_storeu_ps(y_ptr, _mm512_add_ps(_mm512_loadu_ps(y_ptr), _mm512_mul_ps(_mm512_loadu_ps(weight_ptr), _mm512_set1_ps(inp))));
+#endif  
                 }
 #endif
 #ifdef __AVX__
-				__m256 scalevec = _mm256_set1_ps(inp);
-				for (; j < ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8){
-   #if defined(__FMA__)
-					_mm256_storeu_ps(y_ptr, _mm256_fmadd_ps( _mm256_loadu_ps(weight_ptr), scalevec, _mm256_loadu_ps(y_ptr)));
-   #else
-					_mm256_storeu_ps(y_ptr, _mm256_add_ps(_mm256_loadu_ps(y_ptr), _mm256_mul_ps(_mm256_loadu_ps(weight_ptr), scalevec)));
-   #endif  
+                __m256 scalevec = _mm256_set1_ps(inp);
+                for (; j < ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8){
+#if defined(__FMA__)
+                    _mm256_storeu_ps(y_ptr, _mm256_fmadd_ps( _mm256_loadu_ps(weight_ptr), scalevec, _mm256_loadu_ps(y_ptr)));
+#else
+                    _mm256_storeu_ps(y_ptr, _mm256_add_ps(_mm256_loadu_ps(y_ptr), _mm256_mul_ps(_mm256_loadu_ps(weight_ptr), scalevec)));
+#endif  
                 }
 #endif
                 for(; j < m; j++ )
                     *y_ptr++ += inp * *weight_ptr++;
-			}
-		}
-	}
+            }
+        }
+    }
 #endif /* USE_CBLAS */
 }
 

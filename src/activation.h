@@ -1,4 +1,7 @@
-/* activation.h - Øystein Schønning-Johansen 2013 */
+/* activation.h - Øystein Schønning-Johansen 2013 - 2023 */
+/*
+  vim: ts=4 sw=4 softtabstop=4 expandtab 
+ */
 #ifndef __ACTIVATION_H__
 #define __ACTIVATION_H__
 

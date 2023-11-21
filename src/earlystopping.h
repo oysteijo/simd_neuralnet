@@ -1,3 +1,7 @@
+/* earlystopping.h - Øystein Schønning-Johansen 2020 - 2023 */
+/*
+  vim: ts=4 sw=4 softtabstop=4 expandtab 
+ */
 #ifndef __EARLYSTOPPING_H__
 #define __EARLYSTOPPING_H__
 #include "callback.h"

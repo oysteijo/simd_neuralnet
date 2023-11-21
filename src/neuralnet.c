@@ -1,5 +1,7 @@
-/* Copyright -- Øystein Schønning-Johansen 2007-2023 */
-
+/* neuralnet.c - Øystein Schønning-Johansen 2007 - 2023 */
+/* 
+ vim: ts=4 sw=4 softtabstop=4 expandtab 
+*/
 #include "neuralnet.h"
 #include "simd.h"
 #include "activation.h"

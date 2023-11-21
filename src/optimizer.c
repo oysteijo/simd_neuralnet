@@ -1,3 +1,11 @@
+/* optimizer.c - Øystein Schønning-Johansen 2013 - 2023 */
+/* 
+ vim: ts=4 sw=4 softtabstop=4 expandtab 
+*/
+/* 
+ vim: ts=4 sw=4 softtabstop=4 expandtab 
+*/
+
 #include "optimizer.h"
 #include "simd.h"
 #include "evaluate.h"
@@ -40,10 +48,10 @@ optimizer_t *optimizer_new( neuralnet_t *nn, void *data )
     optimizer_config_t *conf = (optimizer_config_t*) data;
 
     optimizer_t *newopt = malloc( sizeof( optimizer_t ));
-	if ( !newopt ) {
-		fprintf( stderr ,"Can't allocate memory for optimizer_t type.\n");
-		return NULL;
-	}
+    if ( !newopt ) {
+        fprintf( stderr ,"Can't allocate memory for optimizer_t type.\n");
+        return NULL;
+    }
 
     /* First the configs */
     newopt->nn         = nn;
@@ -142,7 +150,7 @@ void optimizer_run_epoch( optimizer_t *self,
 
     /* Run the epoch */
     assert ( self->run_epoch );
-	self->run_epoch(self, n_train_samples, train_X, train_Y );
+    self->run_epoch(self, n_train_samples, train_X, train_Y );
 
     /* Calculate the losses */
     /* First the train loss */

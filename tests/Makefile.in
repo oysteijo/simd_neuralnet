@@ -28,8 +28,6 @@ ifeq ($(CC),clang)
 	LDLIBS += -lomp
 endif
 
-
-
 CFLAGS += $(DEFINE)
 
 testprogs = test_neuralnet test_sgd test_backpropagation test_activation test_loss test_metrics

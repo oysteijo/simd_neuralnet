@@ -1,4 +1,6 @@
-/* optimizer.h - Oystein Schonning-Johansen 2019 
+/* optimizer.h - Øystein Schønning-Johansen 2019 - 2023 */
+/*
+  vim: ts=4 sw=4 softtabstop=4 expandtab 
  */
 
 /** \struct _optimizer_t
@@ -42,15 +44,14 @@
 
 #define OPTIMIZER(v) ((optimizer_t*)(v))
 
-
 typedef struct _optimizer_t optimizer_t;
 typedef void (*epoch_func)( optimizer_t *opt, const unsigned int n_samples, const float *X, const float *Y );
 struct _optimizer_t {
     void (*run_epoch)( optimizer_t *opt,
         const unsigned int n_train_samples, const float *train_X, const float *train_Y);
 
-	void (*free) (optimizer_t *self);
-    
+    void (*free) (optimizer_t *self);
+
     neuralnet_t *nn;
     unsigned long long int iterations;
     bool     shuffle;
@@ -77,7 +78,6 @@ void optimizer_run_epoch( optimizer_t *self,
         const unsigned int n_train_samples, const float *train_X, const float *train_Y,
         const unsigned int n_valid_samples, const float *valid_X, const float *valid_Y, float *result );
 
-
 typedef struct _optimizer_config_t optimizer_config_t;
 struct _optimizer_config_t {
     int batchsize;
@@ -87,7 +87,6 @@ struct _optimizer_config_t {
     void *settings;
     void (*progress)( int x, int n, const char *fmt, ...);
 } ;
-
 
 /* These are the default values. The end user should not edit this but "override" at creation */
 #define OPTIMIZER_CONFIG(...)  &((optimizer_config_t)  \
@@ -110,5 +109,4 @@ static inline int optimizer_get_n_metrics( const optimizer_t *opt )
 
     return n_metrics;
 }
-
 #endif  /* __OPTIMIZER_H__ */

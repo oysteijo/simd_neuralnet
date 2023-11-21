@@ -1,4 +1,7 @@
-/* loss.h - Øystein Schønning-Johansen 2013-2019 */
+/* loss.h - Øystein Schønning-Johansen 2013 - 2023 */
+/*
+  vim: ts=4 sw=4 softtabstop=4 expandtab 
+ */
 #ifndef __LOSS_H__
 #define __LOSS_H__
 

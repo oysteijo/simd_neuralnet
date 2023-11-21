@@ -1,3 +1,7 @@
+/* progress.c - Øystein Schønning-Johansen 2013 - 2023 */
+/* 
+ vim: ts=4 sw=4 softtabstop=4 expandtab 
+*/
 #include "progress.h"
 
 #include <stdio.h>
