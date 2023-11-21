@@ -258,6 +258,7 @@ void neuralnet_predict( const neuralnet_t *nn, const float *input, float *out )
     activations[1] = workmem;
     for( int i = 1; i < nn->n_layers-1; i++) {
         int size_w_padding = (nn->layer[i-1].n_output + floats_per_simd_register - 1) / floats_per_simd_register;
+        size_w_padding *= floats_per_simd_register;
         activations[i+1] = activations[i] + size_w_padding;
         assert( is_aligned( activations[i+1] ));
     }
@@ -491,6 +492,7 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
     activations[1] = workmem;
     for( int i = 1; i < nn->n_layers; i++) {
         int size_w_padding = (nn->layer[i-1].n_output + floats_per_simd_register - 1) / floats_per_simd_register;
+        size_w_padding *= floats_per_simd_register;
         activations[i+1] = activations[i] + size_w_padding;
         assert( is_aligned( activations[i+1] ));
     }
