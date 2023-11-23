@@ -8,11 +8,12 @@
 #include <assert.h>
 #include <time.h>
 
-struct nntest {
+struct {
     int  *sizes;
     char **activations;
     char *loss;
-} test_sizes[3] = {
+} test_cases[] = {
+    /* Some random sized neural network configurations - mostly to test alignment and load/store */
     { .sizes = INT_ARRAY( 231, 128, 5),
       .activations = STR_ARRAY("relu", "sigmoid"),
       .loss = "binary_crossentropy" },
@@ -22,6 +23,7 @@ struct nntest {
     { .sizes = INT_ARRAY( 103, 53, 19, 13, 7),
       .activations = STR_ARRAY("relu", "hard_sigmoid", "tanh", "softmax"),
       .loss = "categorical_crossentropy" },
+    { NULL, NULL, NULL }  /* Sentinel */
 };
 
 int main(int argc, char *argv[] )
@@ -32,10 +34,16 @@ int main(int argc, char *argv[] )
     if(argc == 1)
         fprintf(stderr, KBLU "Running '%s'\n" KNRM, argv[0] );
 
-    for( int i = 0; i < 3; i++ ){
+    for( int i = 0; test_cases[i].sizes; i++ ){
+
         fprintf(stderr, KBLU "Creating neural network %d\n" KNRM, i+1 );
-        neuralnet_t *nn = neuralnet_create( i+2,
-                test_sizes[i].sizes, test_sizes[i].activations);
+
+        /* Count number of layers by counting the number of activation functions given */
+        int n_layers = 0; char **p = test_cases[i].activations;
+        while( *p++ ) n_layers++;
+        
+        neuralnet_t *nn = neuralnet_create( n_layers,
+                test_cases[i].sizes, test_cases[i].activations);
     
         CHECK_NOT_NULL_MSG( nn,
                 "Checking that neural network was created" );
@@ -60,7 +68,7 @@ int main(int argc, char *argv[] )
             printf("%6.6f\n", output[j]);
         
         /* Try one backward calc. */
-        neuralnet_set_loss( nn, test_sizes[i].loss );
+        neuralnet_set_loss( nn, test_cases[i].loss );
         for( int j = 0; j < nn_n_output; j++)
             target[j] = 1.0f;
         neuralnet_backpropagation( nn, input, target, grad );
