@@ -62,7 +62,7 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
 #if defined(__FMA__)
             sum = _mm256_fmadd_ps( _mm256_loadu_ps(v_ptr), _mm256_load_ps(m_ptr), sum);
 #else
-            sum = _mm256_add_ps (sum, _mm256_mul_ps(_mm256_load_ps(v_ptr), _mm256_load_ps(m_ptr)));
+            sum = _mm256_add_ps (sum, _mm256_mul_ps(_mm256_loadu_ps(v_ptr), _mm256_load_ps(m_ptr)));
 #endif
         }
         y[i] += horizontalsum_avx( sum );
@@ -73,9 +73,10 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
 #endif /* USE_CBLAS */
 }
 
-
 void vector_vector_outer( int n_rows, int n_cols, const float *x, const float *y, float *matrix )
 {
+    /* printf("Is y vector aligned? %s\n", is_aligned( y ) ? "Yes" : "Nope" );
+    It is not always aligned! I guess I have to align the different elements of the gradient for that. */
 #ifdef USE_CBLAS
     cblas_sger(CblasRowMajor, n_rows, n_cols, 1.0, x, 1, y, 1, matrix, n_cols);
 #else
@@ -141,18 +142,18 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
 
     for (int i = 0; i < n; i++) {
         float const inp = input[i];
-        const float *weight_ptr = weight + ( i * m );  /* Argh! if m is not a multiple of ALIGN_SIZE, the pointer wil be unaligned! :-( */
+        const float *weight_ptr = weight + ( i * m );  /* Argh! if m is not a multiple of ALIGN_SIZE, the pointer will be unaligned! :-( */
         if (inp) {
             float  *y_ptr = y;  /* same goes for this */
             if (inp == 1.0f){
                 int j = 0;
 #ifdef __AVX512F__
                 for (; j <= ((m)-16) ; j += 16, y_ptr += 16, weight_ptr += 16) 
-                    _mm512_storeu_ps(y_ptr, _mm512_add_ps (_mm512_loadu_ps(y_ptr), _mm512_loadu_ps( weight_ptr )));
+                    _mm512_store_ps(y_ptr, _mm512_add_ps (_mm512_load_ps(y_ptr), _mm512_loadu_ps( weight_ptr )));
 #endif /*  __AVX512F__ */
 #ifdef __AVX__
                 for (; j <= ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8) 
-                    _mm256_storeu_ps(y_ptr, _mm256_add_ps (_mm256_loadu_ps(y_ptr), _mm256_loadu_ps( weight_ptr )));
+                    _mm256_store_ps(y_ptr, _mm256_add_ps (_mm256_load_ps(y_ptr), _mm256_loadu_ps( weight_ptr )));
 #endif /*  __AVX__ */
                 for( ; j < m; j++ )
                     *y_ptr++ += *weight_ptr++;
@@ -161,9 +162,9 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
 #ifdef __AVX512F__
                 for (; j < ((m)-16) ; j += 16, y_ptr += 16, weight_ptr += 16){
 #if defined(__FMA__)
-                    _mm512_storeu_ps(y_ptr, _mm512_fmadd_ps( _mm512_loadu_ps(weight_ptr), _mm512_set1_ps(inp), _mm512_loadu_ps(y_ptr)));
+                    _mm512_store_ps(y_ptr, _mm512_fmadd_ps( _mm512_loadu_ps(weight_ptr), _mm512_set1_ps(inp), _mm512_load_ps(y_ptr)));
 #else
-                    _mm512_storeu_ps(y_ptr, _mm512_add_ps(_mm512_loadu_ps(y_ptr), _mm512_mul_ps(_mm512_loadu_ps(weight_ptr), _mm512_set1_ps(inp))));
+                    _mm512_store_ps(y_ptr, _mm512_add_ps(_mm512_load_ps(y_ptr), _mm512_mul_ps(_mm512_loadu_ps(weight_ptr), _mm512_set1_ps(inp))));
 #endif  
                 }
 #endif
@@ -171,9 +172,9 @@ void vector_matrix_multiply( int n, int m, const float *weight, const float *bia
                 __m256 scalevec = _mm256_set1_ps(inp);
                 for (; j < ((m)-8) ; j += 8, y_ptr += 8, weight_ptr += 8){
 #if defined(__FMA__)
-                    _mm256_storeu_ps(y_ptr, _mm256_fmadd_ps( _mm256_loadu_ps(weight_ptr), scalevec, _mm256_loadu_ps(y_ptr)));
+                    _mm256_store_ps(y_ptr, _mm256_fmadd_ps( _mm256_loadu_ps(weight_ptr), scalevec, _mm256_load_ps(y_ptr)));
 #else
-                    _mm256_storeu_ps(y_ptr, _mm256_add_ps(_mm256_loadu_ps(y_ptr), _mm256_mul_ps(_mm256_loadu_ps(weight_ptr), scalevec)));
+                    _mm256_store_ps(y_ptr, _mm256_add_ps(_mm256_load_ps(y_ptr), _mm256_mul_ps(_mm256_loadu_ps(weight_ptr), scalevec)));
 #endif  
                 }
 #endif
