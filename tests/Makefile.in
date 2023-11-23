@@ -30,7 +30,7 @@ endif
 
 CFLAGS += $(DEFINE)
 
-testprogs = test_neuralnet test_sgd test_backpropagation test_activation test_loss test_metrics
+testprogs = test_neuralnet test_oddsizes test_sgd test_backpropagation test_activation test_loss test_metrics
 
 all: $(testprogs) 
 

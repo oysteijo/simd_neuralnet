@@ -60,7 +60,7 @@ void matrix_vector_multiply( int n_rows, int n_cols, const float *matrix, const 
         __m256 sum = _mm256_setzero_ps ();
         for (; j <= ((n_cols)-8); j += 8, m_ptr += 8, v_ptr += 8){ /* Check if faster: unroll w prefetch */
 #if defined(__FMA__)
-            sum = _mm256_fmadd_ps( _mm256_load_ps(v_ptr), _mm256_load_ps(m_ptr), sum);
+            sum = _mm256_fmadd_ps( _mm256_loadu_ps(v_ptr), _mm256_load_ps(m_ptr), sum);
 #else
             sum = _mm256_add_ps (sum, _mm256_mul_ps(_mm256_load_ps(v_ptr), _mm256_load_ps(m_ptr)));
 #endif
