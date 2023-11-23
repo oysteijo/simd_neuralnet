@@ -41,10 +41,10 @@ int main(int argc, char *argv[] )
         /* Count number of layers by counting the number of activation functions given */
         int n_layers = 0; char **p = test_cases[i].activations;
         while( *p++ ) n_layers++;
-        
+
         neuralnet_t *nn = neuralnet_create( n_layers,
                 test_cases[i].sizes, test_cases[i].activations);
-    
+
         CHECK_NOT_NULL_MSG( nn,
                 "Checking that neural network was created" );
 
@@ -66,7 +66,7 @@ int main(int argc, char *argv[] )
         printf("Predictions:\n");
         for( int j = 0; j < nn_n_output; j++)
             printf("%6.6f\n", output[j]);
-        
+
         /* Try one backward calc. */
         neuralnet_set_loss( nn, test_cases[i].loss );
         for( int j = 0; j < nn_n_output; j++)
