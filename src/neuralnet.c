@@ -189,24 +189,7 @@ neuralnet_t *neuralnet_load( const char *filename)
             }
         }
 
-        /*
-        printf( "copy data from (%dx%d) matrix into a (%dx%d) matrix.\n",
-             weights->shape[0], weights->shape[1],
-             nn->layer[i].n_input, nn->layer[i].n_output );
-        */
-        if( ((int)weights->shape[0] == nn->layer[i].n_input) && ((int)weights->shape[1] == nn->layer[i].n_output)) { 
-            /* No resize */
-            memcpy( nn->layer[i].weight, weights->data, weights->shape[0] * weights->shape[1] * sizeof(float));
-        } else {
-            /* The neural network layer has been resized to match the SIMD register size. */
-            /* Step one: Set all weights to 0 */
-            memset( nn->layer[i].weight, 0, nn->layer[i].n_input * nn->layer[i].n_output * sizeof(float));
-            /* Step two: copy row by row */
-            for( int j = 0; j < (int) weights->shape[0]; j++ )
-                memcpy( nn->layer[i].weight + (j * nn->layer[i].n_output), /* dest */
-                        (float*) weights->data + (j * weights->shape[1]),  /* src  */
-                        weights->shape[1] * sizeof(float));                /* size */
-        }
+        memcpy( nn->layer[i].weight, weights->data, weights->shape[0] * weights->shape[1] * sizeof(float));
         /* Debug 
         print_matrix( weights->shape[0], weights->shape[1], (float*) weights->data );
         print_matrix( nn->layer[i].n_input, nn->layer[i].n_output, nn->layer[i].weight );
@@ -269,13 +252,16 @@ void neuralnet_predict( const neuralnet_t *nn, const float *input, float *out )
     for( int i = 0; i < nn->n_layers; i++)
         workmem_sz += nn->layer[i].n_output; // + nn->layer[i].n_float_padding;
 
-    float SIMD_ALIGN(workmem[ workmem_sz ]);
+    float SIMD_ALIGN(workmem[ workmem_sz + (floats_per_simd_register * nn->n_layers) ]);
     float *activations[nn->n_layers+1];
     activations[0] = (float*) input;
     activations[1] = workmem;
-    for( int i = 1; i < nn->n_layers-1; i++)
-        activations[i+1] = activations[i] + nn->layer[i-1].n_output; // + nn->layer[i-1].n_float_padding;
-    
+    for( int i = 1; i < nn->n_layers-1; i++) {
+        int size_w_padding = (nn->layer[i-1].n_output + floats_per_simd_register - 1) / floats_per_simd_register;
+        size_w_padding *= floats_per_simd_register;
+        activations[i+1] = activations[i] + size_w_padding;
+        assert( is_aligned( activations[i+1] ));
+    }
     activations[nn->n_layers] = out;
 
     /* Debug */
@@ -500,12 +486,16 @@ void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const
     for( int i = 0; i < nn->n_layers; i++)
         workmem_sz += nn->layer[i].n_output;
 
-    float SIMD_ALIGN(workmem[ workmem_sz + nn->layer[0].n_input ]);
+    float SIMD_ALIGN(workmem[ workmem_sz + nn->layer[0].n_input + (floats_per_simd_register * nn->n_layers) ]);
     float *activations[nn->n_layers+1];
     activations[0] = (float*) input;
     activations[1] = workmem;
-    for( int i = 1; i < nn->n_layers; i++)
-        activations[i+1] = activations[i] + nn->layer[i-1].n_output;
+    for( int i = 1; i < nn->n_layers; i++) {
+        int size_w_padding = (nn->layer[i-1].n_output + floats_per_simd_register - 1) / floats_per_simd_register;
+        size_w_padding *= floats_per_simd_register;
+        activations[i+1] = activations[i] + size_w_padding;
+        assert( is_aligned( activations[i+1] ));
+    }
     
     /* forward */
     for( int i = 0; i < nn->n_layers; i++){
@@ -648,19 +638,6 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
         return NULL;
     }
 
-#ifndef USE_CBLAS
-    /* OK - resize "bad" sized */
-    int resizes[n_layers + 1];
-    memcpy( resizes, sizes, (n_layers + 1) * sizeof(int));
-    for( int i = 1; i < n_layers; i++ ){
-        int num_of_simd_reg = ( sizes[i] +  floats_per_simd_register - 1 ) / floats_per_simd_register;
-        resizes[i] = num_of_simd_reg * floats_per_simd_register;
-
-        if (sizes[i] != resizes[i] ) /* We did a resize */
-            fprintf( stderr, "INFO - Neural network size is resized to match CPUs SIMD registers.\nINFO - Hidden size %d is resized to %d.\n",
-                    sizes[i], resizes[i] );
-    }
-#endif
     neuralnet_t *nn;
     /* The neural network itself doesn't need to be aligned */
     if ( (nn = malloc( sizeof( neuralnet_t ))) == NULL ){  
@@ -678,13 +655,8 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
     }
 
     for( int i = 0; i < nn->n_layers; i++ ){
-#ifdef USE_CBLAS
         nn->layer[i].n_input  = sizes[i];
         nn->layer[i].n_output = sizes[i+1];
-#else
-        nn->layer[i].n_input  = resizes[i];
-        nn->layer[i].n_output = resizes[i+1];
-#endif
     }
 
     if( !_weights_memory_allocate( nn )){
