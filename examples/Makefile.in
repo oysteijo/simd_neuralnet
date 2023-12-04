@@ -14,7 +14,7 @@ NEURALNET_LIBPATH = ../src
 CFLAGS += -I$(NPY_ARRAY_LIBPATH) -I$(NEURALNET_LIBPATH) -I..
 LDFLAGS += -L$(NEURALNET_LIBPATH) -lsimd_neuralnet
 LDFLAGS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
-LDFLAGS += `pkg-config --libs openblas`
+# LDFLAGS += `pkg-config --libs openblas`
 LDFLAGS += -lzip -ldl -lm
 
 ifeq ($(CC),gcc)
