@@ -25,62 +25,62 @@ test partition.
 
 Let's start python:
 ```python
-    # First we import the libraries we are using
-    import csv
-    import numpy as np
-    from collections import defaultdict
-    
-    columns = defaultdict(list) # each value in each column is appended to a list
-    
-    # Read the file into a dictionary where each column is tehe key and the value
-    # is a list of all elements in the column.
-    with open('mushrooms.csv') as f:
-        reader = csv.DictReader(f) # read rows into a dictionary format
-        for row in reader: # read a row as {column1: value1, column2: value2,...}
-            for (k,v) in row.items(): # go over each column name and value
-                columns[k].append(v) # append the value into the appropriate list
-                                     # based on column name k
-    
-    # This is code does one-hot-encoding of all the features. It finds the number of unique
-    # elements in each column and makes a numpy array of one hot encoded features for each.
-    # At the end of each loop iterations the numpy array is concatenated to the other
-    # previous features form previous iterations. 
-    # It there is only one unique value in a column, that column will be discarded in the
-    # features. If there are only two unique values in a column, it will only produce one
-    # feature column since another column will be complementary to the other.
-    
-    features = None
-    for c in list(columns.keys()):
-        u, e =  np.unique(columns[c], return_inverse=True)
-        if len(u) == 1:
-            continue
-        if len(u) == 2:
-            f = np.array(e, dtype=np.float32).reshape((-1,1))
-        else:
-            n_values = np.max(e) + 1
-            f = np.eye(n_values)[e].astype(np.float32)
-        print( "{:25s}".format(c), f.shape )
-        if features is None:
-            features = f
-        else:
-            features = np.hstack((features, f ))
-    
-    # "features" is actually a bit of a misnomer as the first column is actually the target value.
-    # We will also use python to split the dataset. First we randomize the order, and then we split
-    # into train and test partitions.
-    
-    np.random.shuffle( features )
-    split_ratio = 0.7
-    split_idx = int(features.shape[0] * split_ratio)
-    
-    # We save everything into four numpy arrays in the `.npz` format (which is actually zip).
-    # - train_features
-    # - train_targets
-    # - test_features
-    # - test_targets
-    
-    np.savez("mushroom_train.npz", features[:split_idx,1:], features[:split_idx,0].reshape((-1,1)),
-                                   features[split_idx:,1:], features[split_idx:,0].reshape((-1,1)))
+# First we import the libraries we are using
+import csv
+import numpy as np
+from collections import defaultdict
+
+columns = defaultdict(list) # each value in each column is appended to a list
+
+# Read the file into a dictionary where each column is tehe key and the value
+# is a list of all elements in the column.
+with open('mushrooms.csv') as f:
+    reader = csv.DictReader(f) # read rows into a dictionary format
+    for row in reader: # read a row as {column1: value1, column2: value2,...}
+        for (k,v) in row.items(): # go over each column name and value
+            columns[k].append(v) # append the value into the appropriate list
+                                 # based on column name k
+
+# This is code does one-hot-encoding of all the features. It finds the number of unique
+# elements in each column and makes a numpy array of one hot encoded features for each.
+# At the end of each loop iterations the numpy array is concatenated to the other
+# previous features form previous iterations. 
+# It there is only one unique value in a column, that column will be discarded in the
+# features. If there are only two unique values in a column, it will only produce one
+# feature column since another column will be complementary to the other.
+
+features = None
+for c in list(columns.keys()):
+    u, e =  np.unique(columns[c], return_inverse=True)
+    if len(u) == 1:
+        continue
+    if len(u) == 2:
+        f = np.array(e, dtype=np.float32).reshape((-1,1))
+    else:
+        n_values = np.max(e) + 1
+        f = np.eye(n_values)[e].astype(np.float32)
+    print( "{:25s}".format(c), f.shape )
+    if features is None:
+        features = f
+    else:
+        features = np.hstack((features, f ))
+
+# "features" is actually a bit of a misnomer as the first column is actually the target value.
+# We will also use python to split the dataset. First we randomize the order, and then we split
+# into train and test partitions.
+
+np.random.shuffle( features )
+split_ratio = 0.7
+split_idx = int(features.shape[0] * split_ratio)
+
+# We save everything into four numpy arrays in the `.npz` format (which is actually zip).
+# - train_features
+# - train_targets
+# - test_features
+# - test_targets
+
+np.savez("mushroom_train.npz", features[:split_idx,1:], features[:split_idx,0].reshape((-1,1)),
+                               features[split_idx:,1:], features[split_idx:,0].reshape((-1,1)))
 ```    
 The code above is also available in `mushroom_to_numpy.py`.
 
@@ -89,13 +89,13 @@ The code above is also available in `mushroom_to_numpy.py`.
 `simd_neuralnet` is a library written in ANSI C and here comes an example of the usage in C.
 Let's start simple.
 ```c
-    #include "npy_array.h"
-    #include "neuralnet.h"
-    
-    #include <stdio.h>
-    #include <stdlib.h>
-    #include <assert.h>
-    ...
+#include "npy_array.h"
+#include "neuralnet.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+...
 ```
 First we include the header file from npy_array (`#include "npy_array.h"`) which is a library that
 can read and write numpy arrays stored as `.npy` or `.npz` files. The routines for this from this
@@ -105,24 +105,24 @@ The next include (`#include "neuralnet.h"`) is the header declarations for the n
 
 The three last includes are standard include files that comes from the C library.
 ```c
-    int main( int argc, char *argv[] )
-    {
-        npy_array_list_t *filelist = npy_array_list_load( "mushroom_train.npz" );
-        assert( filelist );
-        
-        npy_array_list_t *iter = filelist;
-        npy_array_t *train_X = iter->array;  iter = iter->next;
-        npy_array_t *train_Y = iter->array;  iter = iter->next;
-        npy_array_t *test_X = iter->array;   iter = iter->next;
-        npy_array_t *test_Y = iter->array;
+int main( int argc, char *argv[] )
+{
+    npy_array_list_t *filelist = npy_array_list_load( "mushroom_train.npz" );
+    assert( filelist );
     
-        /* if any of these asserts fails, try to open the weight in python and save with
-         * np.ascontiguousarray( matrix ) */
-        assert( train_X->fortran_order == false );
-        assert( train_Y->fortran_order == false );
-        assert( test_X->fortran_order == false );
-        assert( test_Y->fortran_order == false );
-    ...
+    npy_array_list_t *iter = filelist;
+    npy_array_t *train_X = iter->array;  iter = iter->next;
+    npy_array_t *train_Y = iter->array;  iter = iter->next;
+    npy_array_t *test_X = iter->array;   iter = iter->next;
+    npy_array_t *test_Y = iter->array;
+
+    /* if any of these asserts fails, try to open the weight in python and save with
+     * np.ascontiguousarray( matrix ) */
+    assert( train_X->fortran_order == false );
+    assert( train_Y->fortran_order == false );
+    assert( test_X->fortran_order == false );
+    assert( test_Y->fortran_order == false );
+...
 ```
 The above code opens a main() function which is the starting point of our little program.
 The function `npy_array_list_load()` loads a `.npz` file into memory and makes a linked
@@ -143,15 +143,15 @@ npy_array documentation.
 There is also some assert macros added to ensure that the row/column order is correct. That
 is the `fortran_order` lines. 
 ```c
-    ...
-        neuralnet_t *nn = neuralnet_create( 3,
-                INT_ARRAY( train_X->shape[1], 64, 32, 1 ),
-                STR_ARRAY( "relu", "relu", "sigmoid" ) );
-        assert( nn );
-    
-        neuralnet_initialize( nn, STR_ARRAY("kaiming", "kaiming", "kaiming"));
-        neuralnet_set_loss( nn, "binary_crossentropy" );
-    ...
+...
+    neuralnet_t *nn = neuralnet_create( 3,
+            INT_ARRAY( train_X->shape[1], 64, 32, 1 ),
+            STR_ARRAY( "relu", "relu", "sigmoid" ) );
+    assert( nn );
+
+    neuralnet_initialize( nn, STR_ARRAY("kaiming", "kaiming", "kaiming"));
+    neuralnet_set_loss( nn, "binary_crossentropy" );
+...
 ```
 These next lines creates a new neural network datatype, and it is followed by an assert
 macro call to check that it really got created. The arguments the `nueralnet_create()`
@@ -201,26 +201,26 @@ So we are now ready to train the neural network and we will use an update rule c
 Stochastic Gradient Descent. We will loop through the training set once. One iteration
 of training through a training dataset is called an epoch, so we will train for one epochs.
 ```c
-    ...
-        const int n_train_samples = train_X->shape[0];
-        const int n_features      = train_X->shape[1];
-        const int n_parameters    = neuralnet_total_n_parameters( nn );
-        const float learning_rate = 0.01f;
-    
-        float SIMD_ALIGN(gradient[n_parameters]); 
-    
-        float *train_feature = (float*) train_X->data;
-        float *train_target  = (float*) train_Y->data;
-        for( int i = 0; i < n_train_samples; i++ ){
-            neuralnet_backpropagation( nn, train_feature, train_target, gradient );
-            for( int j = 0; j < n_parameters; j++ )
-                gradient[j] *= -learning_rate;
-            neuralnet_update( nn, gradient );
-            train_feature += n_features;
-            train_target  += 1;
-        }
-        printf("Done.\n");
-    ...
+...
+    const int n_train_samples = train_X->shape[0];
+    const int n_features      = train_X->shape[1];
+    const int n_parameters    = neuralnet_total_n_parameters( nn );
+    const float learning_rate = 0.01f;
+
+    float SIMD_ALIGN(gradient[n_parameters]); 
+
+    float *train_feature = (float*) train_X->data;
+    float *train_target  = (float*) train_Y->data;
+    for( int i = 0; i < n_train_samples; i++ ){
+        neuralnet_backpropagation( nn, train_feature, train_target, gradient );
+        for( int j = 0; j < n_parameters; j++ )
+            gradient[j] *= -learning_rate;
+        neuralnet_update( nn, gradient );
+        train_feature += n_features;
+        train_target  += 1;
+    }
+    printf("Done.\n");
+...
 ```
 Does that look overwhelming? Relax... the next paragraphs will simplify a bit. If you know
 something about C as a programming language and something about Stochastic Gradient Descent,
@@ -237,47 +237,47 @@ test samples. This will be what data scientists will call the "accuracy" or
 of 0.5 since it is about 50% chance of guessing right. We must hope we get a higher
 accuracy then 0.5.
 ```c
-    ...
-        int correct_count = 0;
-        const int n_test_samples = test_X->shape[0];
-        
-        float *test_feature = (float*) test_X->data;
-        float *test_target  = (float*) test_Y->data;
-        for( int i = 0; i < n_test_samples; i++ ){
-            float output[1];
-            neuralnet_predict( nn, test_feature, output );
-            int y_pred = output[0] > 0.5f ? 1 : 0;
-            int y_true = *test_target > 0.5f ? 1 : 0;
-            if( y_pred == y_true )
-                correct_count++;
-            test_feature += n_features;
-            test_target  += 1;
-        }
+...
+    int correct_count = 0;
+    const int n_test_samples = test_X->shape[0];
     
-        printf("Accuracy: %5.5f\n", (float) correct_count / (float) n_test_samples );
-    ...
+    float *test_feature = (float*) test_X->data;
+    float *test_target  = (float*) test_Y->data;
+    for( int i = 0; i < n_test_samples; i++ ){
+        float output[1];
+        neuralnet_predict( nn, test_feature, output );
+        int y_pred = output[0] > 0.5f ? 1 : 0;
+        int y_true = *test_target > 0.5f ? 1 : 0;
+        if( y_pred == y_true )
+            correct_count++;
+        test_feature += n_features;
+        test_target  += 1;
+    }
+
+    printf("Accuracy: %5.5f\n", (float) correct_count / (float) n_test_samples );
+...
 ```
 ### Clean up resources
 
 We have created resources for the neural network itself and the training and test data.
 The only thing left to do is to free these resources and return to the shell.
 ```c
-        ...
-        neuralnet_free( nn );
-        npy_array_list_free( filelist );
-        return 0;
-    }
+    ...
+    neuralnet_free( nn );
+    npy_array_list_free( filelist );
+    return 0;
+}
 ```
 ### Compile and run
 The code listed above is actually available in `example_01.c`. It can be compiled with the
 `configure` and makefile provided. 
 ```shell
-    ./configure
-    make example_01
+./configure
+make example_01
 ```
 The above will make an executable of the example above. You can run it with:
 ```shell
-    ./example_01
+./example_01
 ```
 Your mileage may vary, but I get accuracy of **0.99795**. Really not bad.
 
@@ -297,33 +297,33 @@ projects:
 
 Let's first make the manual implementation above use the supplied SGD code.
 ```c
-    ...
-        /* Training with plain Stochastic Gradient Decsent (SGD) */
-        const int n_train_samples = train_X->shape[0];
-        const int n_test_samples = test_X->shape[0];
-        const float learning_rate = 0.01f;
-    
-        optimizer_t *sgd = optimizer_new( nn,
-                OPTIMIZER_CONFIG(
-                    .batchsize = 1,
-                    .shuffle   = false,
-                    .run_epoch = SGD_run_epoch,
-                    .settings  = SGD_SETTINGS( .learning_rate = learning_rate ),
-                    .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
-                        get_metric_func( "binary_accuracy" ), NULL }),
-                    .progress  = NULL
-                    )
-                );
-    
-        float results[ 2 * optimizer_get_n_metrics( sgd ) ];
-        optimizer_run_epoch( sgd, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
-                                  n_test_samples,  (float*) test_X->data, (float*) test_Y->data, results );
+...
+    /* Training with plain Stochastic Gradient Decsent (SGD) */
+    const int n_train_samples = train_X->shape[0];
+    const int n_test_samples = test_X->shape[0];
+    const float learning_rate = 0.01f;
 
-        printf("Train loss    : %5.5f\n", results[0] );
-        printf("Train accuracy: %5.5f\n", results[1] );
-        printf("Test loss     : %5.5f\n", results[2] );
-        printf("Test accuracy : %5.5f\n", results[3] );
-    ...
+    optimizer_t *sgd = optimizer_new( nn,
+            OPTIMIZER_CONFIG(
+                .batchsize = 1,
+                .shuffle   = false,
+                .run_epoch = SGD_run_epoch,
+                .settings  = SGD_SETTINGS( .learning_rate = learning_rate ),
+                .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
+                    get_metric_func( "binary_accuracy" ), NULL }),
+                .progress  = NULL
+                )
+            );
+
+    float results[ 2 * optimizer_get_n_metrics( sgd ) ];
+    optimizer_run_epoch( sgd, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
+                              n_test_samples,  (float*) test_X->data, (float*) test_Y->data, results );
+
+    printf("Train loss    : %5.5f\n", results[0] );
+    printf("Train accuracy: %5.5f\n", results[1] );
+    printf("Test loss     : %5.5f\n", results[2] );
+    printf("Test accuracy : %5.5f\n", results[3] );
+...
 ```
 As you see there are some parameters to setup a optimizer,
 but when it's done it basically does both loops for you.
@@ -356,15 +356,15 @@ with a plain feed forward neural network, we can only expect to get an accuracy
 of about 95% on the test data. Let's try. First we get the data using some simple
 command line tools:
 ```shell
-    wget http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
-    wget http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
-    wget http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
-    wget http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
-    # unzip the files
-    gunzip train-images-idx3-ubyte.gz
-    gunzip train-labels-idx1-ubyte.gz
-    gunzip t10k-images-idx3-ubyte.gz
-    gunzip t10k-labels-idx3-ubyte.gz
+wget http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
+wget http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
+wget http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
+wget http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+# unzip the files
+gunzip train-images-idx3-ubyte.gz
+gunzip train-labels-idx1-ubyte.gz
+gunzip t10k-images-idx3-ubyte.gz
+gunzip t10k-labels-idx3-ubyte.gz
 ```
 The file `example_03.c` contains some code to read the files and convert it to
 training data. The reading function images reads the file and converts the data
@@ -385,44 +385,44 @@ can at the end of the loop run through all callbacks. In the callback directory
 in this codebase, there are already implemented a logging callback, an early stopping
 callback and a checkpoint callback.
 ```c
-        /* Training with plain Stochastic Gradient Decsent (SGD) */    
-        const float learning_rate = 0.01f;
-    
-        optimizer_t *opt = optimizer_new( nn, 
-                OPTIMIZER_CONFIG(
-                    .batchsize = 16,
-                    .shuffle   = true,
-                    .run_epoch = adamw_run_epoch,
-                    .settings  = ADAMW_SETTINGS( .learning_rate = learning_rate ),
-                    .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
-                        get_metric_func( "categorical_accuracy" ), NULL }),
-                    )
-                );
-    
-        callback_t *callbacks[] = {
-            CALLBACK( logger_new( LOGGER_NEW() ) ),
-            NULL
-        };
-    
-        /* Main training loop */
-        float results[ 2 * optimizer_get_n_metrics( opt ) ];
-        int n_epochs = 2;
-        for( int epoch = 0; epoch < n_epochs; epoch++ ){
-            optimizer_run_epoch( opt, n_train_samples, train_features, train_labels,
-                                      n_test_samples,  test_features,  test_labels, results );
-            for( callback_t **cb = callbacks; *cb; cb++ )
-                callback_run( *cb, opt, results, true );
-        }
+    /* Training with plain Stochastic Gradient Decsent (SGD) */    
+    const float learning_rate = 0.01f;
+
+    optimizer_t *opt = optimizer_new( nn, 
+            OPTIMIZER_CONFIG(
+                .batchsize = 16,
+                .shuffle   = true,
+                .run_epoch = adamw_run_epoch,
+                .settings  = ADAMW_SETTINGS( .learning_rate = learning_rate ),
+                .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
+                    get_metric_func( "categorical_accuracy" ), NULL }),
+                )
+            );
+
+    callback_t *callbacks[] = {
+        CALLBACK( logger_new( LOGGER_NEW() ) ),
+        NULL
+    };
+
+    /* Main training loop */
+    float results[ 2 * optimizer_get_n_metrics( opt ) ];
+    int n_epochs = 2;
+    for( int epoch = 0; epoch < n_epochs; epoch++ ){
+        optimizer_run_epoch( opt, n_train_samples, train_features, train_labels,
+                                  n_test_samples,  test_features,  test_labels, results );
+        for( callback_t **cb = callbacks; *cb; cb++ )
+            callback_run( *cb, opt, results, true );
+    }
 ```
 The callbacks are using resources and should be free'ed when you're done with them:
 ```c
-        /* How to free all callbacks in a NULL terminated array */
-        for( callback_t **cb = callbacks; *cb; cb++ )
-            callback_free( *cb );
+    /* How to free all callbacks in a NULL terminated array */
+    for( callback_t **cb = callbacks; *cb; cb++ )
+        callback_free( *cb );
 ```
 Compile and run this:
 ```shell
-    make mnist (?)
+make mnist (?)
 ```
 I get about 95% accuracy on this, however the results are not that interesting here.
 
