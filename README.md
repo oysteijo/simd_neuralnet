@@ -96,64 +96,58 @@ arrays, however the `neuralnet_save()` function will store it at the en of the z
 A simple feed forward neural network with 3 inputs, 4 hidden units and 2 outputs, and tanh and sigmoid activations
 will then be stored as.
 
-    A numpy array with shape 3,4 (Weights)
-    A numpy array with shape 4,
-    A numpy array with shape 4,2
-    A numpy array with shape 2,
-    A numpy array of string (char arrays) contaning "tanh" and "sigmoid"
+ *  A numpy array with shape 3,4 (Weights)
+ *  A numpy array with shape 4,
+ *  A numpy array with shape 4,2
+ *  A numpy array with shape 2,
+ *  A numpy array of string (char arrays) contaning `"tanh"` and `"sigmoid"`
 
 Let me build that neural network in C code:
+```c
+#include "neuralnet.h"
+int main(){
+    neuralnet_t *nn = neuralnet_create( 2, INT_ARRAY( 3, 4, 2 ), STR_ARRAY( "tanh", "sigmoid"));
+    neuralnet_initialize( nn, "xavier", "xavier" );
 
-    #include "neuralnet.h"
-    int main(){
-        neuralnet_t *nn = neuralnet_create( 2, INT_ARRAY( 3, 4, 2 ), STR_ARRAY( "tanh", "sigmoid"));
-        neuralnet_initialize( nn, "xavier", "xavier" );
+    /* I'm only showing this for being able to save, so I won't set a loss function */
+    neuralnet_save( nn, "my_first_neuralnet_%d_%d_%d.npz", 3,4,2 );
+    neuralnet_free( nn );
 
-        /* I'm only showing this for being able to save, so I won't set a loss function */
-        neuralnet_save( nn, "my_first_neuralnet_%d_%d_%d.npz", 3,4,2 );
-        neuralnet_free( nn );
-
-        return 0;
-    }
-
+    return 0;
+}
+```
 I am then able to open this file in python and numpy:
-
-    Python 3.8.1 (default, Jan 22 2020, 06:38:00) 
-    [GCC 9.2.0] on linux
-    Type "help", "copyright", "credits" or "license" for more information.
-    >>> import numpy as np
-    >>> weights = np.load("my_first_neuralnet_3_4_2.npz")
-    >>> params = [ weights[i] for i in weights.files]
-    >>> import pprint
-    >>> for array in params:
-    ...    pprint.pprint( array )
-    ... 
-    array([[ 0.6299053 , -0.19556482,  0.52419794,  0.5526036 ],
-           [ 0.7622228 , -0.56002605, -0.3051082 ,  0.49666473],
-           [-0.41148126,  0.09993298, -0.04185252,  0.23862255]],
-          dtype=float32)
-    array([0., 0., 0., 0.], dtype=float32)
-    array([[-0.27043104,  0.02680182],
-           [ 0.9044595 ,  0.8323902 ],
-           [ 0.27142346,  0.43459392],
-           [-0.71679485,  0.21393776]], dtype=float32)
-    array([0., 0.], dtype=float32)
-    array([b'tanh', b'sigmoid'], dtype='|S7')
-
+```python
+Python 3.8.1 (default, Jan 22 2020, 06:38:00) 
+[GCC 9.2.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import numpy as np
+>>> weights = np.load("my_first_neuralnet_3_4_2.npz")
+>>> params = [ weights[i] for i in weights.files]
+>>> import pprint
+>>> for array in params:
+...    pprint.pprint( array )
+... 
+array([[ 0.6299053 , -0.19556482,  0.52419794,  0.5526036 ],
+       [ 0.7622228 , -0.56002605, -0.3051082 ,  0.49666473],
+       [-0.41148126,  0.09993298, -0.04185252,  0.23862255]],
+      dtype=float32)
+array([0., 0., 0., 0.], dtype=float32)
+array([[-0.27043104,  0.02680182],
+       [ 0.9044595 ,  0.8323902 ],
+       [ 0.27142346,  0.43459392],
+       [-0.71679485,  0.21393776]], dtype=float32)
+array([0., 0.], dtype=float32)
+array([b'tanh', b'sigmoid'], dtype='|S7')
+```
 And of course it also works the other way, I can create an array in numpy and then stroe it back to
 be read in C. I only need to make sure I store the activation names in pure ascii bytes. (No unicode)
-
-    w1 = np.random.random( (3,4) ).astype(np.float32) 
-    b1 = np.zeros( (4,), dtype=np.float32 )
-    w2 = np.random.random( (4,2) ).astype(np.float32)
-    b2 = np.zeros( (2,), dtype=np.float32 )
-    activations = np.array(["tanh", "sigmoid"]).astype('S')
-    
-    np.savez( "numpy_saved_neuralnet.npz", w1, b1, w2, b2, activations )
-
+```python
+w1 = np.random.random( (3,4) ).astype(np.float32) 
+b1 = np.zeros( (4,), dtype=np.float32 )
+w2 = np.random.random( (4,2) ).astype(np.float32)
+b2 = np.zeros( (2,), dtype=np.float32 )
+activations = np.array(["tanh", "sigmoid"]).astype('S')
+np.savez( "numpy_saved_neuralnet.npz", w1, b1, w2, b2, activations )
+```
 And that file can be used with `neuralnet_load()`.
-
-
-
-
-
