@@ -10,34 +10,67 @@
 #include "neuralnet.h"
 #include "simd.h"
 
-#if 0
-/* This is used for debug */
-static void print_vector( int n, const float *v )
+#if RESOLVE_WITH_WORKMEMORY
+/* Something along these lines. Maybe double size each time? And how do I clean up? */
+static float * _get_workmemory( const size_t n_needed_floats )
 {
-    printf("[ ");
-    for (int i = 0; i < n; i++ )
-        printf("% .5f ", v[i] );
-    printf("]\n");
-}
-static void print_matrix( int m, int n, const float *v )
-{
-    const float *ptr = v;
-    printf("[\n");
-    for ( int i = 0; i < m; i++ ){
-        printf(" ");
-        print_vector( n, ptr );
-        ptr += n;
+    static size_t n_allocated_floats = 0;
+    static float *mem = NULL;
+    if ( n_needed_floats <= n_allocated_floats ){
+        return mem;
     }
-    printf("]\n");
+    mem = realloc( mem, n_needed_floats * sizeof(float));
+    n_allocated_floats = n_needed_floats;
+    return mem;
 }
 #endif
 
+#ifndef STACK_LIMIT
+#define STACK_LIMIT 512 * 1024
+#endif
 void neuralnet_predict_batch( const neuralnet_t *nn, const int n_samples, const float *inputs, float *output )
 {
     /* Make some work memory on stack. */
     int workmem_sz = 0;
     for( int i = 0; i < nn->n_layers; i++)
-        workmem_sz += nn->layer[i].n_output * n_samples;
+        workmem_sz += nn->layer[i].n_output;
+    workmem_sz *= n_samples;
+
+    /* Let's see how often this this fails. */
+    const size_t stack_limit = (STACK_LIMIT) / sizeof(float);
+    assert( stack_limit >= workmem_sz && "Stack size limit reached - "
+            "either recompile with a higher limit find another way to handle work memory" );
+
+#if RESOLVE_WITH_RECURSION
+    if( stack_limit < workmem_sz ){
+        int half = n_samples >> 1;
+        const int n_inputs = nn->layer[0].n_input;
+        const int n_output = nn->layer[nn->n_layers-1].n_output;
+        fprintf(stderr, "Warning: Stack limit reached with %d samples - recursing.\n", n_samples);
+        neuralnet_predict_batch( nn, half, inputs, output );
+        neuralnet_predict_batch( nn, n_samples - half, inputs+(half*n_inputs), output+(half*n_output) );
+        return;    
+    }
+#endif
+    /* So the above line makes sure we don't blow off the stack - but what to do when we hit the limit?
+     *
+     * BTW: What is the limit here? The stack is usually about one MB, so I have initially
+     * set the limit to 512 kb. If we have a neural net with say 1000 n_ouptus (cumulative over
+     * all layers) and then n_samples is 600... That actually fucks it up.
+     *
+     * Options:
+     * 1. Divide and Conquere: Divide the output into two halfs and recurse. Cool!
+     * 2. Have a private (static) function that controls memory. Say:
+     *
+     *     `float *workmem = _get_workmemory( nn, n_samples );`
+     *
+     *    and this function returns a pointer to a preallocated area of memory.
+     * 3. Have a pointer input for work memory and let the caller take care.
+     * 4. Allocate on heap .... ?
+     *
+     * ... and then: even if I have the above limit, I can still get stack overflow.
+     *
+     * */
 
     float workmem[ workmem_sz ]; /* can we blow the stack here? */
     float *activations[nn->n_layers+1];
@@ -59,26 +92,6 @@ void neuralnet_predict_batch( const neuralnet_t *nn, const int n_samples, const 
             memcpy( activations[i+1] + j*layer_ptr->n_output, layer_ptr->bias, size );
     }
 
-#if 0
-    /*  Test first mult */
-    float *A = inputs;               // 2 x 6
-    float *B = nn->layer[0].weight;  // 6 x 4
-    float *C = activations[1];       // 2 x 4
-
-    cblas_sgemm( CblasRowMajor, CblasNoTrans, CblasNoTrans,
-            2, 4, 6,
-            1.0f,
-            A,
-            6,
-            B,
-            4,
-            1.0f,
-            C,
-            4
-            );
-
-    print_matrix( 2, 4, C );
-#endif
     /* Then we do the forward calculation */
     for( int i = 0; i < nn->n_layers; i++){
         const layer_t *layer_ptr = nn->layer + i;
@@ -98,36 +111,3 @@ void neuralnet_predict_batch( const neuralnet_t *nn, const int n_samples, const 
     }
 }
 
-#if 0
-int main()
-{
-    neuralnet_t *nn = neuralnet_create( 2, INT_ARRAY( 6, 4, 2 ), STR_ARRAY( "tanh", "sigmoid" ));
-    assert( nn );
-    neuralnet_set_loss( nn, "binary_crossentropy"); /* I actually don't need this */
-    neuralnet_initialize( nn, STR_ARRAY("xavier", "xavier" ));
-
-    /*  Two samples */
-    float SIMD_ALIGN(inputs[]) = {
-        0.3f, 0.5f, 0.2f, 0.2f, 0.0f, 0.8f,
-        0.5f, 0.2f, 0.2f, 0.0f, 0.8f, 0.3f
-    };
-    
-    float SIMD_ALIGN(output[2*2]) = { 0 };
-
-    neuralnet_save( nn, "simple_6_4_2.npz" );
-
-    for ( int i = 0; i < 2; i++ )
-        neuralnet_predict( nn, inputs + i*6, output + i*2 );
-
-    for ( int i = 0; i < 2; i++ )
-        printf("Output %d: %5.5f %5.5f\n", i, output[i*2], output[(i*2)+1]  );
-
-    neuralnet_predict_batch( nn, 2, inputs, output);
-
-    for ( int i = 0; i < 2; i++ )
-        printf("Output %d: %5.5f %5.5f\n", i, output[i*2], output[(i*2)+1]  );
-
-    return 0;
-
-}
-#endif
