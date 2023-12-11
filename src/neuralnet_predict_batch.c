@@ -8,50 +8,46 @@
 #include <cblas.h>
 #include <assert.h>
 #include "neuralnet.h"
-#include "simd.h"
 
-#if RESOLVE_WITH_WORKMEMORY
-/* Something along these lines. Maybe double size each time? And how do I clean up? */
-static float * _get_workmemory( const size_t n_needed_floats )
-{
-    static size_t n_allocated_floats = 0;
-    static float *mem = NULL;
-    if ( n_needed_floats <= n_allocated_floats ){
-        return mem;
-    }
-    mem = realloc( mem, n_needed_floats * sizeof(float));
-    n_allocated_floats = n_needed_floats;
-    return mem;
-}
+/* This number depends on your system - how much memory do you want to stack allocate?
+ * On a desktop or laptop you probably have plenty. If you ever run into a stack overflow,
+ * you can recomile with -DN_STACK_ALLOC_FLOATS=1024 (or even a lower number)
+ *
+ * So this function, `neuralnet_predict_batch()`, uses some work memory. I don't want to
+ * allocate this dynamically as heap allocation will be performance killer, and stack 
+ * allocation can blow up the stack. The idea is therefore to allocate (on stack) some
+ * fixed size memory, N_STACK_ALLOC_FLOATS, and then check if we need mor or less than
+ * this. If the size need is more than the allocated, we simply split the set in two
+ * and recurse like a divide-and-conquere scheme.
+ */
+#ifndef N_STACK_ALLOC_FLOATS
+#define N_STACK_ALLOC_FLOATS 64 * 1024
 #endif
 
-#ifndef STACK_LIMIT
-#define STACK_LIMIT 512 * 1024
-#endif
 void neuralnet_predict_batch( const neuralnet_t *nn, const int n_samples, const float *inputs, float *output )
 {
-    /* Make some work memory on stack. */
+    /* Make some work memory on stack. First calculate how much we need. */
     int workmem_sz = 0;
     for( int i = 0; i < nn->n_layers; i++)
         workmem_sz += nn->layer[i].n_output;
-    workmem_sz *= n_samples;
+    workmem_sz *= n_samples;  /* This size is also in floats */
 
+#if 0
     /* Let's see how often this this fails. */
-    const size_t stack_limit = (STACK_LIMIT) / sizeof(float);
-    assert( stack_limit >= workmem_sz && "Stack size limit reached - "
+    assert( N_STACK_ALLOC_FLOATS >= workmem_sz && "Stack size limit reached - "
             "either recompile with a higher limit find another way to handle work memory" );
+#endif
 
-#if RESOLVE_WITH_RECURSION
-    if( stack_limit < workmem_sz ){
+    if( N_STACK_ALLOC_FLOATS < workmem_sz ){
         int half = n_samples >> 1;
         const int n_inputs = nn->layer[0].n_input;
         const int n_output = nn->layer[nn->n_layers-1].n_output;
-        fprintf(stderr, "Warning: Stack limit reached with %d samples - recursing.\n", n_samples);
+        // fprintf(stderr, "Warning: Stack limit reached with %d samples - recursing.\n", n_samples);
         neuralnet_predict_batch( nn, half, inputs, output );
         neuralnet_predict_batch( nn, n_samples - half, inputs+(half*n_inputs), output+(half*n_output) );
         return;    
     }
-#endif
+
     /* So the above line makes sure we don't blow off the stack - but what to do when we hit the limit?
      *
      * BTW: What is the limit here? The stack is usually about one MB, so I have initially
@@ -70,9 +66,11 @@ void neuralnet_predict_batch( const neuralnet_t *nn, const int n_samples, const 
      *
      * ... and then: even if I have the above limit, I can still get stack overflow.
      *
+     * (so far we stay with option 1, but we allocate a fixed size on the stack suck that it
+     * cannot overflow.)
      * */
 
-    float workmem[ workmem_sz ]; /* can we blow the stack here? */
+    float workmem[ N_STACK_ALLOC_FLOATS ]; /* can we blow the stack here? */
     float *activations[nn->n_layers+1];
     activations[0] = (float*) inputs;
     activations[1] = workmem;
