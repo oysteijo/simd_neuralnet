@@ -8,6 +8,7 @@
 #include <cblas.h>
 #include <assert.h>
 #include "neuralnet.h"
+#include "activation.h"
 
 /* This number depends on your system - how much memory do you want to stack allocate?
  * On a desktop or laptop you probably have plenty. If you ever run into a stack overflow,
@@ -75,8 +76,6 @@ void neuralnet_predict_batch( const neuralnet_t *nn, const int n_samples, const 
     activations[0] = (float*) inputs;
     activations[1] = workmem;
 
-    /* print_matrix( 2, 6, inputs); */
-
     for( int i = 1; i < nn->n_layers-1; i++)
         activations[i+1] = activations[i] + nn->layer[i-1].n_output * n_samples;
 
@@ -90,22 +89,34 @@ void neuralnet_predict_batch( const neuralnet_t *nn, const int n_samples, const 
             memcpy( activations[i+1] + j*layer_ptr->n_output, layer_ptr->bias, size );
     }
 
+    static activation_func softmax = NULL; /* Keep it static such that get_() is called only once! */
+    if( !softmax )
+        softmax = get_activation_func( "softmax" ); /* Slow? */
+
     /* Then we do the forward calculation */
     for( int i = 0; i < nn->n_layers; i++){
         const layer_t *layer_ptr = nn->layer + i;
+        /* Matrix multiplication */
         cblas_sgemm( CblasRowMajor, CblasNoTrans, CblasNoTrans,
                 n_samples, layer_ptr->n_output, layer_ptr->n_input,
                 1.0f,                /* alpha (7) */
                 activations[i],      /* A     (8) */
                 layer_ptr->n_input,  /* lda   (9) */
                 layer_ptr->weight,   /* B     (8) */
-                layer_ptr->n_output, /* ldb  (11) Something wrong here? */
+                layer_ptr->n_output, /* ldb  (11) */
                 1.0f,                /* beta (12) */
                 activations[i+1],    /* C    (13) */
                 layer_ptr->n_output  /* ldc  (14) */
-        );
-        /* FIXME: we need a special treatment of softmax */
-        layer_ptr->activation_func( layer_ptr->n_output * n_samples, activations[i+1] );
+                );
+        /* Activation */
+        /* ( I really hope the silly if-condition doesn't kill performance. */
+        if ( layer_ptr->activation_func == softmax ){
+            float *out = activations[i+1];
+            for ( int j = 0; j < n_samples; j++, out += layer_ptr->n_output)
+                layer_ptr->activation_func ( layer_ptr->n_output, out );
+        } else {
+            layer_ptr->activation_func ( layer_ptr->n_output * n_samples, activations[i+1] );
+        }
     }
 }
 
