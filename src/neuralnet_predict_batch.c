@@ -2,14 +2,27 @@
 /* 
  vim: ts=4 sw=4 softtabstop=4 expandtab 
 */
+#include "neuralnet_predict_batch.h"
+#include "activation.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <cblas.h>
 #include <assert.h>
-#include "neuralnet.h"
-#include "activation.h"
 
+#ifndef USE_CBLAS
+/* This is the primitive implemetation using OpenMP to thread th foward calculation of several samples.
+ * The recommendation is to us the BLAS implementation, and then add the threading at a higher level in
+ * you application. */
+void neuralnet_predict_batch( const neuralnet_t *nn, const int n_samples, const float *inputs, float *output )
+{
+    const int n_inputs = nn->layer[0].n_input;
+    const int n_output = nn->layer[nn->n_layers-1].n_output;
+#pragma omp parallel for
+    for ( int i = 0; i < n_samples; i++ )
+        neuralnet_predict( nn, inputs + i*n_inputs, output + i*n_output);
+}
+#else
 /* This number depends on your system - how much memory do you want to stack allocate?
  * On a desktop or laptop you probably have plenty. If you ever run into a stack overflow,
  * you can recomile with -DN_STACK_ALLOC_FLOATS=1024 (or even a lower number)
@@ -119,4 +132,4 @@ void neuralnet_predict_batch( const neuralnet_t *nn, const int n_samples, const 
         }
     }
 }
-
+#endif /* USE_CBLAS */
