@@ -7,8 +7,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <cblas.h>
 #include <assert.h>
+
+#ifdef USE_CBLAS
+#include <cblas.h>
+#endif
 
 #ifndef USE_CBLAS
 /* This is the primitive implemetation using OpenMP to thread th foward calculation of several samples.
