@@ -488,12 +488,15 @@ static void sigmoid( const int n, float *y )
 {
     int i = 0;
 #ifdef __AVX2__
+    for ( ; !is_aligned( y + i ); i++)
+        y[i] = 1.0f / (1.0f + expf(-y[i]));
+
     const __m256 one  = _mm256_set1_ps(1.0f);
     const __m256 zero = _mm256_set1_ps(0.0f);
 
     __m256 YMM0, YMM1, YMM2, YMM3;
 
-    for (i = 0; i <= ((n)-16); i += 16) {
+    for (; i <= ((n)-16); i += 16) {
         YMM0 = _mm256_load_ps(y + i);
         YMM1 = _mm256_load_ps(y + i + 8);
         YMM0 = _mm256_sub_ps(zero, YMM0);
