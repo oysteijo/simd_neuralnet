@@ -12,7 +12,7 @@
 void evaluate( neuralnet_t *nn, const int n_valid_samples, const float *valid_X, const float *valid_Y,
         metric_func metrics[], float *results )
 {
-#ifndef USE_CBLAS
+#ifndef USE_CBLAS 
     const int n_input  = nn->layer[0].n_input;
 #endif
     const int n_output = nn->layer[nn->n_layers-1].n_output;
@@ -27,6 +27,7 @@ void evaluate( neuralnet_t *nn, const int n_valid_samples, const float *valid_X,
     memset( local_results, 0, n_metrics * sizeof(float));
 #ifdef USE_CBLAS
     float predictions[ n_output * n_valid_samples ];
+    memset( predictions, 0, n_output * n_valid_samples * sizeof(float));
     neuralnet_predict_batch( nn, n_valid_samples, valid_X, predictions);
 #endif
     #pragma omp parallel for reduction(+:local_results[:])
@@ -47,5 +48,4 @@ void evaluate( neuralnet_t *nn, const int n_valid_samples, const float *valid_X,
     float *res = results;
     for ( int i = 0; i < n_metrics; i++ )
         *res++ = local_results[i] / (float) n_valid_samples;
-
 }

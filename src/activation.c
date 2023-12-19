@@ -308,7 +308,7 @@ static void relu( const int n, float *y )
 #ifdef __AVX__
     const __m256 zero = _mm256_set1_ps(0.0f);
     __m256 YMM0, YMM1;
-    for ( ; !is_aligned( y + i ); i++)
+    for ( ; !is_aligned( y + i ) && i < n; i++)
         y[i] = fmaxf(0.0f, y[i]);
 
     for ( ; i <= ((n)-16); i += 16) {
@@ -456,6 +456,13 @@ static void softmax( const int n, float *ar )
        classification problems. If using two registers, I will lose all vectorization for classification
        problems with less than 16 classes. This is of course a trade off, and if you ever do a classification
        problem with 16 or more classes, you could consider re-writing. */
+
+    /* Skip the unaligned - FIXME: This code is specific for AVX2,
+     *                             yet it checks align for whatever the computer supports */
+    for (; !is_aligned( ar+j ) && j<n; j++ ){
+        ar[j] = expf( ar[j] - maxval );
+        sum += ar[j];
+    }
     __m256 max_v = _mm256_set1_ps( maxval );
     __m256 sum_v = _mm256_set1_ps( 0.0f );
     for (; j <= ((n)-8); j += 8) {
@@ -473,6 +480,9 @@ static void softmax( const int n, float *ar )
     }
     j = 0;
 #ifdef __AVX__
+    for (; !is_aligned( ar + j ) && j < n; j++ ){
+        ar[j] /= sum;
+    }
     __m256 sum4 = _mm256_set1_ps( sum );
     for(; j <= ((n)-8); j+= 8 ) {
         __m256 YMM0 = _mm256_load_ps( ar + j );
@@ -488,7 +498,7 @@ static void sigmoid( const int n, float *y )
 {
     int i = 0;
 #ifdef __AVX2__
-    for ( ; !is_aligned( y + i ); i++)
+    for ( ; !is_aligned( y + i ) && i < n; i++)
         y[i] = 1.0f / (1.0f + expf(-y[i]));
 
     const __m256 one  = _mm256_set1_ps(1.0f);
