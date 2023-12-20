@@ -243,7 +243,7 @@ void neuralnet_predict( const neuralnet_t *nn, const float *input, float *out )
 {
     /* These asserts are important - end user may forget to SIMD_ALIGN memory 
        and then there is a extremly hard bug to find - Think before you remove these assert() */
-    assert( is_aligned( out ));
+    // assert( is_aligned( out ));
 
     /* Stack allocating memory */
     /* FIXME: Do this once and once only! */

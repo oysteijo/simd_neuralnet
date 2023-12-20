@@ -66,6 +66,10 @@ int main( int argc, char *argv[] )
     printf("Test loss     : %5.5f\n", results[2] );
     printf("Test accuracy : %5.5f\n", results[3] );
 
+    /* Let's save the neural net and see if we can recreate the result form a saved nn
+     * That test will be done in a separate souce file (example_02b.c) */
+    neuralnet_save( nn, "mushroom-neuralnet.npz");
+
     /* Clean up the resources */
     neuralnet_free( nn );
     npy_array_list_free( filelist );

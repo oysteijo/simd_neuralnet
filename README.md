@@ -1,10 +1,16 @@
 # simd_neuralnet
 Feed-forward neural network implementation in C with SIMD instructions.
 
-BTW: simd_neuralnet is a bit of a misnomer. It is not SIMD instructions apart from AVX and AVX2 instructions in some of the most heavy functions. Can anyone come up with a better name? It is a neural network library written in C. I'm not sure what else makes this library different from the other libraries out there.
+BTW: simd_neuralnet is a bit of a misnomer. It is not SIMD instructions apart from AVX, AVX2
+and AVX512 instructions in some of the most heavy functions. Can anyone come up with a better name?
+It is a neural network library written in C. I'm not sure what else makes this library different
+from the other libraries out there.
+
+It is very fast compared to other libraries like Keras and PyTorch - just give it a try and you
+will see.
 
 ## The idea.
-At current this is just a study project for myself to improve my abilities to implement a 
+This project started out as a study project for myself to improve my abilities to implement a 
 feed forward neural network in C. A lot of this code will be based on code from some of my
 other projects. Hopefully this will be generally usable.
 
@@ -26,7 +32,8 @@ struggle with python bindings or slow memory transfers to GPU memory.
 ## Limitations
 To be able to achieve the above, we need to set some limitations.
 
- * **`float32` precision only!** The code will use SIMD instructions, so double precision will slow things down, and float16 is not precise enough and has limited support.
+ * **`float32` precision only!** The code will use SIMD instructions, so double precision will
+    slow things down, and `float16` is not precise enough and has limited support.
  * **Fully connect feed forward neural networks only!** No support for LSTM, convolutional layers, RNN or whatever.
  
 ### Loss functions implemented
