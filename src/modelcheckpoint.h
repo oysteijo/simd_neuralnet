@@ -18,7 +18,7 @@ typedef struct _modelcheckpoint_config
 
 /* The 'macros' */
 #define MODELCHECKPOINT(x) ((modelcheckpoint_t*)x)
-#define MODELCHECKPOINT_NEW(...) \
+#define MODELCHECKPOINT_SETTINGS(...) \
     &((modelcheckpoint_config) { .filename=NULL, .monitor_idx=-1, .greater_is_better=false, .verbose=false, __VA_ARGS__ })
 
 #endif /* __MODELCHECKPOINT_H__ */

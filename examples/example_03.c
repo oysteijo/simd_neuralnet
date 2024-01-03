@@ -17,7 +17,9 @@
 static uint32_t read_uint_big_endian( FILE *fp )
 {
     union { unsigned char c[4]; uint32_t i; } val;
-    fread( &val, 1, sizeof(val), fp );
+    if( fread( &val, sizeof(val), 1, fp ) != 1)
+        fprintf(stderr, "Warning - could not read uint in big endian order. (line: %3d)\n", __LINE__ );
+
     unsigned char tmp;
     tmp = val.c[0];
     val.c[0] = val.c[3];
@@ -49,7 +51,9 @@ float *read_idx_features( const char *filename, uint32_t *n_samples, uint32_t *n
         The 4-th byte codes the number of dimensions of the vector/matrix: 1 for vectors, 2 for matrices....
     */
     unsigned char magic[ 4 ];
-    fread( magic, 4, sizeof(unsigned char), fp );
+    if( fread( magic, sizeof(unsigned char), 4, fp ) != 4 )
+        fprintf(stderr, "Warning - cannot read 4 bytes of magic. (line: %3d)\n", __LINE__ );
+
     assert( magic[0] == 0 );
     assert( magic[1] == 0 );
     assert( magic[2] == 0x08 );  /* We expect unsigned bytes */
@@ -68,7 +72,8 @@ float *read_idx_features( const char *filename, uint32_t *n_samples, uint32_t *n
     *n_features = n_rows * n_cols;
 
     unsigned char *raw = malloc( *n_samples * *n_features * sizeof( unsigned char ));
-    fread( raw, *n_samples * *n_features, sizeof( unsigned char ), fp );
+    if( fread( raw, sizeof( unsigned char ), *n_samples * *n_features, fp ) != (size_t) *n_samples * *n_features)
+        fprintf(stderr, "Warning - Cannot read the feature data. (line: %3d)\n", __LINE__ );
 
     float   *features = malloc( *n_samples * *n_features * sizeof( float ));
 
@@ -84,7 +89,7 @@ float *read_idx_features( const char *filename, uint32_t *n_samples, uint32_t *n
     return features;
 }
 
-float *read_idx_labels( const char *filename, uint32_t *n_samples, uint32_t *n_targets )
+float *read_idx_labels( const char *filename, uint32_t *n_samples, uint32_t n_targets )
 {
     FILE *fp = fopen(filename, "rb");
     if( !fp ) return NULL;
@@ -104,7 +109,9 @@ float *read_idx_labels( const char *filename, uint32_t *n_samples, uint32_t *n_t
         The 4-th byte codes the number of dimensions of the vector/matrix: 1 for vectors, 2 for matrices....
     */
     unsigned char magic[ 4 ];
-    fread( magic, 4, sizeof(unsigned char), fp );
+    if( fread( magic, sizeof(unsigned char), 4, fp ) != 4 )
+        fprintf(stderr, "Warning - cannot read 4 bytes of magic. (line: %3d)\n", __LINE__ );
+
     assert( magic[0] == 0 );
     assert( magic[1] == 0 );
     assert( magic[2] == 0x08 );  /* We expect unsigned bytes */
@@ -118,21 +125,20 @@ float *read_idx_labels( const char *filename, uint32_t *n_samples, uint32_t *n_t
     *n_samples = read_uint_big_endian( fp );
 
     unsigned char *raw = malloc( *n_samples * sizeof( unsigned char ));
-    fread( raw, *n_samples, sizeof( unsigned char ), fp );
+    if ( fread( raw, sizeof( unsigned char ), *n_samples, fp ) != *n_samples)
+        fprintf(stderr, "Warning - Cannot read target values data. (line: %3d)\n", __LINE__ );
 
-    float   *labels = calloc( *n_samples * *n_targets, sizeof( float ));
+    float   *labels = calloc( *n_samples * n_targets, sizeof( float ));
 
     /* Do one-hot encoding of target labels */
     for( unsigned int i = 0; i < *n_samples; i++ ){
-        *((labels + (i * *n_targets)) + *(raw+i)) = 1.0f;   /* Hehe! Did you get that? */
+        *((labels + (i * n_targets)) + *(raw+i)) = 1.0f;   /* Hehe! Did you get that? */
     }
 
     free( raw );
     fclose( fp );
     return labels;
 }
-
-    
 
 int main( int argc, char *argv[] )
 {
@@ -142,9 +148,9 @@ int main( int argc, char *argv[] )
     uint32_t n_output_targets = 10;
 
     float *train_features = read_idx_features( "train-images-idx3-ubyte", &n_train_samples, &n_input_features );
-    float *train_labels   = read_idx_labels  ( "train-labels-idx1-ubyte", &n_train_samples, &n_output_targets );
+    float *train_labels   = read_idx_labels  ( "train-labels-idx1-ubyte", &n_train_samples, n_output_targets );
     float *test_features  = read_idx_features( "t10k-images-idx3-ubyte", &n_test_samples, &n_input_features );
-    float *test_labels    = read_idx_labels  ( "t10k-labels-idx1-ubyte", &n_test_samples, &n_output_targets );
+    float *test_labels    = read_idx_labels  ( "t10k-labels-idx1-ubyte", &n_test_samples, n_output_targets );
 
     if( !train_labels   || !train_features || !test_labels    || !test_features ){
         fprintf(stderr, "Cannot read datafiles. See README.\n");
@@ -159,7 +165,6 @@ int main( int argc, char *argv[] )
 
     neuralnet_initialize( nn, NULL ); 
     neuralnet_set_loss( nn, "categorical_crossentropy" );
-
 
     /* Training with plain Stochastic Gradient Decsent (SGD) */    
     const float learning_rate = 0.01f;
@@ -176,7 +181,7 @@ int main( int argc, char *argv[] )
             );
 
     callback_t *callbacks[] = {
-        CALLBACK( logger_new( LOGGER_NEW() ) ),
+        CALLBACK( logger_new( LOGGER_SETTINGS() ) ),
         NULL
     };
 

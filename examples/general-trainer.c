@@ -4,12 +4,25 @@
 #include "loss.h"
 #include "optimizer.h"
 #include "optimizer_implementations.h"
+
+#include "callback.h"
+#include "earlystopping.h"
+#include "logger.h"
+#include "modelcheckpoint.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
 #include <assert.h>
+
+enum {
+    CB_MODEL_CHECKPOINT,
+    CB_LOGGER,
+    CB_EARLY_STOPPING,
+    N_CALLBACKS 
+};
 
 int main(int argc, char *argv[]) {
     // Declare variables
@@ -162,19 +175,17 @@ int main(int argc, char *argv[]) {
     /* Metrics */
     /* Here there will be some logic. */
 
-    /* Callbacks */
-    /* callback  Log  */
-    /* callback  Model checkpoint  */
-    /* callback  Early stopping  */
-    
     /* Optimizer logic */
     optimizer_t *optim = optimizer_new( nn, 
             OPTIMIZER_CONFIG(
                 .batchsize = batch_size,
                 .shuffle   = true,
-                .run_epoch = adamw_run_epoch,
-                .settings  = ADAMW_SETTINGS( .learning_rate = learning_rate ),
+                .run_epoch = SGD_run_epoch,
+                .settings  = SGD_SETTINGS( .learning_rate = learning_rate ),
+//                .run_epoch = adamw_run_epoch,
+//                .settings  = ADAMW_SETTINGS( .learning_rate = learning_rate ),
                 .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
+                    get_metric_func( metrics ), 
                     NULL }),
                 .progress  = NULL
                 )
@@ -199,17 +210,29 @@ int main(int argc, char *argv[]) {
         printf("%*s", longest_metric_name_len, get_metric_name( optim->metrics[j] ));
 
     printf("\n");
+
+    /* Callbacks */
+    callback_t *callbacks[N_CALLBACKS];
+    /* callback  Model checkpoint  */
+    callbacks[CB_MODEL_CHECKPOINT] = CALLBACK(modelcheckpoint_new( MODELCHECKPOINT_SETTINGS(  ) ));
+    /* callback  Log  */
+    callbacks[CB_LOGGER]           = CALLBACK(logger_new( LOGGER_SETTINGS( ) ));
+    /* callback  Early stopping  */
+    callbacks[CB_EARLY_STOPPING]   = CALLBACK(earlystopping_new( EARLYSTOPPING_SETTINGS( )));
     
     /* The main loop */
     for ( int i = 0; i < n_epochs || n_epochs == -1; i++ ){
         float results[2*n_metrics];
         optimizer_run_epoch( optim, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
                                   n_verify_samples, (float*) verify_X->data, (float*) verify_Y->data, results );
-        /*  This printout should be done with a log callback */
-        printf( "%4d ", i);  /* same length as "epoch" */
-        for ( int j = 0; j < 2*n_metrics ; j++ )
-            printf("%*.7e", longest_metric_name_len, results[j] );
-        printf("\n");
+
+        for ( int cb_idx = 0; cb_idx < N_CALLBACKS; cb_idx++ ){
+            callback_t *cb = callbacks[cb_idx];
+            if(!cb) continue;
+            callback_run( cb, OPTIMIZER(optim), results, true );
+        }
+        if ( earlystopping_do_stop( EARLYSTOPPING(callbacks[CB_EARLY_STOPPING]) ) )
+            break;
     }
     neuralnet_free( nn );
     free( optim );

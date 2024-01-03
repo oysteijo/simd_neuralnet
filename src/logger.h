@@ -17,7 +17,7 @@ typedef struct _logger_config
 
 /* The 'macros' */
 #define LOGGER(x) ((logger_t*)x)
-#define LOGGER_NEW(...) \
+#define LOGGER_SETTINGS(...) \
     &((logger_config) { .epoch_count=0, .filename=NULL, .no_stdout=false, __VA_ARGS__ })
 
 #endif /* __LOGGER_H__ */

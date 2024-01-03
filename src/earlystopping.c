@@ -68,5 +68,5 @@ void earlystopping_callback_run( callback_t *cb, optimizer_t * opt, const float 
 
 bool earlystopping_do_stop( const earlystopping_t *es )
 {
-    return es->early_stopping_flag;
+    return es ? es->early_stopping_flag : false;
 }
