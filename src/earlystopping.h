@@ -18,7 +18,7 @@ typedef struct _earlystopping_config
 
 /* The 'macros' */
 #define EARLYSTOPPING(x) ((earlystopping_t*)x)
-#define EARLYSTOPPING_NEW(...) \
+#define EARLYSTOPPING_SETTINGS(...) \
     &((earlystopping_config) { .patience=10, .monitor_idx=-1, .greater_is_better=false, __VA_ARGS__ })
 
 /* The 'methods' */

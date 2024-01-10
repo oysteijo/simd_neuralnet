@@ -10,8 +10,8 @@
  * This is the typical way of creating an callback instance. The code below shows how to instansiate
  * the implementation neuralnet_callback_t and composite_callback_t.
 
-        callback_t *log            = CALLBACK(logging_new( LOGGING_ARGS( ) ));
-        callback_t *earlystopping  = CALLBACK(earlystopping_new( EARLYSTOPPING_ARGS( )));
+        callback_t *log            = CALLBACK(logging_new( LOGGING_SETTINGS( ) ));
+        callback_t *earlystopping  = CALLBACK(earlystopping_new( EARLYSTOPPING_SETTINGS( )));
 
  * The interface assures the 'callback_run' method to be implemented, and this method can be called like:
 
