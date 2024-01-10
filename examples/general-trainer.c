@@ -192,7 +192,7 @@ int main(int argc, char *argv[]) {
             );
 
     int n_metrics = optimizer_get_n_metrics( optim );
-
+#if 0
     /* Table heading */
     printf("Epoch");
     int longest_metric_name_len = 0;
@@ -210,7 +210,7 @@ int main(int argc, char *argv[]) {
         printf("%*s", longest_metric_name_len, get_metric_name( optim->metrics[j] ));
 
     printf("\n");
-
+#endif
     /* Callbacks */
     callback_t *callbacks[N_CALLBACKS];
     /* callback  Model checkpoint  */
