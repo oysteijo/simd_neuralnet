@@ -6,9 +6,6 @@
 #define __OPTIMIZER_IMPLEMENTATIONS_H__
 #include "optimizer.h"
 
-#define EPOCH_RUNNER_DECLARE(opt_name) \
-void opt_name ## _run_epoch( optimizer_t *opt, \
-        const unsigned int n_train_samples, const float *train_X, const float *train_Y )
 
 /* ---- Stochastic Gradient Decsent (SGD) ---- */
 typedef struct _sgd_settings_t sgd_settings_t; 

@@ -2,9 +2,6 @@
 /* 
  vim: ts=4 sw=4 softtabstop=4 expandtab 
 */
-/* 
- vim: ts=4 sw=4 softtabstop=4 expandtab 
-*/
 
 #include "optimizer.h"
 #include "simd.h"
@@ -43,6 +40,7 @@ static void fisher_yates_shuffle( unsigned int *arr, unsigned int n )
 
 #define METRIC_LIST(...) ((metric_func[]){ __VA_ARGS__, NULL }) 
 
+#if 0
 optimizer_t *optimizer_new( neuralnet_t *nn, void *data )
 {
     optimizer_config_t *conf = (optimizer_config_t*) data;
@@ -97,6 +95,7 @@ void optimizer_free( optimizer_t *opt )
     free( opt );
     opt = NULL;
 }
+#endif
 
 void optimizer_calc_batch_gradient( optimizer_t *opt, 
         const unsigned int n_train_samples, const float *train_X, const float *train_Y,
