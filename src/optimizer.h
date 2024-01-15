@@ -59,15 +59,6 @@ struct _optimizer_t {
     void     (*progress)( int x, int n, const char *fmt, ...);
     metric_func *metrics;  /* NULL terminated */
     unsigned int *pivot;
-
-    /* Momentum velocity */
-    float *velocity;
-
-    /* Adam 1st and 2nd moments */
-    float *s;
-    float *r;
-
-    void  *settings;
 };
 
 #if defined(__GNUC__)
@@ -99,10 +90,6 @@ DLLEXPORT name ## _t * name ## _new( neuralnet_t *nn, void * UNUSED(config)) \
     \
     /* First the configs */ \
     newopt->opt.nn         = nn; \
-    newopt->opt.batchsize  = config->batchsize; /* FIXME: Check sanity */ \
-    newopt->opt.shuffle    = config->shuffle; \
-    newopt->opt.metrics    = config->metrics;   /* Lots of checks can be done */ \
-    newopt->opt.progress   = config->progress; \
     \
     newopt->opt.iterations = 0; \
     \
