@@ -1,5 +1,6 @@
 #include "SGD.h"
 #include "simd.h" 
+#include "matrix_operations.h" 
 #include <stdbool.h>
 /*  SGD.c  */
 struct _SGD_t 
@@ -10,6 +11,11 @@ struct _SGD_t
     float decay;
     float momentum;
     bool  nesterov;
+
+    /* private stuff - don't touch! */
+    unsigned int n_iterations;  
+    float *velocity;
+
 };
 
 OPTIMIZER_DEFINE(SGD);
@@ -17,7 +23,7 @@ OPTIMIZER_DEFINE(SGD);
 int testfunc()
 {
     neuralnet_t *nn = neuralnet_create( 2, INT_ARRAY( 250, 128, 5 ), STR_ARRAY("sigmoid", "sigmoid"));
-    optimizer_t *opt = OPTIMIZER( SGD_new( nn, NULL ));
+    optimizer_t *opt = OPTIMIZER( SGD_new( nn, OPTIMIZER_CONFIG(), SGD_SETTINGS( ) ));
 
     opt->shuffle = true;
 
@@ -38,9 +44,9 @@ void SGD_run_epoch( optimizer_t *opt,
 
         /* Apply interim update */
         if ( sgd->momentum > 0.0f ){
-            vector_scale( n_parameters, opt->velocity, sgd->momentum );
+            vector_scale( n_parameters, sgd->velocity, sgd->momentum );
             if( sgd->nesterov )  
-                neuralnet_update( nn, opt->velocity );
+                neuralnet_update( nn, sgd->velocity );
         }
 
         /* Calculate batch gradient */
@@ -52,20 +58,20 @@ void SGD_run_epoch( optimizer_t *opt,
         
         /* Learning rate update */
         if (sgd->decay > 0.0f )
-            sgd->learning_rate *= 1.0f / (1.0f + sgd->decay * (float) opt->iterations);
-        opt->iterations++;
+            sgd->learning_rate *= 1.0f / (1.0f + sgd->decay * (float) sgd->n_iterations);
+        sgd->n_iterations++;
 
         float *neg_eta_grad = batchgrad;
         vector_scale( n_parameters, neg_eta_grad, -sgd->learning_rate );
 
         if ( sgd->momentum > 0.0f ){
             /* Compute velocity update */
-            vector_accumulate( n_parameters, opt->velocity, neg_eta_grad );
+            vector_accumulate( n_parameters, sgd->velocity, neg_eta_grad );
         }
          
         /* Apply update */
         if ( sgd->momentum > 0.0f && !sgd->nesterov )  /* if nesterov==true we have already updated based on the velocity */
-            neuralnet_update( nn, opt->velocity );
+            neuralnet_update( nn, sgd->velocity );
         else
             neuralnet_update( nn, neg_eta_grad );
     }

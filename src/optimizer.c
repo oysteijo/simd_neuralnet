@@ -6,6 +6,7 @@
 #include "optimizer.h"
 #include "simd.h"
 #include "evaluate.h"
+#include "matrix_operations.h"
 
 #include <string.h>
 #include <time.h>
