@@ -1,7 +1,11 @@
 #include "SGD.h"
+
 #include "simd.h" 
 #include "matrix_operations.h" 
+
 #include <stdbool.h>
+#include <string.h>
+#include <assert.h>
 /*  SGD.c  */
 struct _SGD_t 
 {
@@ -15,22 +19,37 @@ struct _SGD_t
     /* private stuff - don't touch! */
     unsigned int n_iterations;  
     float *velocity;
-
 };
 
-OPTIMIZER_DEFINE(SGD);
-
-int testfunc()
+static void SGD_optimizer_init( SGD_t *sgd, sgd_properties_t *properties )
 {
-    neuralnet_t *nn = neuralnet_create( 2, INT_ARRAY( 250, 128, 5 ), STR_ARRAY("sigmoid", "sigmoid"));
-    optimizer_t *opt = OPTIMIZER( SGD_new( nn, OPTIMIZER_CONFIG(), SGD_SETTINGS( ) ));
+    sgd_properties_t *props = (sgd_properties_t*) properties;
 
-    opt->shuffle = true;
+    sgd->n_iterations = 0;
 
-    SGD_OPTIMIZER(opt)->learning_rate *= 0.99f;
-    SGD_OPTIMIZER(opt)->momentum = 0.8f;
-    return 0;
+    sgd->learning_rate = props->learning_rate;
+    sgd->momentum = props->momentum;
+    sgd->nesterov = props->nesterov;
+    sgd->decay = props->decay;
+
+    const unsigned int n_param = neuralnet_total_n_parameters( OPTIMIZER(sgd)->nn );
+
+    sgd->velocity   = simd_malloc( n_param * sizeof(float) );
+    assert( sgd->velocity );
+    memset( sgd->velocity, 0, n_param * sizeof(float));
 }
+
+static void SGD_optimizer_free( optimizer_t *opt )
+{
+    if( !opt ) return;
+    free( SGD_OPTIMIZER(opt)->velocity );
+    free( opt );
+}
+
+OPTIMIZER_DEFINE(SGD, 
+    SGD_optimizer_init( newopt, properties );
+    newopt->opt.free = SGD_optimizer_free;
+);
 
 /* Stochastic Gradient Descent */
 void SGD_run_epoch( optimizer_t *opt,
@@ -76,5 +95,4 @@ void SGD_run_epoch( optimizer_t *opt,
             neuralnet_update( nn, neg_eta_grad );
     }
 }
-
 

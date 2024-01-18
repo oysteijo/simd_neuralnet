@@ -4,7 +4,7 @@
 #include "simd.h"
 
 #include "optimizer.h"
-#include "optimizer_implementations.h"
+#include "SGD.h"
 #include "loss.h"
 
 #include "callback.h"
@@ -168,7 +168,7 @@ int main( int argc, char *argv[] )
 
     /* Training with plain Stochastic Gradient Decsent (SGD) */    
     const float learning_rate = 0.01f;
-
+#if 0
     optimizer_t *opt = optimizer_new( nn, 
             OPTIMIZER_CONFIG(
                 .batchsize = 16,
@@ -179,6 +179,20 @@ int main( int argc, char *argv[] )
                     get_metric_func( "categorical_accuracy" ), NULL }),
                 )
             );
+#endif
+    optimizer_t *opt = OPTIMIZER(
+         SGD_new(
+             nn, 
+             OPTIMIZER_PROPERTIES(
+                .batchsize = 16,
+                .shuffle   = true,
+                .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
+                    get_metric_func( "categorical_accuracy" ), NULL }),
+                /* .progress  = NULL */
+            ),
+            SGD_PROPERTIES( .learning_rate=learning_rate )
+         )
+    );
 
     callback_t *callbacks[] = {
         CALLBACK( logger_new( LOGGER_SETTINGS() ) ),

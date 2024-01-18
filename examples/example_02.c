@@ -4,7 +4,7 @@
 #include "simd.h"
 
 #include "optimizer.h"
-#include "optimizer_implementations.h"
+#include "SGD.h"
 #include "loss.h"
 
 #include <stdio.h>
@@ -45,17 +45,19 @@ int main( int argc, char *argv[] )
     const int n_test_samples = test_X->shape[0];
     const float learning_rate = 0.01f;
 
-    optimizer_t *sgd = optimizer_new( nn, 
-            OPTIMIZER_CONFIG(
+    optimizer_t *sgd = OPTIMIZER(
+         SGD_new(
+             nn, 
+             OPTIMIZER_PROPERTIES(
                 .batchsize = 1,
                 .shuffle   = false,
-                .run_epoch = SGD_run_epoch,
-                .settings  = SGD_SETTINGS( .learning_rate = learning_rate ),
                 .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
                     get_metric_func( "binary_accuracy" ), NULL }),
                 .progress  = NULL
-                )
-            );
+            ),
+            SGD_PROPERTIES( .learning_rate=learning_rate )
+         )
+    );
 
     float results[ 2 * optimizer_get_n_metrics( sgd ) ];
     optimizer_run_epoch( sgd, n_train_samples, (float*) train_X->data, (float*) train_Y->data,

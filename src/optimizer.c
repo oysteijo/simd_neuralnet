@@ -39,64 +39,8 @@ static void fisher_yates_shuffle( unsigned int *arr, unsigned int n )
     }
 }
 
+/*  This doesn't belong here */
 #define METRIC_LIST(...) ((metric_func[]){ __VA_ARGS__, NULL }) 
-
-#if 0
-optimizer_t *optimizer_new( neuralnet_t *nn, void *data )
-{
-    optimizer_config_t *conf = (optimizer_config_t*) data;
-
-    optimizer_t *newopt = malloc( sizeof( optimizer_t ));
-    if ( !newopt ) {
-        fprintf( stderr ,"Can't allocate memory for optimizer_t type.\n");
-        return NULL;
-    }
-
-    /* First the configs */
-    newopt->nn         = nn;
-    newopt->batchsize  = conf->batchsize; /* FIXME: Chack sanity */
-    newopt->shuffle    = conf->shuffle;
-    newopt->metrics    = conf->metrics;   /* Lots of checks can be done */
-    newopt->settings   = conf->settings;
-    newopt->run_epoch  = conf->run_epoch;
-    newopt->progress   = conf->progress;
-
-    newopt->iterations = 0;
-
-    /* now we do the internal data stuff */
-    const unsigned int n_param = neuralnet_total_n_parameters( nn );
-    newopt->pivot      = NULL; /* This will be allocated in the main loop */
-
-
-    /* FIXME: Loop? */
-    newopt->velocity   = simd_malloc( n_param * sizeof(float) );
-    assert( newopt->velocity );
-    memset( newopt->velocity, 0, n_param * sizeof(float));
-
-    /* Adam moments */
-    newopt->s   = simd_malloc( n_param * sizeof(float) );
-    newopt->r   = simd_malloc( n_param * sizeof(float) );
-    assert( newopt->s );
-    assert( newopt->r );
-    memset( newopt->s, 0, n_param * sizeof(float));
-    memset( newopt->r, 0, n_param * sizeof(float));
-
-
-    return newopt;
-}
-
-void optimizer_free( optimizer_t *opt )
-{
-    assert( opt );
-    if( opt->pivot )
-        free( opt->pivot );
-    free( opt->velocity );
-    free( opt->s );
-    free( opt->r );
-    free( opt );
-    opt = NULL;
-}
-#endif
 
 void optimizer_calc_batch_gradient( optimizer_t *opt, 
         const unsigned int n_train_samples, const float *train_X, const float *train_Y,
@@ -137,7 +81,6 @@ void optimizer_calc_batch_gradient( optimizer_t *opt,
     *i += batchsize;
     vector_divide_by_scalar( n_parameters, batchgrad, (float) batchsize );
 }
-
 
 void optimizer_run_epoch( optimizer_t *self,
         const unsigned int n_train_samples, const float *train_X, const float *train_Y,
