@@ -70,6 +70,7 @@ DLLEXPORT name ## _t * name ## _new( neuralnet_t *nn, optimizer_properties_t opt
     newopt->opt.pivot      = NULL; /* This will be allocated in the main loop */ \
     \
     __VA_ARGS__ ; \
+    optimizer_check_sanity( OPTIMIZER(newopt) ); \
     return newopt; \
 }
 #if 0
@@ -120,11 +121,14 @@ void optimizer_run_epoch( optimizer_t *self,
         const unsigned int n_train_samples, const float *train_X, const float *train_Y,
         const unsigned int n_valid_samples, const float *valid_X, const float *valid_Y, float *result );
 
+void optimizer_check_sanity( optimizer_t * opt);
+
 static inline void optimizer_free( optimizer_t *opt )
 {
+    opt->free( opt );
     if ( opt->pivot )
         free( opt->pivot );
-    opt->free( opt );
+    free( opt );
 }
 
 static inline int optimizer_get_n_metrics( const optimizer_t *opt )

@@ -43,7 +43,6 @@ static void SGD_optimizer_free( optimizer_t *opt )
 {
     if( !opt ) return;
     free( SGD_OPTIMIZER(opt)->velocity );
-    free( opt );
 }
 
 OPTIMIZER_DEFINE(SGD, 

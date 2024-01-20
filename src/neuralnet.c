@@ -678,6 +678,10 @@ neuralnet_t * neuralnet_create( const int n_layers, int sizes[], char *activatio
         }
     }
 
+    /* We really don't want a dangling pointer for the loss function */
+    nn->loss = NULL;
+    /* The user should set the loss function by calling `neuralnet_set_loss( nn, "nameofloss")` */
+
     return nn;
 }
 

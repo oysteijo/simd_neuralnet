@@ -7,6 +7,7 @@
 #include "simd.h"
 #include "evaluate.h"
 #include "matrix_operations.h"
+#include "loss.h"
 
 #include <string.h>
 #include <time.h>
@@ -39,8 +40,23 @@ static void fisher_yates_shuffle( unsigned int *arr, unsigned int n )
     }
 }
 
-/*  This doesn't belong here */
-#define METRIC_LIST(...) ((metric_func[]){ __VA_ARGS__, NULL }) 
+/* Discuss: Should this be made static inline and placed in optimizer.h ? */
+void optimizer_check_sanity( optimizer_t * opt)
+{
+    assert( opt );
+    assert( opt->nn );
+    assert( opt->nn->loss );
+    assert( opt->batchsize > 0 );
+
+    /* If the metrics is set to NULL - add the metric function corresponding to the loss */
+    static metric_func static_metrics[2];
+    static_metrics[0] = get_metric_func( get_loss_name( opt->nn->loss ));
+    static_metrics[1] = NULL;
+
+    if( opt->metrics == NULL ){
+        opt->metrics = static_metrics;
+    }
+}
 
 void optimizer_calc_batch_gradient( optimizer_t *opt, 
         const unsigned int n_train_samples, const float *train_X, const float *train_Y,
