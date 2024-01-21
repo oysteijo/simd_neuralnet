@@ -42,7 +42,7 @@ static void SGD_optimizer_init( SGD_t *sgd, sgd_properties_t *properties )
 static void SGD_optimizer_free( optimizer_t *opt )
 {
     if( !opt ) return;
-    free( SGD_OPTIMIZER(opt)->velocity );
+    simd_free( SGD_OPTIMIZER(opt)->velocity );
 }
 
 OPTIMIZER_DEFINE(SGD, 
