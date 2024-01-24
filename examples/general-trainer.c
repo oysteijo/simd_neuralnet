@@ -176,20 +176,18 @@ int main(int argc, char *argv[]) {
     /* Here there will be some logic. */
 
     /* Optimizer logic */
-    optimizer_t *optim = optimizer_new( nn, 
-            OPTIMIZER_CONFIG(
+    optimizer_t *optim = OPTIMIZER(
+         SGD_new(
+             nn,
+             OPTIMIZER_PROPERTIES(
                 .batchsize = batch_size,
                 .shuffle   = true,
-                .run_epoch = SGD_run_epoch,
-                .settings  = SGD_SETTINGS( .learning_rate = learning_rate ),
-//                .run_epoch = adamw_run_epoch,
-//                .settings  = ADAMW_SETTINGS( .learning_rate = learning_rate ),
                 .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
-                    get_metric_func( metrics ), 
-                    NULL }),
-                .progress  = NULL
-                )
-            );
+                    get_metric_func( metrics ), NULL }),
+            ),
+            SGD_PROPERTIES( .learning_rate=learning_rate )
+         )
+    );
 
     int n_metrics = optimizer_get_n_metrics( optim );
 #if 0

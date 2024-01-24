@@ -9,4 +9,7 @@ typedef float (*metric_func)(const int n, const float *y_pred, const float *y_re
 metric_func get_metric_func( const char * name );
 const char * get_metric_name( metric_func ptr );
 
+#define METRIC_FROM_NEURALNET(nnet) get_metric_func( get_loss_name( nnet->loss ))
+#define METRIC_LIST(...) ((metric_func[]){ __VA_ARGS__, NULL })
+
 #endif /* __METRICS_H__ */
