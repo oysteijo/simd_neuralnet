@@ -15,6 +15,6 @@ typedef struct _adam_properties_t {
     float weight_decay;
 } adam_properties_t;
 #define ADAM_PROPERTIES(...) \
-    &((adam_settings_t)  \
+    &((adam_properties_t)  \
             { .learning_rate = 0.001f, .beta_1 = 0.9f, .beta_2 = 0.999f, .weight_decay = 1e-4f, __VA_ARGS__ })
 

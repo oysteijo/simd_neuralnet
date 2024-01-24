@@ -303,17 +303,18 @@ Let's first make the manual implementation above use the supplied SGD code.
     const int n_test_samples = test_X->shape[0];
     const float learning_rate = 0.01f;
 
-    optimizer_t *sgd = optimizer_new( nn,
-            OPTIMIZER_CONFIG(
+    optimizer_t *sgd = OPTIMIZER(
+         SGD_new(
+             nn, 
+             OPTIMIZER_PROPERTIES(
                 .batchsize = 1,
                 .shuffle   = false,
-                .run_epoch = SGD_run_epoch,
-                .settings  = SGD_SETTINGS( .learning_rate = learning_rate ),
                 .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
-                    get_metric_func( "binary_accuracy" ), NULL }),
-                .progress  = NULL
-                )
-            );
+                    get_metric_func( "categorical_accuracy" ), NULL }),
+            ),
+            SGD_PROPERTIES( .learning_rate=learning_rate )
+         )
+    );
 
     float results[ 2 * optimizer_get_n_metrics( sgd ) ];
     optimizer_run_epoch( sgd, n_train_samples, (float*) train_X->data, (float*) train_Y->data,
@@ -328,7 +329,7 @@ Let's first make the manual implementation above use the supplied SGD code.
 As you see there are some parameters to setup a optimizer,
 but when it's done it basically does both loops for you.
 It does the training loop (a training epoch) and it does the
-evaluation. As you create the optimizer with `optimizer_new()`,
+evaluation. As you create the optimizer with,
 you also pass in the metrics that will be used in the evaluation
 loop. In the above example, we've passed in the binary_crossentropy
 metric and the binary accuracy. `optimizer_get_n_metrics()` will
@@ -385,19 +386,22 @@ can at the end of the loop run through all callbacks. In the callback directory
 in this codebase, there are already implemented a logging callback, an early stopping
 callback and a checkpoint callback.
 ```c
-    /* Training with plain Stochastic Gradient Decsent (SGD) */    
+    /* Training */    
     const float learning_rate = 0.01f;
 
-    optimizer_t *opt = optimizer_new( nn, 
-            OPTIMIZER_CONFIG(
+    optimizer_t *opt = OPTIMIZER(
+         adam_new(
+             nn, 
+             OPTIMIZER_PROPERTIES(
                 .batchsize = 16,
                 .shuffle   = true,
-                .run_epoch = adamw_run_epoch,
-                .settings  = ADAMW_SETTINGS( .learning_rate = learning_rate ),
                 .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
                     get_metric_func( "categorical_accuracy" ), NULL }),
-                )
-            );
+                /* .progress  = NULL */
+            ),
+            ADAM_PROPERTIES( .learning_rate=learning_rate )
+         )
+    );
 
     callback_t *callbacks[] = {
         CALLBACK( logger_new( LOGGER_NEW() ) ),

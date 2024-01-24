@@ -4,7 +4,7 @@
 #include "simd.h"
 
 #include "optimizer.h"
-#include "SGD.h"
+#include "optimizer_implementations.h"
 #include "loss.h"
 
 #include "callback.h"
@@ -181,7 +181,7 @@ int main( int argc, char *argv[] )
             );
 #endif
     optimizer_t *opt = OPTIMIZER(
-         SGD_new(
+         adam_new(
              nn, 
              OPTIMIZER_PROPERTIES(
                 .batchsize = 16,
@@ -190,7 +190,7 @@ int main( int argc, char *argv[] )
                     get_metric_func( "categorical_accuracy" ), NULL }),
                 /* .progress  = NULL */
             ),
-            SGD_PROPERTIES( .learning_rate=learning_rate )
+            ADAM_PROPERTIES( .learning_rate=learning_rate )
          )
     );
 

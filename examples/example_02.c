@@ -49,8 +49,8 @@ int main( int argc, char *argv[] )
          SGD_new(
              nn, 
              OPTIMIZER_PROPERTIES(
-#if 0
                 .batchsize = 1,
+#if 0
                 .shuffle   = false,
 #endif
                 .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
