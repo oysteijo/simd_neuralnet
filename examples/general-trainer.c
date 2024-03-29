@@ -174,20 +174,76 @@ int main(int argc, char *argv[]) {
     
     /* Metrics */
     /* Here there will be some logic. */
+    metric_func metric_func_array[] = { get_metric_func( get_loss_name( nn->loss )), get_metric_func( metrics ), NULL };
 
     /* Optimizer logic */
-    optimizer_t *optim = OPTIMIZER(
-         SGD_new(
-             nn,
-             OPTIMIZER_PROPERTIES(
-                .batchsize = batch_size,
-                .shuffle   = true,
-                .metrics   = ((metric_func[]){ get_metric_func( get_loss_name( nn->loss ) ),
-                    get_metric_func( metrics ), NULL }),
-            ),
-            SGD_PROPERTIES( .learning_rate=learning_rate )
-         )
-    );
+    optimizer_t *optim = NULL;
+
+    if( !strcmp( optimizer, "SGD" ) )
+        optim = OPTIMIZER(
+                SGD_new(
+                    nn,
+                    OPTIMIZER_PROPERTIES(
+                        .batchsize = batch_size,
+                        .shuffle   = true,
+                        .metrics   = metric_func_array,
+                        ),
+                    SGD_PROPERTIES( .learning_rate=learning_rate )
+                    )
+                );
+
+    if( !strcmp( optimizer, "RMSprop" ) )
+        optim = OPTIMIZER(
+                RMSprop_new(
+                    nn,
+                    OPTIMIZER_PROPERTIES(
+                        .batchsize = batch_size,
+                        .shuffle   = true,
+                        .metrics   = metric_func_array,
+                        ),
+                    RMSPROP_PROPERTIES( .learning_rate=learning_rate )
+                    )
+                );
+
+    if( !strcmp( optimizer, "adagrad" ) )
+        optim = OPTIMIZER(
+                adagrad_new(
+                    nn,
+                    OPTIMIZER_PROPERTIES(
+                        .batchsize = batch_size,
+                        .shuffle   = true,
+                        .metrics   = metric_func_array,
+                        ),
+                    ADAGRAD_PROPERTIES( .learning_rate=learning_rate )
+                    )
+                );
+
+    if( !strcmp( optimizer, "adam" ))
+        optim = OPTIMIZER(
+                adam_new(
+                    nn,
+                    OPTIMIZER_PROPERTIES(
+                        .batchsize = batch_size,
+                        .shuffle   = true,
+                        .metrics   = metric_func_array,
+                        ),
+                    ADAM_PROPERTIES( .learning_rate=learning_rate, .weight_decay=0.0f )
+                    )
+                );
+
+    if( !strcmp( optimizer, "adamw" ))
+        optim = OPTIMIZER(
+                adam_new(
+                    nn,
+                    OPTIMIZER_PROPERTIES(
+                        .batchsize = batch_size,
+                        .shuffle   = true,
+                        .metrics   = metric_func_array,
+                        ),
+                    ADAM_PROPERTIES( .learning_rate=learning_rate )
+                    )
+                );
+
 
     int n_metrics = optimizer_get_n_metrics( optim );
 #if 0

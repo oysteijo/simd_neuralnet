@@ -167,7 +167,7 @@ int main( int argc, char *argv[] )
     neuralnet_set_loss( nn, "categorical_crossentropy" );
 
     /* Training with plain Stochastic Gradient Decsent (SGD) */    
-    const float learning_rate = 0.01f;
+    const float learning_rate = 0.001f;
 #if 0
     optimizer_t *opt = optimizer_new( nn, 
             OPTIMIZER_CONFIG(
