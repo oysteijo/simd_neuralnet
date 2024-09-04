@@ -270,7 +270,7 @@ int main(int argc, char *argv[]) {
     /* callback  Model checkpoint  */
     callbacks[CB_MODEL_CHECKPOINT] = CALLBACK(modelcheckpoint_new( MODELCHECKPOINT_SETTINGS(  ) ));
     /* callback  Log  */
-    callbacks[CB_LOGGER]           = CALLBACK(logger_new( LOGGER_SETTINGS( ) ));
+    callbacks[CB_LOGGER]           = CALLBACK(logger_new( LOGGER_SETTINGS( .filename=log ) ));
     /* callback  Early stopping  */
     callbacks[CB_EARLY_STOPPING]   = CALLBACK(earlystopping_new( EARLYSTOPPING_SETTINGS( )));
     
