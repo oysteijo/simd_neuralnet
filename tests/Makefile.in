@@ -11,9 +11,11 @@ obj = $(src:.c=.o)
 # dependency library
 NPY_ARRAY_LIBPATH = ../npy_array
 NEURALNET_LIBPATH = ../src
+CFLAGS += `pkg-config --cflags libzip`
 CFLAGS += -I$(NPY_ARRAY_LIBPATH) -I$(NEURALNET_LIBPATH)
 LDLIBS += -L$(NEURALNET_LIBPATH) -lsimd_neuralnet
 LDLIBS += -L$(NPY_ARRAY_LIBPATH) -lnpy_array
+LDLIBS += `pkg-config --libs libzip`
 LDLIBS += -ldl
 LDLIBS += -lm
 LDLIBS += $(BLAS_LDFLAGS) 
@@ -41,11 +43,6 @@ test_loss.c: generate_tests.py neuralnet.py metrics.py
 test_metrics.c: generate_tests.py neuralnet.py metrics.py
 	python3 generate_tests.py
 
-neuralnet.py:
-	ln -sf ../reference/neuralnet.py
-metrics.py:
-	ln -sf ../reference/metrics.py
-
 .PHONY: run
 run: $(testprogs)
 	for t in $(testprogs); do ./$$t; done
@@ -56,6 +53,6 @@ clean:
 
 .PHONY: distclean
 distclean:
-	$(RM) $(obj) $(testprogs) neuralnet.py metrics.py  neuralnet.pyc metrics.pyc  test_activation.c test_loss.c test_metrics.c Makefile tmp_*.npz *~
+	$(RM) $(obj) $(testprogs)  neuralnet.pyc metrics.pyc  test_activation.c test_loss.c test_metrics.c Makefile tmp_*.npz *~
 	$(RM) -r __pycache__
 
