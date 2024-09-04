@@ -357,16 +357,20 @@ with a plain feed forward neural network, we can only expect to get an accuracy
 of about 95% on the test data. Let's try. First we get the data using some simple
 command line tools:
 ```shell
-wget http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
-wget http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
-wget http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
-wget http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+wget https://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
+wget https://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
+wget https://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
+wget https://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
 # unzip the files
 gunzip train-images-idx3-ubyte.gz
 gunzip train-labels-idx1-ubyte.gz
 gunzip t10k-images-idx3-ubyte.gz
 gunzip t10k-labels-idx3-ubyte.gz
 ```
+(It seems like `yann.lecun.com` might be misconfigured and gives
+ Forbidden 403 response. In that case you can probably find and other resource.
+ There are several copies an github. Try this: https://github.com/mkolod/MNIST )
+
 The file `example_03.c` contains some code to read the files and convert it to
 training data. The reading function images reads the file and converts the data
 into float data in the range 0.0 to 1.0.

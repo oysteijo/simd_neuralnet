@@ -49,10 +49,15 @@ jobs:
     - name: Download MNIST data.
       run: |
          cd examples
-         wget http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
-         wget http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
-         wget http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
-         wget http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz         
+         wget https://storage.googleapis.com/cvdf-datasets/mnist/train-images-idx3-ubyte.gz
+         wget https://storage.googleapis.com/cvdf-datasets/mnist/train-labels-idx1-ubyte.gz
+         wget https://storage.googleapis.com/cvdf-datasets/mnist/t10k-images-idx3-ubyte.gz
+         wget https://storage.googleapis.com/cvdf-datasets/mnist/t10k-labels-idx1-ubyte.gz
+#         Looks like Yann's website is misconfigured... :-(
+#         wget http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
+#         wget http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
+#         wget http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
+#         wget http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz         
     - name: unzip MNIST data.
       run: |
          cd examples
