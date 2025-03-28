@@ -30,6 +30,7 @@ struct _optimizer_t {
     int          batchsize;
     void         (*progress)( int x, int n, const char *fmt, ...);
     metric_func  *metrics;  /* NULL terminated */
+	int          n_metrics;
     unsigned int *pivot;    /* Don't touch! */
 };
 
@@ -65,10 +66,17 @@ DLLEXPORT name ## _t * name ## _new( neuralnet_t *nn, optimizer_properties_t opt
     newopt->opt.shuffle    = optconf.shuffle;   \
     newopt->opt.batchsize  = optconf.batchsize; \
     newopt->opt.progress   = optconf.progress;  \
-    newopt->opt.metrics    = optconf.metrics;   \
+    newopt->opt.n_metrics  = 0;                 \
     \
     newopt->opt.pivot      = NULL; /* This will be allocated in the main loop */ \
     \
+    metric_func *mf_ptr = optconf.metrics; \
+    if(!mf_ptr) \
+        newopt->opt.n_metrics = 0; \
+	else while ( *mf_ptr++ ) \
+        newopt->opt.n_metrics++; \
+	newopt->opt.metrics = malloc( (newopt->opt.n_metrics+1) * sizeof(metric_func)); \
+	memcpy( newopt->opt.metrics, optconf.metrics, (newopt->opt.n_metrics+1) * sizeof( metric_func )); \
     __VA_ARGS__ ; \
     optimizer_check_sanity( OPTIMIZER(newopt) ); \
     return newopt; \
@@ -126,6 +134,8 @@ void optimizer_check_sanity( optimizer_t * opt);
 static inline void optimizer_free( optimizer_t *opt )
 {
     opt->free( opt );
+    if ( opt->metrics )
+        free( opt->metrics );
     if ( opt->pivot )
         free( opt->pivot );
     free( opt );
@@ -133,14 +143,6 @@ static inline void optimizer_free( optimizer_t *opt )
 
 static inline int optimizer_get_n_metrics( const optimizer_t *opt )
 {
-    metric_func *mf_ptr = opt->metrics;
-    if(!mf_ptr)
-        return 0;
-
-    int n_metrics = 0;    
-    while ( *mf_ptr++ )
-        n_metrics++;
-
-    return n_metrics;
+    return opt->n_metrics;
 }
 #endif  /* __OPTIMIZER_H__ */
