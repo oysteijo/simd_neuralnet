@@ -20,8 +20,14 @@ void evaluate( neuralnet_t *nn, const int n_valid_samples, const float *valid_X,
     metric_func *mf_ptr = metrics;
 
     int n_metrics = 0;
-    while ( *mf_ptr++ )
+    while ( *mf_ptr++ ){
         n_metrics++;
+	}
+
+	if( n_metrics == 0 ){
+		*results = -1.0f;
+		return;
+	}
 
     float local_results[n_metrics];
     memset( local_results, 0, n_metrics * sizeof(float));

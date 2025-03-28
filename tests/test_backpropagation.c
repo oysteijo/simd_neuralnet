@@ -11,14 +11,6 @@
 
 int main( int argc, char *argv[]) 
 {
-    /* This testing program could actually read a nn from a file.
-     * Say you read command line inputs like:
-     *
-     *   ./test_backpropagation <file_with_nn.npz> <file_with_input.npy> <file_with_target.npy> --output=outputfile.txt
-     *
-     * BTW: all testfiles should actually take an option to redirect output.
-     */
-
     int n_input = 214;
     int n_output = 5;
 
@@ -110,6 +102,15 @@ int main( int argc, char *argv[])
     fprintf(stderr, "Gradient test report, using delta=%g and epsilon=%g\n", delta, epsilon);
     fprintf(stderr, "%5d tests done\n", n_tests );
     fprintf(stderr, "%s%5d tests failed\n" KNRM, n_fail ? KRED : KGRN, n_fail );
+
+	fprintf(stderr, "Please note - this test of the gradient calculation is really inaccurate. There can\n"
+			"be significant discrepansies between the gradient values from the backpropagation\n"
+			"algorithm and the numerical calculation.\n\n"
+			"If you have Keras installed and you have any doubt about the calculation of the gradient,\n"
+			"you should rather run 'test_keras.py'. That python code will set up a Keras neural network,\n"
+			"and select a random sample and a random taget vector and calculate the gradient using Keras.\n"
+			"The model, the sample/target and the gradient are then saved in .npz files. You can then test\n"
+			"this gradient with the `test_backgammon_files` executable. That's a better check!");
 
     return 0;
 }

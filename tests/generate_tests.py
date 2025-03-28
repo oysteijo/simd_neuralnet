@@ -196,5 +196,6 @@ if __name__ == '__main__':
                 # In addition we add a test to check the numerical stability of softmax
             if obj == "activation":
                 f.write(generate_activation_test( "softmax", [np.array([1000,2000,3000], dtype=np.float32)] ))  # This gives overflow on naiive implementations  
+                f.write(generate_activation_test( "sigmoid", [np.array([-1000,1000], dtype=np.float32)] ))  # This gives NaN on naiive implementations  
             f.write(main_end)
 

@@ -479,7 +479,7 @@ void neuralnet_set_loss ( neuralnet_t *nn, const char *loss_name )
   
 void neuralnet_backpropagation( const neuralnet_t *nn, const float *input, const float *target, float *grad )
 {
-    /* These sould do */
+    /* These should do */
     assert( is_aligned( grad ));
 
     int workmem_sz = 0;
